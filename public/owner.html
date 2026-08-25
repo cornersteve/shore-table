@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+<title>Owner Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='10'%20y='10'%20width='44'%20height='44'%20rx='11'%20fill='%233a6ea5'/%3E%3Cpath%20d='M18%2024Q21.5%2020.4%2025%2024T32%2024T39%2024T46%2024M18%2033Q21.5%2029.4%2025%2033T32%2033T39%2033T46%2033M18%2042Q21.5%2038.4%2025%2042T32%2042T39%2042T46%2042'%20fill='none'%20stroke='%23fff'%20stroke-width='3.4'%20stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://wryscqcukjduaodgfmdl.supabase.co" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  :root{
+    --bg:#ffffff;--page:#eeede9;--panel:#faf9f6;--panel-2:#efece6;
+    --ink:#1b1813;--ink-dim:#7c766c;--ink-faint:#aaa399;
+    --line:rgba(22,17,10,.10);--line-2:rgba(22,17,10,.16);
+    --good:#2e9e63;--bad:#b3372f;--accent:#3a6ea5;--accent-soft:#eaf1f8;
+    --radius:16px;
+    --font-d:"Bricolage Grotesque",system-ui,sans-serif;
+    --font-b:"Hanken Grotesk",system-ui,sans-serif;
+    --shadow-sm:0 1px 2px rgba(22,17,10,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-b);color:var(--ink);background:var(--page);line-height:1.5;padding:0 16px 60px}
+  .wrap{max-width:760px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px;border-bottom:1px solid var(--line-2);margin-bottom:22px}
+  .wordmark{font-family:var(--font-d);font-weight:800;letter-spacing:.03em;font-size:16px;text-transform:uppercase;display:inline-flex;align-items:center;gap:9px;color:var(--ink)}
+  .wordmark svg{width:24px;height:24px;flex:none}
+  .wm-mark{width:24px;height:24px;border-radius:7px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none}
+  .ownertag{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+  h1{font-family:var(--font-d);font-weight:700;font-size:clamp(24px,6vw,32px);line-height:1.1;margin:2px 0 4px}
+  .vlogo{display:block;max-height:56px;max-width:240px;margin:2px 0 6px}
+  .promo-head{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:16px;color:var(--ink);background:var(--bg);margin-bottom:2px}
+  .promo-head:focus{outline:none;border-color:var(--accent)}
+  .sub{color:var(--ink-dim);font-size:14px;margin-bottom:20px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;margin-bottom:14px}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:16px 16px 14px;box-shadow:var(--shadow-sm)}
+  .card .k{font-family:var(--font-d);font-weight:700;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px}
+  .big{font-family:var(--font-d);font-weight:800;font-size:32px;line-height:1}
+  .big small{font-size:15px;color:var(--ink-faint);font-weight:600}
+  .delta{display:inline-block;font-size:12.5px;font-weight:700;border-radius:999px;padding:2px 9px;margin-left:8px;vertical-align:4px}
+  .delta.up{background:#e7f5ec;color:var(--good)} .delta.down{background:#fbeceb;color:var(--bad)} .delta.flat{background:var(--panel-2);color:var(--ink-dim)}
+  .mini{color:var(--ink-dim);font-size:12.5px;margin-top:5px}
+  section{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+  section h2{font-family:var(--font-d);font-weight:700;font-size:16px;margin-bottom:4px}
+  section .hint{color:var(--ink-dim);font-size:13px;margin-bottom:12px}
+  .bar{display:flex;align-items:center;gap:10px;margin:7px 0;font-size:13.5px}
+  .bar .lbl{width:120px;flex:none;color:var(--ink)}
+  .bar .track{flex:1;height:8px;background:var(--panel-2);border-radius:99px;overflow:hidden;display:block}
+  .bar .fill{display:block;height:100%;background:var(--accent);border-radius:99px}
+  .bar .n{width:34px;text-align:right;font-weight:700;font-size:12.5px;color:var(--ink-dim)}
+  .comments{max-height:420px;overflow-y:auto;display:flex;flex-direction:column;gap:10px}
+  .comment{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+  .comment .t{font-size:14.5px}
+  .comment .at{font-size:11.5px;color:var(--ink-faint);margin-top:5px}
+  .empty{color:var(--ink-faint);font-size:14px;padding:8px 0}
+  textarea{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:12px;font-family:var(--font-b);font-size:16px;color:var(--ink);background:var(--bg);resize:vertical;min-height:84px}
+  textarea:focus{outline:none;border-color:var(--accent)}
+  .gamerow{display:flex;align-items:center;gap:11px;padding:9px 2px;font-size:15px;user-select:none}
+  .gamerow label{display:flex;align-items:center;gap:11px;flex:1;min-width:0;cursor:pointer}
+  .gamerow input{width:18px;height:18px;accent-color:var(--accent);cursor:pointer}
+  .gamerow .gname{font-weight:600}
+  .gamerow .gsub{color:var(--ink-faint);font-size:12.5px;margin-left:auto;padding-right:6px}
+  .gmove{display:flex;gap:4px;flex:none}
+  .gmove button{width:34px;height:34px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);color:var(--ink-dim);font-size:15px;line-height:1;cursor:pointer}
+  .gmove button:active{background:var(--panel-2, #efece6)}
+  .promo-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
+  .promo-row label{font-size:13.5px;color:var(--ink-dim);font-weight:600}
+  .sprow{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .sprow label{flex:none;width:44px;font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)}
+  .sprow.today label{color:var(--accent)}
+  .sprow input{flex:1;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:15px;color:var(--ink);background:var(--bg)}
+  .sprow input:focus{outline:none;border-color:var(--accent)}
+  .sprow.today input{border-color:var(--accent)}
+  input[type=date]{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
+  .counter{font-size:12px;color:var(--ink-faint);text-align:right;margin-top:4px}
+  input::placeholder,textarea::placeholder{color:var(--ink-faint);opacity:.65}
+  .btn{font-family:var(--font-d);font-weight:700;font-size:14px;border:0;border-radius:11px;padding:12px 22px;cursor:pointer;background:var(--accent);color:var(--on-accent,#fff);box-shadow:var(--shadow-sm)}
+  .btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line-2)}
+  .btn:active{transform:scale(.98)}
+  .savemsg{font-size:13.5px;font-weight:600;margin-left:6px}
+  .savemsg.ok{color:var(--good)} .savemsg.err{color:var(--bad)}
+  .center{max-width:460px;margin:80px auto;text-align:center}
+  .center h1{margin-bottom:10px}
+  .center p{color:var(--ink-dim);font-size:15px}
+  .livehint{background:var(--accent-soft);border:1px solid rgba(58,110,165,.25);border-radius:12px;padding:10px 13px;font-size:13px;color:var(--ink);margin-top:12px;display:none}
+  /* Table card designer */
+  .cardsplit{display:grid;grid-template-columns:1fr;gap:20px}
+  @media(min-width:640px){ .cardsplit{grid-template-columns:1fr 280px;align-items:start} }
+  .cardsplit canvas{width:100%;max-width:280px;border-radius:10px;box-shadow:0 10px 30px rgba(22,17,10,.18);display:block;margin:0 auto}
+  .cf{display:block;font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px}
+  .cfrow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .cfrow input[type=text]{border:1px solid var(--line-2);border-radius:10px;padding:9px 11px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
+  .cfrow input[type=text]:focus{outline:none;border-color:var(--accent)}
+  .cfrow input[type=color]{width:44px;height:36px;border:1px solid var(--line-2);border-radius:8px;padding:2px;background:var(--bg);cursor:pointer}
+  .cfrow input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent)}
+  .swatches{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .swatches .sw{width:26px;height:26px;border-radius:8px;border:1px solid var(--line-2);cursor:pointer;padding:0}
+  .iconbtn{width:30px;height:30px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+  .iconbtn svg{width:15px;height:15px}
+  .iconbtn.off{color:var(--bad);border-color:rgba(179,55,47,.4)}
+  .spcount{flex:none;width:58px;text-align:right;font-size:11.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+  /* Venue theming: when the venue's app runs a dark or colored header, the
+     page background matches it so a white logo reads here too. Sections
+     stay white; only page-level text flips. */
+  body.vd .wordmark, body.vd h1{color:#f2efe9}
+  body.vd .ownertag, body.vd .sub{color:rgba(255,255,255,.66)}
+  body.vd header{border-bottom-color:rgba(255,255,255,.22)}
+</style>
+</head>
+<body>
+<div class="wrap" id="page" style="display:none">
+  <header>
+    <span class="wordmark"><span class="wm-mark" aria-hidden="true"></span><span class="wm-name"></span></span>
+    <span class="ownertag">Owner view · private</span>
+  </header>
+
+  <h1 id="vname"></h1>
+  <div class="sub">Live numbers from your table cards. Anonymous, seen only by you. The monthly report adds the bigger local picture.</div>
+
+  <div class="cards" id="scorecards"></div>
+
+  <section>
+    <h2>Monthly report</h2>
+    <div class="hint">Your printable guest report, one permanent link. Pick any month on the page, and print or save it as a PDF from there.</div>
+    <div class="promo-row" style="margin-top:8px"><a class="btn" id="reportBtn" target="_blank" rel="noopener">View the report</a></div>
+  </section>
+
+  <section>
+    <h2>Owner promo</h2>
+    <div class="hint">Shows on your app's landing screen (the first screen diners see) until the end date, or until you clear it. Events, notices, one-off announcements. For specials that repeat every week, use Daily specials below instead. The header is optional: it appears as a small title above your promo.</div>
+    <input type="text" class="promo-head" id="promoHead" maxlength="26" placeholder="Header (optional)">
+    <div class="counter"><span id="promoHeadCount">0</span>/26</div>
+    <textarea id="promoText" maxlength="240" placeholder="Type your promo here. Diners see it on your app's landing screen. Example: Live music this Friday 7pm, no cover."></textarea>
+    <div class="counter"><span id="promoCount">0</span>/240</div>
+    <input type="url" class="promo-head" id="promoUrl" style="margin-top:10px" maxlength="500" placeholder="Link (optional), https://yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <div class="promo-row">
+      <label for="promoExp">Last day shown (optional)</label>
+      <input type="date" id="promoExp">
+      <button class="btn" id="promoSave">Save promo</button>
+      <button class="btn ghost" id="promoClear">Clear</button>
+      <span class="savemsg" id="saveMsg"></span>
+    </div>
+    <div class="livehint" id="liveHint"></div>
+  </section>
+
+  <section>
+    <h2 style="display:flex;align-items:center;gap:8px"><span id="spTitleTxt">Daily specials</span>
+      <button class="iconbtn" id="spEditT" title="Rename this section" aria-label="Rename this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+      <button class="iconbtn" id="spTagBtn" aria-label="Show or hide the label in the app"></button>
+    </h2>
+    <div id="spTitleRow" style="display:none;margin:6px 0 12px">
+      <input type="text" class="promo-head" id="spTitleIn" maxlength="40" placeholder="Daily specials">
+      <div class="counter"><span id="spTitleCount">0</span>/40</div>
+      <div class="promo-row" style="margin-top:2px">
+        <button class="btn" id="spTitleSave">Save name</button>
+        <button class="btn ghost" id="spTitleCancel">Cancel</button>
+        <span class="savemsg" id="spTitleMsg"></span>
+      </div>
+    </div>
+    <div class="hint">Repeat weekly specials, set once. Diners see only the current day's entry, as its own card on the landing screen. Leave a day blank and no card shows that day. Today's row is highlighted. The pencil renames this section, and the app's weekly screen shows the same name as its label; the eye shows or hides that label in the app.</div>
+    <div id="spRows"></div>
+    <div class="promo-row">
+      <button class="btn" id="spSave">Save specials</button>
+      <button class="btn ghost" id="spClear">Clear all</button>
+      <span class="savemsg" id="spMsg"></span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Games on your card</h2>
+    <div class="hint">What your tables can play, in the order it appears on your card. Use the arrows to reorder. Changes are live the moment you save. New games start off, and we flag them in your monthly report so you can decide. At least one game stays on.</div>
+    <div id="gameToggles"></div>
+    <div class="promo-row">
+      <button class="btn" id="gamesSave">Save games</button>
+      <span class="savemsg" id="gamesMsg"></span>
+    </div>
+  </section>
+
+  <section id="formSec" style="display:none">
+    <h2>Feedback form</h2>
+    <div class="hint">Your custom feedback form: what diners see in the suggestion box. Untick a standard question to hide it, and add up to 10 of your own. Changes are live on the next app load.</div>
+    <div id="formBody"></div>
+    <div class="promo-row">
+      <button class="btn" id="formSave">Save form</button>
+      <span class="savemsg" id="formMsg"></span>
+    </div>
+  </section>
+
+  <section id="cardSec" style="display:none">
+    <h2>Table card</h2>
+    <div class="hint">Your printable 4x6 table card with both QR codes, one for games and one for feedback. Colors start from your app branding, and your changes are remembered on this device. Always test-scan a printed card before a real print run.</div>
+    <div class="cardsplit">
+      <div>
+        <label class="cf" for="cTown" style="margin-top:0">Town line (top right, optional)</label>
+        <div class="cfrow"><input type="text" id="cTown" maxlength="30" placeholder="Springfield, USA" style="flex:1;min-width:170px"></div>
+        <label class="cf" for="cA1">Structure color (headlines, pills, bottom bar)</label>
+        <div class="cfrow"><input type="color" id="cA1"><input type="text" id="cA1Hex" style="width:110px" autocapitalize="off" spellcheck="false"></div>
+        <div class="swatches" id="cSw1"></div>
+        <label class="cf" for="cA2">Accent color (header rule, feedback pill)</label>
+        <div class="cfrow"><input type="color" id="cA2"><input type="text" id="cA2Hex" style="width:110px" autocapitalize="off" spellcheck="false"></div>
+        <div class="swatches" id="cSw2"></div>
+        <label class="cf">Header background</label>
+        <div class="cfrow"><label style="font-size:14px;display:flex;gap:7px;align-items:center"><input type="checkbox" id="cHbOn"> custom color</label><input type="color" id="cHb" style="display:none"></div>
+        <label class="cf">Dark card</label>
+        <div class="cfrow"><label style="font-size:14px;display:flex;gap:7px;align-items:center"><input type="checkbox" id="cDark"> dark card (QR panels stay white so they scan)</label></div>
+        <div class="cfrow" style="margin-top:16px">
+          <button class="btn" id="dlPrint">Download print PNG</button>
+          <button class="btn ghost" id="dlBleed">Download with bleed</button>
+        </div>
+        <div class="hint" style="margin-top:10px;margin-bottom:0">The print PNG is an exact 4x6 at 300dpi for borderless home or lab printing. The bleed version extends the background past each edge for commercial printers that trim to size.</div>
+        <div class="savemsg" id="cMsg"></div>
+      </div>
+      <canvas id="cardCanvas"></canvas>
+    </div>
+  </section>
+
+  <section>
+    <h2>How they found you</h2>
+    <div class="hint">Last 30 days of survey answers.</div>
+    <div id="discovery"></div>
+  </section>
+
+  <section id="extraSec" style="display:none">
+    <h2>Your custom questions</h2>
+    <div class="hint">This month's answers to the extra questions on your feedback form.</div>
+    <div id="extraBody"></div>
+  </section>
+
+  <section>
+    <h2>Suggestion box</h2>
+    <div class="hint">Latest comments, newest first. Anonymous by design: there is no way to know who wrote what, so read for patterns, not people.</div>
+    <div class="comments" id="comments"></div>
+  </section>
+
+  <section>
+    <h2>Games and activity</h2>
+    <div class="hint">All-time game starts, plus the last 30 days of app opens, Google review clicks, and taps on your promo card when it has a link.</div>
+    <div id="games"></div>
+  </section>
+</div>
+
+<div class="center" id="msg" style="display:none">
+  <h1 id="msgTitle"></h1>
+  <p id="msgBody"></p>
+</div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script>
+const CFG = window.OPERATOR_CONFIG || null;
+if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
+  document.body.innerHTML = '<div style="max-width:540px;margin:80px auto;font-family:system-ui,sans-serif;line-height:1.5;padding:0 20px"><h2>Almost there</h2><p>This page needs its operator config. In your fork, copy <code>public/config.example.js</code> to <code>public/config.js</code> and fill in your values. SETUP.md walks through it.</p></div>';
+  throw new Error('missing config.js');
+}
+const SUPABASE_URL = CFG.supabaseUrl;
+const SUPABASE_KEY = CFG.supabaseKey;
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const params = new URLSearchParams(location.search);
+const V = params.get('v'), K = params.get('k');
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+function showMsg(title, body){
+  $('page').style.display = 'none';
+  $('msg').style.display = 'block';
+  $('msgTitle').textContent = title;
+  $('msgBody').textContent = body;
+}
+
+function deltaChip(cur, prev){
+  if (cur == null || prev == null) return '';
+  const d = Math.round((cur - prev) * 100) / 100;
+  if (d > 0)  return `<span class="delta up">▲ +${d.toFixed(1)}</span>`;
+  if (d < 0)  return `<span class="delta down">▼ ${d.toFixed(1)}</span>`;
+  return `<span class="delta flat">even</span>`;
+}
+
+function render(s){
+  $('page').style.display = 'block';
+  $('msg').style.display = 'none';
+  // Venue logo up top when it is a URL; the venue name in text otherwise
+  // (same convention as the diner app: venues.logo holds a URL or a wordmark).
+  if (/^https?:\/\//i.test(s.logo || '')) $('vname').innerHTML = `<img class="vlogo" src="${esc(s.logo)}" alt="${esc(s.name)}">`;
+  else $('vname').textContent = s.name;
+
+  const tm = s.this_month || {}, lm = s.last_month || {};
+  $('scorecards').innerHTML = `
+    <div class="card"><div class="k">Food · this month</div>
+      <div class="big">${tm.food ?? '–'}<small> /5</small>${deltaChip(tm.food, lm.food)}</div>
+      <div class="mini">last month: ${lm.food ?? 'no data'}</div></div>
+    <div class="card"><div class="k">Service · this month</div>
+      <div class="big">${tm.service ?? '–'}<small> /5</small>${deltaChip(tm.service, lm.service)}</div>
+      <div class="mini">last month: ${lm.service ?? 'no data'}</div></div>
+    <div class="card"><div class="k">Responses · this month</div>
+      <div class="big">${tm.count ?? 0}</div>
+      <div class="mini">last month: ${lm.count ?? 0}</div></div>`;
+
+  const disc = s.discovery_30d || [];
+  const dmax = Math.max(1, ...disc.map(d => d.n));
+  $('discovery').innerHTML = disc.length
+    ? disc.map(d => `<div class="bar"><span class="lbl">${esc(d.k)}</span><span class="track"><span class="fill" style="width:${Math.round(d.n/dmax*100)}%"></span></span><span class="n">${d.n}</span></div>`).join('')
+    : '<div class="empty">No survey answers yet in the last 30 days.</div>';
+
+  renderExtras(s);
+  renderFormEditor(s);
+
+  const com = s.comments || [];
+  $('comments').innerHTML = com.length
+    ? com.map(c => `<div class="comment"><div class="t">${esc(c.t)}</div><div class="at">${new Date(c.at).toLocaleString('en-US',{month:'short',day:'numeric',hour:'numeric',minute:'2-digit'})}</div></div>`).join('')
+    : '<div class="empty">No comments yet. They land here the moment a diner sends one.</div>';
+
+  const gp = s.game_plays || [];
+  const ev = s.events_30d || {};
+  const gmax = Math.max(1, ...gp.map(g => g.plays));
+  const gameName = g => ({guess_the_split:'Guess the Split', who_knows_who:'Who Knows Who', wordy:'Wordy', trivia:'Trivia', who_invited_you:'Who Invited You?', fortune_teller:'Fortune Teller', all_talk:'All Talk', cornhole:'Cornhole', quick_pour:GNAME.quick_pour, horse_racing:'Horse Racing', ring_toss:'Ring Toss'}[g] || g);
+  $('games').innerHTML =
+    (gp.length ? gp.map(g => `<div class="bar"><span class="lbl">${esc(gameName(g.game))}</span><span class="track"><span class="fill" style="width:${Math.round(g.plays/gmax*100)}%"></span></span><span class="n">${g.plays}</span></div>`).join('') : '<div class="empty">No game plays recorded yet.</div>')
+    + `<div class="mini" style="margin-top:10px">Last 30 days: ${ev.opens ?? 0} app opens · ${ev.review_clicks ?? 0} Google review clicks${
+        (ev.promo_clicks || (s.promo && s.promo.url)) ? ` · ${ev.promo_clicks ?? 0} promo taps` : ''}</div>`;
+
+  // game toggles. s.games is the enabled list; null (pre-migration or never
+  // saved) means everything on. When a new game ships it gets added to
+  // GAME_LIB below AND to v_allowed in set_venue_games, and shows up here
+  // unchecked for existing venues (new games launch off, announced in the
+  // monthly report).
+  renderGameToggles(s.games || null);
+
+  // promo editor state
+  const p = s.promo || {};
+  $('promoHead').value = p.header || '';
+  $('promoHeadCount').textContent = ($('promoHead').value).length;
+  $('promoText').value = p.text || '';
+  $('promoCount').textContent = ($('promoText').value).length;
+  $('promoUrl').value = p.url || '';
+  $('promoExp').value = p.expires || '';
+  renderSpecials(s.specials || {});
+  refreshLiveHint();
+}
+
+/* ---- custom feedback questions (35_feedback_forms.sql): aggregate this
+   month's extra answers against the venue's active form. Ratings average,
+   choices count per option (multi answers count each pick), text lists the
+   latest ten. Hidden entirely when the form has no extra questions or the
+   migration has not run. ---- */
+async function renderExtras(s){
+  const list = s.extras_month || [];
+  let form = null;
+  try {
+    const ids = s.form_custom ? ['global', V] : ['global'];
+    const { data, error } = await db.from('feedback_forms').select('*').in('id', ids);
+    if(!error && data){
+      const rows = {}; data.forEach(r => { rows[r.id] = r; });
+      form = (s.form_custom && rows[V]) ? rows[V] : rows.global;
+    }
+  } catch(e){}
+  const extras = (form && Array.isArray(form.extras)) ? form.extras : [];
+  if(!extras.length){ $('extraSec').style.display = 'none'; return; }
+  $('extraBody').innerHTML = extras.map(q => {
+    const vals = list.map(e => e && e[q.id]).filter(x => x !== undefined && x !== null);
+    let body;
+    if(q.type === 'rating'){
+      const nums = vals.filter(x => typeof x === 'number');
+      body = nums.length
+        ? `<b>${(nums.reduce((a,b)=>a+b,0)/nums.length).toFixed(2)}</b> average &middot; ${nums.length} answer${nums.length===1?'':'s'}`
+        : '<span class="empty">No answers yet this month.</span>';
+    } else if(q.type === 'choice'){
+      const counts = {};
+      vals.forEach(x => { (Array.isArray(x) ? x : [x]).forEach(o => { counts[o] = (counts[o]||0) + 1; }); });
+      const entries = Object.entries(counts).sort((a,b) => b[1]-a[1]);
+      body = entries.length
+        ? entries.map(([o,n]) => `${esc(o)} <b>${n}</b>`).join(' &middot; ')
+        : '<span class="empty">No answers yet this month.</span>';
+    } else {
+      const texts = vals.filter(x => typeof x === 'string').slice(0, 10);
+      body = texts.length
+        ? texts.map(t => `<div class="comment"><div>${esc(t)}</div></div>`).join('')
+        : '<span class="empty">No answers yet this month.</span>';
+    }
+    return `<div style="margin-top:12px"><div style="font-weight:600">${esc(q.label)}</div><div style="margin-top:4px;font-size:14.5px">${body}</div></div>`;
+  }).join('');
+  $('extraSec').style.display = 'block';
+}
+
+/* ---- feedback form editor (42_owner_form_editor.sql) ----
+   Owner-side twin of the operator's form builder: shown only while the
+   venue's paid form_custom flag is on. Seeds from a copy of the global
+   form on first open (same replace-model as the operator side); saves
+   through set_venue_form, the key + passphrase gated RPC with the same
+   server-side validation. */
+const FORM_CORE_META = [
+  ['food',      'How was the food? (1-5 rating)'],
+  ['service',   'How was the service? (1-5 rating)'],
+  ['discovery', "How'd you end up here tonight? (choice)"],
+  ['plate',     'In the food itself, what matters most? (choice)'],
+  ['visit',     'About the visit, what matters most? (choice)'],
+];
+const formQid = ()=> 'x' + Math.random().toString(36).slice(2, 10);
+let feCore = null, feExtras = null;
+async function renderFormEditor(s){
+  if(!s.form_custom){ $('formSec').style.display = 'none'; return; }
+  try {
+    const { data, error } = await db.from('feedback_forms').select('*').in('id', ['global', V]);
+    if(error) return;   // pre-35 database: leave the section hidden
+    const rows = {}; (data || []).forEach(r => { rows[r.id] = r; });
+    const seed = rows[V] || rows.global || { core:{}, extras:[] };
+    feCore = Object.assign({ food:true, service:true, discovery:true, plate:true, visit:true }, seed.core || {});
+    feExtras = Array.isArray(seed.extras) ? JSON.parse(JSON.stringify(seed.extras)) : [];
+    $('formSec').style.display = '';
+    fePaint();
+  } catch(e){}
+}
+function feCollectCore(){
+  const c = {};
+  document.querySelectorAll('#formBody [data-core]').forEach(x => { c[x.dataset.core] = x.checked; });
+  return Object.keys(c).length ? c : feCore;
+}
+function fePaint(){
+  $('formBody').innerHTML = `
+    <div style="font-weight:600;font-size:14px;margin-top:4px">Standard questions</div>
+    ${FORM_CORE_META.map(([k, label]) => `
+      <label class="gamerow" style="padding:6px 2px">
+        <input type="checkbox" data-core="${k}" ${feCore[k] !== false ? 'checked' : ''}><span style="font-size:14.5px">${esc(label)}</span>
+      </label>`).join('')}
+    <div style="font-weight:600;font-size:14px;margin-top:14px">Your questions <span style="font-weight:400;color:var(--ink-faint);font-size:12.5px">(asked before the comment box, up to 10)</span></div>
+    <div id="feList">
+      ${feExtras.length ? feExtras.map((x, i) => `
+        <div class="gamerow" data-ix="${i}">
+          <span style="flex:1;min-width:0;font-size:14.5px">${esc(x.label)} <span style="color:var(--ink-faint);font-size:12px">· ${x.type === 'rating' ? '1-5 rating' : x.type === 'text' ? 'short text' : (x.multi ? 'choice, pick many' : 'choice, pick one') + ': ' + esc((x.opts || []).join(' / '))}</span></span>
+          <span class="gmove"><button type="button" data-mv="-1" aria-label="Move up">▲</button><button type="button" data-mv="1" aria-label="Move down">▼</button><button type="button" data-del aria-label="Remove">×</button></span>
+        </div>`).join('') : '<div class="empty">None yet.</div>'}
+    </div>
+    <div class="promo-row" style="margin-top:10px">
+      <select id="feType" style="border:1px solid var(--line-2);border-radius:10px;padding:10px 11px;font-family:var(--font-b);font-size:14px;background:var(--bg);color:var(--ink)">
+        <option value="rating">Rating 1-5</option><option value="choice">Multiple choice</option><option value="text">Short text</option>
+      </select>
+      <input type="text" class="promo-head" id="feLabel" maxlength="120" placeholder="The question diners see" style="flex:1;min-width:180px;margin-bottom:0">
+    </div>
+    <div id="feChoiceOpts" style="display:none;margin-top:8px">
+      <textarea id="feOpts" rows="3" style="min-height:64px" placeholder="One option per line (2 to 12)"></textarea>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="feMulti" style="width:17px;height:17px;accent-color:var(--accent)"> Allow multiple answers
+      </label>
+    </div>
+    <div class="promo-row" style="margin-top:8px">
+      <button class="btn ghost" id="feAdd">Add question</button>
+      <span class="savemsg" id="feAddMsg"></span>
+    </div>`;
+  $('feType').onchange = ()=>{ $('feChoiceOpts').style.display = $('feType').value === 'choice' ? 'block' : 'none'; };
+  document.querySelectorAll('#feList [data-mv]').forEach(b => b.onclick = ()=>{
+    const i = +b.closest('[data-ix]').dataset.ix, j = i + (+b.dataset.mv);
+    if(j < 0 || j >= feExtras.length) return;
+    Object.assign(feCore, feCollectCore());
+    const t = feExtras[i]; feExtras[i] = feExtras[j]; feExtras[j] = t;
+    fePaint();
+  });
+  document.querySelectorAll('#feList [data-del]').forEach(b => b.onclick = ()=>{
+    Object.assign(feCore, feCollectCore());
+    feExtras.splice(+b.closest('[data-ix]').dataset.ix, 1);
+    fePaint();
+  });
+  $('feAdd').onclick = ()=>{
+    const m = $('feAddMsg');
+    const type = $('feType').value, label = $('feLabel').value.trim();
+    if(!label){ m.className='savemsg err'; m.textContent='Write the question first.'; return; }
+    if(feExtras.length >= 10){ m.className='savemsg err'; m.textContent='10 questions is the cap. Remove one first.'; return; }
+    const q = { id: formQid(), type, label };
+    if(type === 'choice'){
+      const opts = $('feOpts').value.split('\n').map(x=>x.trim()).filter(Boolean).slice(0, 12);
+      if(opts.length < 2){ m.className='savemsg err'; m.textContent='A choice question needs at least 2 options.'; return; }
+      q.opts = opts; q.multi = $('feMulti').checked;
+    }
+    Object.assign(feCore, feCollectCore());
+    feExtras.push(q);
+    fePaint();
+  };
+}
+$('formSave').onclick = async ()=>{
+  if(feCore === null) return;
+  const msg = $('formMsg');
+  msg.className='savemsg'; msg.textContent='Saving…';
+  try {
+    const { data, error } = await db.rpc('set_venue_form', { p_venue_id: V, p_key: K, p_core: feCollectCore(), p_extras: feExtras, p_pass: P });
+    if (error || data !== true) throw new Error();
+    Object.assign(feCore, feCollectCore());
+    msg.className='savemsg ok'; msg.textContent='Saved. Live on the next app load.';
+  } catch(e){
+    msg.className='savemsg err'; msg.textContent='Could not save. Try again.';
+  }
+  setTimeout(()=>{ msg.textContent=''; }, 4000);
+};
+
+/* ---- daily specials (32_daily_specials.sql) ---- */
+const SP_DAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
+const SP_TODAY = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+function renderSpecials(sp){
+  $('spRows').innerHTML = SP_DAYS.map(([k, label]) => `
+    <div class="sprow${k === SP_TODAY ? ' today' : ''}">
+      <label for="sp_${k}">${label}</label>
+      <input type="text" id="sp_${k}" data-day="${k}" maxlength="200"
+        placeholder="${k === 'mon' ? 'Half price specialty cocktails, $2 off Modelo drafts' : ''}">
+      <span class="spcount" id="spc_${k}">0/200</span>
+    </div>`).join('');
+  SP_DAYS.forEach(([k]) => {
+    const i = $('sp_' + k), c = $('spc_' + k);
+    i.value = (sp && sp[k]) || '';
+    const upd = ()=>{ c.textContent = i.value.length + '/200'; };
+    i.addEventListener('input', upd);
+    upd();
+  });
+}
+
+/* ---- specials title + tag (43_specials_meta.sql): the pencil renames the
+   section (and the app's specials-screen label), the eye hides that label
+   in the app. State prefills from the public_venues branding fetch. ---- */
+const SP_EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const SP_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
+let spMeta = { title: null, show: true };
+function spPaintMeta(){
+  $('spTitleTxt').textContent = spMeta.title || 'Daily specials';
+  $('spTagBtn').innerHTML = spMeta.show ? SP_EYE_ON : SP_EYE_OFF;
+  $('spTagBtn').classList.toggle('off', !spMeta.show);
+  $('spTagBtn').title = spMeta.show ? 'The label shows in the app. Tap to hide it.' : 'The label is hidden in the app. Tap to show it.';
+}
+async function spSaveMeta(title, show, msgEl){
+  msgEl.className = 'savemsg'; msgEl.textContent = 'Saving…';
+  try {
+    const { data, error } = await db.rpc('set_venue_specials_meta', { p_venue_id: V, p_key: K, p_title: title || null, p_show: show, p_pass: P });
+    if (error || data !== true) throw new Error();
+    spMeta = { title: (title || '').trim().slice(0, 40) || null, show };
+    spPaintMeta();
+    msgEl.className = 'savemsg ok'; msgEl.textContent = 'Saved.';
+    setTimeout(()=>{ msgEl.textContent = ''; }, 3000);
+    return true;
+  } catch(e){
+    msgEl.className = 'savemsg err'; msgEl.textContent = 'Could not save. Try again.';
+    setTimeout(()=>{ msgEl.textContent = ''; }, 4000);
+    return false;
+  }
+}
+$('spEditT').onclick = ()=>{
+  $('spTitleRow').style.display = '';
+  $('spTitleIn').value = spMeta.title || '';
+  $('spTitleCount').textContent = $('spTitleIn').value.length;
+  $('spTitleIn').focus();
+};
+$('spTitleIn').addEventListener('input', ()=>{ $('spTitleCount').textContent = $('spTitleIn').value.length; });
+$('spTitleSave').onclick = async ()=>{
+  if (await spSaveMeta($('spTitleIn').value, spMeta.show, $('spTitleMsg'))) $('spTitleRow').style.display = 'none';
+};
+$('spTitleCancel').onclick = ()=>{ $('spTitleRow').style.display = 'none'; };
+$('spTagBtn').onclick = ()=> spSaveMeta(spMeta.title || '', !spMeta.show, $('spMsg'));
+spPaintMeta();
+async function saveSpecials(){
+  const msg = $('spMsg');
+  const sp = {};
+  SP_DAYS.forEach(([k]) => { const t = $('sp_' + k).value.trim(); if (t) sp[k] = t; });
+  msg.className='savemsg'; msg.textContent='Saving…';
+  try {
+    const { data, error } = await db.rpc('set_venue_specials', { p_venue_id: V, p_key: K, p_specials: Object.keys(sp).length ? sp : null, p_pass: P });
+    if (error || data !== true) throw new Error();
+    msg.className='savemsg ok'; msg.textContent='Saved. Live on your tables now.';
+  } catch(e){
+    msg.className='savemsg err'; msg.textContent='Could not save. Try again.';
+  }
+  setTimeout(()=>{ msg.textContent=''; }, 4000);
+}
+$('spSave').onclick  = saveSpecials;
+$('spClear').onclick = () => { SP_DAYS.forEach(([k]) => { $('sp_' + k).value = ''; }); saveSpecials(); };
+renderSpecials({});  // real values land when the stats call resolves
+
+// Two different jobs here. The scheme allowlist (http, https, mailto, tel) is
+// the safety measure: this link is tapped by every diner at the venue, so
+// javascript: and data: must never survive. Adding https:// to a bare domain
+// is only convenience, because owners type "mysite.com/menu" and a bare domain
+// in an href resolves as a path on the app domain. mailto: and tel: are kept
+// exactly as typed, so "call to reserve" and "email us" links work.
+function normalizeUrl(u){
+  const s = String(u || '').trim();
+  if (!s) return '';
+  if (/^(mailto|tel):/i.test(s)) return s;
+  return /^[a-z][a-z0-9+.-]*:\/\//i.test(s) ? s : 'https://' + s;
+}
+function urlOk(s){
+  if (s.length > 500) return false;
+  if (/^mailto:/i.test(s)) return /^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$/i.test(s);
+  if (/^tel:/i.test(s))    return /^tel:[+0-9().-]{5,}$/i.test(s);
+  return /^https?:\/\/[^\/\s]+\.[^\/\s]+/i.test(s);
+}
+
+// Internal game ids -> diner-facing names. Order here is display order.
+const GAME_LIB = [
+  { id:'who_knows_who',        name:'Who Knows Who',    sub:'groups, pass the phone' },
+  { id:'guess_the_split',    name:'Guess the Split',  sub:'solo or up to 8' },
+  { id:'who_invited_you', name:'Who Invited You?', sub:'3 to 8 players' },
+  { id:'wordy',           name:'Wordy',            sub:'solo word puzzle' },
+  { id:'trivia',          name:'Trivia',           sub:'solo or vs. up to 8' },
+  { id:'fortune_teller',  name:'Fortune Teller',   sub:'solo, quick read' },
+  { id:'all_talk',        name:'All Talk',         sub:'2 to 8, bid and prove' },
+  { id:'cornhole',        name:'Cornhole',         sub:'bag toss, teams or solo' },
+  { id:'quick_pour',      name:GNAME.quick_pour,       sub:'timed bar game, solo' },
+  // excl: venue-exclusive (38_horse_racing.sql). The row only renders for a
+  // venue that already has the game, and the server refuses to ADD it from
+  // this page, so unticking it here means only the platform can restore it.
+  { id:'horse_racing',    name:'Horse Racing',     sub:'dice race betting, solo or up to 8', excl:true },
+  { id:'ring_toss',       name:'Ring Toss',        sub:'swing the ring onto the hook, solo', excl:true },
+];
+function renderGameToggles(list){
+  // rows render in the venue's SAVED order (33 preserves it server-side and
+  // the app shows cards in this order); games not in the list follow after
+  const saved = (list || []).filter(id => GAME_LIB.some(g => g.id === id));
+  // exclusives never render as an addable row; they only appear if this
+  // venue's saved list already carries them
+  const order = saved.concat(GAME_LIB.filter(g => !saved.includes(g.id) && !g.excl).map(g => g.id));
+  $('gameToggles').innerHTML = order.map(id=>{
+    const g = GAME_LIB.find(x => x.id === id);
+    const on = !list || !list.length || list.includes(g.id);
+    return `<div class="gamerow" data-id="${g.id}">
+      <label><input type="checkbox" value="${g.id}" ${on?'checked':''}><span class="gname">${g.name}</span><span class="gsub">${g.sub}</span></label>
+      <span class="gmove"><button type="button" data-mv="-1" aria-label="Move ${g.name} up">▲</button><button type="button" data-mv="1" aria-label="Move ${g.name} down">▼</button></span>
+    </div>`;
+  }).join('');
+  document.querySelectorAll('#gameToggles .gmove button').forEach(b => b.onclick = ()=>{
+    const row = b.closest('.gamerow');
+    if (b.dataset.mv === '-1' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+    if (b.dataset.mv === '1'  && row.nextElementSibling)     row.parentNode.insertBefore(row.nextElementSibling, row);
+  });
+}
+$('gamesSave').onclick = async () => {
+  const ids = [...document.querySelectorAll('#gameToggles input:checked')].map(i=>i.value);
+  const msg = $('gamesMsg');
+  if (!ids.length){
+    msg.className='savemsg err'; msg.textContent='Keep at least one game on.';
+    setTimeout(()=>{ msg.textContent=''; }, 4000);
+    return;
+  }
+  msg.className='savemsg'; msg.textContent='Saving…';
+  try {
+    const { data, error } = await db.rpc('set_venue_games', { p_venue_id: V, p_key: K, p_games: ids, p_pass: P });
+    if (error || data !== true) throw new Error();
+    msg.className='savemsg ok'; msg.textContent='Saved. Live on your tables now.';
+  } catch(e){
+    msg.className='savemsg err'; msg.textContent='Could not save. Try again.';
+  }
+  setTimeout(()=>{ msg.textContent=''; }, 4000);
+};
+
+function refreshLiveHint(){
+  const t = $('promoText').value.trim();
+  const head = $('promoHead').value.trim();
+  const url = $('promoUrl').value.trim();
+  const exp = $('promoExp').value;
+  const hint = $('liveHint');
+  if (!t){ hint.style.display = 'none'; return; }
+  hint.style.display = 'block';
+  hint.textContent = 'Diners currently see: "' + (head ? head + ' · ' : '') + t + '"'
+    + (exp ? ' (through ' + exp + ')' : ' (until cleared)')
+    + (url ? ' Tapping it opens ' + url + ' in a new tab.' : '');
+}
+
+/* Optional passphrase (29_owner_passphrase.sql). Most venues have none and
+   never see any of this. When one is set, the server answers
+   {"need_pass": true} until the right passphrase arrives; we remember it
+   per device so an owner types it roughly once, ever. */
+let P = null;
+try { P = localStorage.getItem('st_opass_' + V) || null; } catch(e){}
+function rememberPass(p){ P = p; try { localStorage.setItem('st_opass_' + V, p); } catch(e){} }
+if($('reportBtn')) $('reportBtn').href = 'report.html?v=' + encodeURIComponent(V || '') + '&k=' + encodeURIComponent(K || '');
+
+function showPassGate(wrong){
+  $('page').style.display = 'none';
+  $('msg').style.display = 'block';
+  $('msgTitle').textContent = 'One more thing';
+  $('msgBody').innerHTML = '';
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <p style="margin-bottom:14px">${wrong ? 'That passphrase did not match. Try again, or ask ${esc(CFG.brandName)} if you forgot it.' : 'This dashboard is protected by a passphrase. Enter it once and this device remembers it.'}</p>
+    <input type="password" id="passInput" autocomplete="current-password" style="width:100%;max-width:280px;padding:12px 14px;font-size:16px;border:1px solid rgba(22,17,10,.2);border-radius:12px" />
+    <div style="margin-top:12px"><button id="passGo" class="btn" style="padding:12px 26px">Open dashboard</button></div>`;
+  $('msgBody').appendChild(wrap);
+  const go = ()=>{ const p = $('passInput').value.trim(); if(p) load(p); };
+  $('passGo').onclick = go;
+  $('passInput').addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
+  $('passInput').focus();
+}
+
+async function load(tryPass){
+  if (!V || !K){ showMsg('Missing link details', 'Open this page using the full owner link you were given.'); return; }
+  const pass = tryPass !== undefined ? tryPass : P;
+  let res;
+  try { res = await db.rpc('get_owner_stats', { p_venue_id: V, p_key: K, p_pass: pass }); }
+  catch(e){ showMsg('One sec', 'We could not reach the server. Check your connection and try again.'); return; }
+  if (res.error){ showMsg('One sec', 'We could not reach the server. Check your connection and try again.'); return; }
+  if (!res.data){ showMsg('That link is not valid', 'This owner link does not match. Check for a truncated URL, or ask ' + CFG.brandName + ' for a fresh link.'); return; }
+  if (res.data.need_pass){ showPassGate(pass != null); return; }
+  if (tryPass !== undefined) rememberPass(tryPass);
+  $('msg').style.display = 'none';
+  $('page').style.display = '';
+  render(res.data);
+}
+
+$('promoText').addEventListener('input', () => { $('promoCount').textContent = $('promoText').value.length; });
+$('promoHead').addEventListener('input', () => { $('promoHeadCount').textContent = $('promoHead').value.length; });
+
+async function savePromo(text, expires, header, url){
+  const msg = $('saveMsg');
+  const link = normalizeUrl(url);
+  if (link && !urlOk(link)){
+    msg.className = 'savemsg err'; msg.textContent = 'That link does not look right. Nothing was saved.';
+    setTimeout(() => { msg.textContent = ''; }, 5000);
+    return;
+  }
+  $('promoUrl').value = link;   // show the owner exactly what gets saved
+  msg.className = 'savemsg'; msg.textContent = 'Saving…';
+  try {
+    const { data, error } = await db.rpc('set_venue_promo', { p_venue_id: V, p_key: K, p_text: text, p_expires: expires || null, p_header: header || null, p_url: link || null, p_pass: P });
+    if (error || data !== true) throw new Error();
+    msg.className = 'savemsg ok'; msg.textContent = text.trim() ? 'Saved. It is live now.' : 'Cleared.';
+    refreshLiveHint();
+  } catch(e){
+    msg.className = 'savemsg err'; msg.textContent = 'Could not save. Try again.';
+  }
+  setTimeout(() => { msg.textContent = ''; }, 4000);
+}
+
+$('promoSave').onclick  = () => savePromo($('promoText').value, $('promoExp').value, $('promoHead').value, $('promoUrl').value);
+$('promoClear').onclick = () => { $('promoText').value = ''; $('promoCount').textContent = '0'; $('promoHead').value = ''; $('promoHeadCount').textContent = '0'; $('promoUrl').value = ''; $('promoExp').value = ''; savePromo('', null, null, null); };
+$('promoExp').addEventListener('change', refreshLiveHint);
+$('promoUrl').addEventListener('change', refreshLiveHint);
+
+/* ============================================================
+   VENUE BRANDING + TABLE CARD (self-serve since Aug 2026:
+   subscribers should not need the operator for their card).
+   Branding comes from public_venues, the same anon view the
+   diner app reads, so this needs no new server surface. The
+   QR encoder and the card renderer below are the SAME code as
+   the operator dashboard (ported verbatim from admin.html);
+   fix bugs in both places.
+   ============================================================ */
+/* ============================================================
+   Self-contained QR encoder (ISO/IEC 18004), byte mode, ECC
+   level Q, versions 1..10. Ported VERBATIM from the verified
+   encoder in tools/qr-maker.html (output machine-decode
+   checked there); only the export differs, exposing the raw
+   module matrix for canvas drawing. Do not edit the algorithm.
+   ============================================================ */
+const QR = (() => {
+  const EXP = new Array(256), LOG = new Array(256);
+  for (let i = 0, x = 1; i < 256; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11D; }
+  LOG[1] = 0;
+  const gmul = (a, b) => (a === 0 || b === 0) ? 0 : EXP[(LOG[a] + LOG[b]) % 255];
+  const BLOCKS = {
+    1:[13,[[1,13]]], 2:[22,[[1,22]]], 3:[18,[[2,17]]], 4:[26,[[2,24]]],
+    5:[18,[[2,15],[2,16]]], 6:[24,[[4,19]]], 7:[18,[[2,14],[4,15]]],
+    8:[22,[[4,18],[2,19]]], 9:[20,[[4,16],[4,17]]], 10:[24,[[6,19],[2,20]]],
+  };
+  const ALIGN = {2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46],10:[6,28,50]};
+  function dataCapacity(v){ const [,bl] = BLOCKS[v]; return bl.reduce((s,[n,d]) => s + n*d, 0); }
+  function pickVersion(len){
+    for (let v = 1; v <= 10; v++){
+      const countBits = v <= 9 ? 8 : 16;
+      const bits = 4 + countBits + 8*len;
+      if (bits <= dataCapacity(v)*8) return v;
+    }
+    throw new Error("URL too long for this generator (version 10 max)");
+  }
+  function makeCodewords(bytes, v){
+    const capacity = dataCapacity(v);
+    const countBits = v <= 9 ? 8 : 16;
+    const bits = [];
+    const push = (val, n) => { for (let i = n-1; i >= 0; i--) bits.push((val >> i) & 1); };
+    push(0b0100, 4);
+    push(bytes.length, countBits);
+    bytes.forEach(b => push(b, 8));
+    for (let i = 0; i < 4 && bits.length < capacity*8; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    const cw = [];
+    for (let i = 0; i < bits.length; i += 8){
+      let b = 0; for (let j = 0; j < 8; j++) b = (b<<1) | bits[i+j];
+      cw.push(b);
+    }
+    const pads = [0xEC, 0x11];
+    for (let i = 0; cw.length < capacity; i++) cw.push(pads[i % 2]);
+    return cw;
+  }
+  function eccForBlock(data, ecCount){
+    let gen = [1];
+    for (let i = 0; i < ecCount; i++){
+      const next = new Array(gen.length + 1).fill(0);
+      for (let j = 0; j < gen.length; j++){
+        next[j] ^= gmul(gen[j], EXP[i]);
+        next[j+1] ^= gen[j];
+      }
+      gen = next;
+    }
+    gen.reverse();
+    const res = data.concat(new Array(ecCount).fill(0));
+    for (let i = 0; i < data.length; i++){
+      const f = res[i];
+      if (f === 0) continue;
+      for (let j = 0; j < gen.length; j++) res[i+j] ^= gmul(gen[j], f);
+    }
+    return res.slice(data.length);
+  }
+  function interleave(cw, v){
+    const [ec, layout] = BLOCKS[v];
+    const blocks = [];
+    let pos = 0;
+    layout.forEach(([n, dlen]) => {
+      for (let i = 0; i < n; i++){
+        const d = cw.slice(pos, pos + dlen); pos += dlen;
+        blocks.push({ d, e: eccForBlock(d, ec) });
+      }
+    });
+    const out = [];
+    const maxD = Math.max(...blocks.map(b => b.d.length));
+    for (let i = 0; i < maxD; i++) blocks.forEach(b => { if (i < b.d.length) out.push(b.d[i]); });
+    for (let i = 0; i < ec; i++) blocks.forEach(b => out.push(b.e[i]));
+    return out;
+  }
+  const bchDigit = n => { let d = 0; while (n){ d++; n >>>= 1; } return d; };
+  const G15 = 0b10100110111, G15M = 0b101010000010010, G18 = 0b1111100100101;
+  function bch15(data){
+    let d = data << 10;
+    while (bchDigit(d) - bchDigit(G15) >= 0) d ^= G15 << (bchDigit(d) - bchDigit(G15));
+    return ((data << 10) | d) ^ G15M;
+  }
+  function bch18(data){
+    let d = data << 12;
+    while (bchDigit(d) - bchDigit(G18) >= 0) d ^= G18 << (bchDigit(d) - bchDigit(G18));
+    return (data << 12) | d;
+  }
+  const MASKS = [
+    (i,j) => (i+j) % 2 === 0,
+    (i,j) => i % 2 === 0,
+    (i,j) => j % 3 === 0,
+    (i,j) => (i+j) % 3 === 0,
+    (i,j) => (Math.floor(i/2) + Math.floor(j/3)) % 2 === 0,
+    (i,j) => (i*j) % 2 + (i*j) % 3 === 0,
+    (i,j) => ((i*j) % 2 + (i*j) % 3) % 2 === 0,
+    (i,j) => ((i*j) % 3 + (i+j) % 2) % 2 === 0,
+  ];
+  function build(v, dataCw, mask){
+    const mc = v*4 + 17;
+    const m = Array.from({length: mc}, () => new Array(mc).fill(null));
+    const setFinder = (r, c) => {
+      for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++){
+        const rr = r+i, cc = c+j;
+        if (rr < 0 || rr >= mc || cc < 0 || cc >= mc) continue;
+        m[rr][cc] = (i >= 0 && i <= 6 && (j === 0 || j === 6)) ||
+                    (j >= 0 && j <= 6 && (i === 0 || i === 6)) ||
+                    (i >= 2 && i <= 4 && j >= 2 && j <= 4);
+      }
+    };
+    setFinder(0, 0); setFinder(0, mc-7); setFinder(mc-7, 0);
+    const ap = ALIGN[v] || [];
+    ap.forEach(r => ap.forEach(c => {
+      if (m[r][c] !== null) return;
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++)
+        m[r+i][c+j] = Math.max(Math.abs(i), Math.abs(j)) !== 1;
+    }));
+    for (let i = 8; i < mc-8; i++){
+      if (m[i][6] === null) m[i][6] = i % 2 === 0;
+      if (m[6][i] === null) m[6][i] = i % 2 === 0;
+    }
+    const f = bch15((0b11 << 3) | mask);
+    for (let i = 0; i < 15; i++){
+      const bit = ((f >> i) & 1) === 1;
+      if (i < 6) m[i][8] = bit;
+      else if (i < 8) m[i+1][8] = bit;
+      else m[mc-15+i][8] = bit;
+      if (i < 8) m[8][mc-i-1] = bit;
+      else if (i < 9) m[8][15-i-1+1] = bit;
+      else m[8][15-i-1] = bit;
+    }
+    m[mc-8][8] = true;
+    if (v >= 7){
+      const vi = bch18(v);
+      for (let i = 0; i < 18; i++){
+        const bit = ((vi >> i) & 1) === 1;
+        m[Math.floor(i/3)][i%3 + mc - 8 - 3] = bit;
+        m[i%3 + mc - 8 - 3][Math.floor(i/3)] = bit;
+      }
+    }
+    let inc = -1, row = mc-1, bitIdx = 7, byteIdx = 0;
+    for (let col = mc-1; col > 0; col -= 2){
+      if (col === 6) col--;
+      while (true){
+        for (let c = 0; c < 2; c++){
+          if (m[row][col-c] === null){
+            let dark = false;
+            if (byteIdx < dataCw.length) dark = ((dataCw[byteIdx] >>> bitIdx) & 1) === 1;
+            if (MASKS[mask](row, col-c)) dark = !dark;
+            m[row][col-c] = dark;
+            bitIdx--; if (bitIdx === -1){ byteIdx++; bitIdx = 7; }
+          }
+        }
+        row += inc;
+        if (row < 0 || row >= mc){ row -= inc; inc = -inc; break; }
+      }
+    }
+    return m;
+  }
+  function penalty(m){
+    const mc = m.length;
+    let p = 0;
+    for (let pass = 0; pass < 2; pass++){
+      for (let i = 0; i < mc; i++){
+        let run = 1;
+        for (let j = 1; j < mc; j++){
+          const cur = pass ? m[j][i] : m[i][j], prev = pass ? m[j-1][i] : m[i][j-1];
+          if (cur === prev) run++;
+          else { if (run >= 5) p += 3 + (run - 5); run = 1; }
+        }
+        if (run >= 5) p += 3 + (run - 5);
+      }
+    }
+    for (let i = 0; i < mc-1; i++) for (let j = 0; j < mc-1; j++)
+      if (m[i][j] === m[i][j+1] && m[i][j] === m[i+1][j] && m[i][j] === m[i+1][j+1]) p += 3;
+    const pat = [true,false,true,true,true,false,true];
+    const light4 = (arr, s) => s >= 0 && s+3 < arr.length && !arr[s] && !arr[s+1] && !arr[s+2] && !arr[s+3];
+    for (let pass = 0; pass < 2; pass++){
+      for (let i = 0; i < mc; i++){
+        const line = [];
+        for (let j = 0; j < mc; j++) line.push(pass ? m[j][i] : m[i][j]);
+        for (let j = 0; j <= mc-7; j++){
+          let ok = true;
+          for (let k = 0; k < 7; k++) if (line[j+k] !== pat[k]){ ok = false; break; }
+          if (ok && (light4(line, j-4) || light4(line, j+7))) p += 40;
+        }
+      }
+    }
+    let dark = 0;
+    for (let i = 0; i < mc; i++) for (let j = 0; j < mc; j++) if (m[i][j]) dark++;
+    p += Math.floor(Math.abs(dark*100/(mc*mc) - 50) / 5) * 10;
+    return p;
+  }
+  function encode(text){
+    const bytes = Array.from(new TextEncoder().encode(text));
+    const v = pickVersion(bytes.length);
+    const cw = interleave(makeCodewords(bytes, v), v);
+    let best = null, bestP = Infinity;
+    for (let mask = 0; mask < 8; mask++){
+      const m = build(v, cw, mask);
+      const p = penalty(m);
+      if (p < bestP){ bestP = p; best = m; }
+    }
+    return best;
+  }
+  return { encode };
+})();
+function drawTracked(ctx, text, x, y, ls){
+  let cx = x;
+  for(const ch of text){ ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + ls; }
+  return cx - ls;
+}
+function trackedWidth(ctx, text, ls){
+  let w = 0;
+  for(const ch of text) w += ctx.measureText(ch).width + ls;
+  return w - ls;
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+function drawQrCard(ctx, matrix, x, y, size){
+  ctx.save();
+  ctx.shadowColor = 'rgba(30,25,15,.16)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = '#ffffff';
+  roundRect(ctx, x, y, size, size, 30); ctx.fill();
+  ctx.restore();
+  const pad = 50, inner = size - pad*2, mc = matrix.length, mod = inner/mc;
+  ctx.fillStyle = '#1a1a1a';
+  for(let r=0; r<mc; r++) for(let c=0; c<mc; c++)
+    if(matrix[r][c]) ctx.fillRect(x+pad + c*mod, y+pad + r*mod, Math.ceil(mod), Math.ceil(mod));
+}
+function drawPill(ctx, x, y, label, bg, dotColor){
+  ctx.font = '700 30px "Hanken Grotesk", sans-serif';
+  const ls = 4.5, tw = trackedWidth(ctx, label, ls);
+  const h = 64, dotR = 8, padL = 30, gap = 16, padR = 32;
+  const w = padL + dotR*2 + gap + tw + padR;
+  ctx.fillStyle = bg;
+  roundRect(ctx, x, y, w, h, h/2); ctx.fill();
+  ctx.fillStyle = dotColor;
+  ctx.beginPath(); ctx.arc(x+padL+dotR, y+h/2, dotR, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  drawTracked(ctx, label, x+padL+dotR*2+gap, y+h/2+2, ls);
+  ctx.textBaseline = 'alphabetic';
+}
+async function renderCard(cnv, v, opts){
+  // opts.bleed (px per edge): the background bands extend through the
+  // bleed ring so a commercial printer can trim back to a clean 4x6.
+  // 38px at 300dpi is a hair over the standard 1/8" bleed.
+  // opts.headerBg: custom header band color (venue header_bg prefill).
+  // opts.dark: dark card — dark warm body + light text, header defaults
+  // to the app's black nav, QR cards STAY white so they scan.
+  const W = 1200, H = 1800, B = opts.bleed || 0;
+  cnv.width = W + 2*B; cnv.height = H + 2*B;
+  const ctx = cnv.getContext('2d');
+  const a1 = opts.a1, a2 = opts.a2, DARK = !!opts.dark;
+  const INK    = DARK ? '#ece7dd' : '#33302a';
+  const DIM    = DARK ? '#a7a196' : '#8b8578';
+  const BODY   = DARK ? '#171512' : '#efe8dc';
+  const HEADER = opts.headerBg || (DARK ? '#0b0a09' : '#ffffff');
+  const TOWN   = readableOn(HEADER) === '#ffffff' ? '#a7a196' : '#8b8578';
+  const RULE_L = DARK ? '#3a352e' : '#d9d2c2';    // the hairline divider
+  await Promise.all([
+    document.fonts.load('800 100px "Hanken Grotesk", sans-serif'),
+    document.fonts.load('700 30px "Hanken Grotesk", sans-serif'),
+    document.fonts.load('400 38px "Hanken Grotesk", sans-serif'),
+  ]).catch(()=>{});
+
+  // background bands, painted edge to edge including the bleed ring
+  ctx.fillStyle = BODY; ctx.fillRect(0, 0, W+2*B, H+2*B);
+  ctx.fillStyle = HEADER; ctx.fillRect(0, 0, W+2*B, 332+B);        // header band
+  ctx.fillStyle = a2; ctx.fillRect(0, 332+B, W+2*B, 12);           // accent rule
+  ctx.fillStyle = a1; ctx.fillRect(0, H-54+B, W+2*B, 54+B);        // bottom bar
+  ctx.translate(B, B);  // everything below draws in trim-box coordinates
+
+  // header: logo left (image or wordmark), town right
+  if(opts.logoImg){
+    const img = opts.logoImg, maxW = 430, maxH = 214;
+    const s = Math.min(maxW/img.naturalWidth, maxH/img.naturalHeight, 2.2);
+    const w = img.naturalWidth*s, h = img.naturalHeight*s;
+    ctx.drawImage(img, 110, 166 - h/2, w, h);
+  } else {
+    ctx.fillStyle = a1;
+    ctx.font = '800 58px "Hanken Grotesk", sans-serif';
+    ctx.fillText((v.logo && !/^https?:/i.test(v.logo) ? v.logo : v.name), 110, 188);
+  }
+  if(opts.town){
+    ctx.fillStyle = TOWN;   // header-aware: light dim on dark headers
+    ctx.font = '700 36px "Hanken Grotesk", sans-serif';
+    const t = opts.town.toUpperCase(), ls = 6;
+    drawTracked(ctx, t, W - 110 - trackedWidth(ctx, t, ls), 182, ls);
+  }
+
+  // QR cards
+  const games = QR.encode(`${CFG.domain}/app.html?v=${v.id}&go=games`);
+  const box   = QR.encode(`${CFG.domain}/app.html?v=${v.id}&go=box`);
+  drawQrCard(ctx, games, 710, 435, 380);
+  drawQrCard(ctx, box,   710, 1095, 380);
+
+  // section 1: games
+  drawPill(ctx, 110, 430, 'GAME TIME', a1, a2);
+  ctx.fillStyle = a1; ctx.font = '800 74px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Play games', 110, 592);
+  ctx.fillText('while you wait.', 110, 678);
+  ctx.fillStyle = INK; ctx.font = '400 38px "Hanken Grotesk", sans-serif';
+  ctx.fillText('A few quick games for the table.', 110, 756);
+  ctx.fillText('No app or sign-up required.', 110, 808);
+  ctx.fillStyle = a1; ctx.font = '700 34px "Hanken Grotesk", sans-serif';
+  drawTracked(ctx, 'SCAN TO PLAY TABLE GAMES', 110, 884, 4);
+
+  // divider
+  ctx.fillStyle = RULE_L; ctx.fillRect(110, 972, W-220, 2);
+
+  // section 2: feedback
+  drawPill(ctx, 110, 1090, 'YOUR FEEDBACK', a2, '#ffffff');
+  ctx.fillStyle = a1; ctx.font = '800 74px "Hanken Grotesk", sans-serif';
+  ctx.fillText('How was', 110, 1252);
+  ctx.fillText('everything?', 110, 1338);
+  ctx.fillStyle = INK; ctx.font = '400 38px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Tell us anything, completely', 110, 1416);
+  ctx.fillText('anonymous. No name, no email.', 110, 1468);
+  ctx.fillStyle = a1; ctx.font = '700 34px "Hanken Grotesk", sans-serif';
+  drawTracked(ctx, 'SCAN TO LEAVE FEEDBACK', 110, 1544, 4);
+  ctx.fillStyle = DIM; ctx.font = '400 32px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Takes 30 seconds · 100% anonymous', 110, 1614);
+}
+async function loadCardLogo(v){
+  if(!v.logo || !/^https?:/i.test(v.logo)) return null;
+  try {
+    const res = await fetch(v.logo);
+    if(!res.ok) return null;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    await new Promise((ok, no)=>{ img.onload=ok; img.onerror=no; img.src=url; });
+    return img;
+  } catch(e){ return null; }
+}
+function downloadCanvas(cnv, filename){
+  cnv.toBlob(blob=>{
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+}
+function extractSwatches(img){
+  const c=document.createElement('canvas'); c.width=40; c.height=40;
+  const x=c.getContext('2d'); x.drawImage(img,0,0,40,40);
+  const d=x.getImageData(0,0,40,40).data, tally={};
+  for(let i=0;i<d.length;i+=4){
+    if(d[i+3]<140) continue;                                  // transparent
+    const r=d[i],g=d[i+1],b=d[i+2];
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    if(max>235&&min>215) continue;                            // near white
+    if(max<35) continue;                                      // near black
+    const k=[r,g,b].map(v=>Math.round(v/32)*32).join(',');
+    tally[k]=(tally[k]||0)+1;
+  }
+  return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([k])=>'#'+k.split(',').map(v=>(+v).toString(16).padStart(2,'0')).join(''));
+}
+function readableOn(hex){
+  const c=(hex||'').replace('#',''); if(c.length<6) return '#16110a';
+  const f=x=>{x/=255; return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};
+  const L=.2126*f(parseInt(c.slice(0,2),16))+.7152*f(parseInt(c.slice(2,4),16))+.0722*f(parseInt(c.slice(4,6),16));
+  return L>.55 ? '#16110a' : '#ffffff';
+}
+
+/* The page wears the venue's colors: accent everywhere the dashboard uses
+   its accent, and when the venue's app runs a dark or colored header the
+   page background matches it (a white logo then reads here the way it does
+   in the app). White venues change nothing. */
+function applyVenueTheme(b){
+  if(/^#[0-9a-f]{6}$/i.test(b.accent || '')){
+    document.documentElement.style.setProperty('--accent', b.accent);
+    document.documentElement.style.setProperty('--on-accent', readableOn(b.accent));
+  }
+  const bg = b.header_bg || (b.dark_mode ? '#0b0a09' : null);
+  if(!bg) return;
+  document.body.style.background = bg;
+  if(readableOn(bg) === '#ffffff') document.body.classList.add('vd');
+}
+
+function initCardSection(v){
+  if(!v || !v.id || !$('cardSec')) return;
+  $('cardSec').style.display = '';
+  // the design is remembered per venue on this device (same key as the
+  // operator dashboard, so the same machine shows the same design)
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('st_card_' + v.id) || 'null'); } catch(e){}
+  const d = {
+    town: (saved && saved.town) || '',
+    a1:   (saved && /^#[0-9a-f]{6}$/i.test(saved.a1||'') && saved.a1) || '#1e3a5f',
+    a2:   (saved && /^#[0-9a-f]{6}$/i.test(saved.a2||'') && saved.a2) || v.accent,
+    hb:   saved ? (saved.hb || null) : (v.header_bg || null),
+    dark: saved ? !!saved.dark : !!v.dark_mode,
+  };
+  $('cTown').value = d.town;
+  $('cA1').value = d.a1; $('cA1Hex').value = d.a1;
+  $('cA2').value = d.a2; $('cA2Hex').value = d.a2;
+  $('cHbOn').checked = !!d.hb; $('cHb').value = d.hb || '#0b0a09';
+  $('cHb').style.display = d.hb ? '' : 'none';
+  $('cDark').checked = d.dark;
+
+  let logoImg = null, timer = null;
+  const opts = ()=>({ town: $('cTown').value.trim(), a1: $('cA1Hex').value, a2: $('cA2Hex').value,
+                      headerBg: $('cHbOn').checked ? $('cHb').value : null,
+                      dark: $('cDark').checked, logoImg });
+  const paint = ()=>{
+    const o = opts();
+    try { localStorage.setItem('st_card_' + v.id, JSON.stringify({ town:o.town, a1:o.a1, a2:o.a2, hb:o.headerBg, dark:o.dark })); } catch(e){}
+    return renderCard($('cardCanvas'), v, o);
+  };
+  const queue = ()=>{ clearTimeout(timer); timer = setTimeout(paint, 150); };
+  [['cA1','cA1Hex'],['cA2','cA2Hex']].forEach(([wheel,hex])=>{
+    $(wheel).addEventListener('input', ()=>{ $(hex).value = $(wheel).value; queue(); });
+    $(hex).addEventListener('input', ()=>{ if(/^#[0-9a-f]{6}$/i.test($(hex).value)){ $(wheel).value = $(hex).value; queue(); } });
+  });
+  $('cTown').addEventListener('input', queue);
+  $('cHbOn').addEventListener('change', ()=>{ $('cHb').style.display = $('cHbOn').checked ? '' : 'none'; queue(); });
+  $('cHb').addEventListener('input', queue);
+  $('cDark').addEventListener('change', queue);
+  $('dlPrint').onclick = async ()=>{ await paint(); downloadCanvas($('cardCanvas'), `${v.id}-table-card.png`); };
+  $('dlBleed').onclick = async ()=>{
+    const b = document.createElement('canvas');
+    await renderCard(b, v, { ...opts(), bleed: 38 });
+    downloadCanvas(b, `${v.id}-table-card-bleed.png`);
+  };
+
+  (async ()=>{
+    $('cMsg').className = 'savemsg'; $('cMsg').textContent = 'Rendering…';
+    logoImg = await loadCardLogo(v);
+    await paint();
+    $('cMsg').className = 'savemsg ok';
+    $('cMsg').textContent = logoImg ? '' : 'No logo image; using your name as a wordmark in the header.';
+    if(logoImg){
+      const sw = extractSwatches(logoImg);
+      [['cSw1','cA1','cA1Hex'],['cSw2','cA2','cA2Hex']].forEach(([box, wheel, hex])=>{
+        $(box).innerHTML = sw.map(c=>`<button class="sw" style="background:${c}" data-c="${c}" title="${c}"></button>`).join('');
+        $(box).querySelectorAll('.sw').forEach(b=> b.onclick = ()=>{
+          $(wheel).value = b.dataset.c; $(hex).value = b.dataset.c; paint();
+        });
+      });
+    }
+  })();
+}
+
+let BRAND = null;
+async function loadBrand(){
+  if(!V) return;
+  try {
+    const { data } = await db.from('public_venues').select('*').eq('id', V).maybeSingle();
+    if(data){
+      BRAND = data;
+      applyVenueTheme(data);
+      initCardSection(data);
+      spMeta = { title: data.specials_title || null, show: data.specials_tag !== false };
+      spPaintMeta();
+    }
+  } catch(e){}
+}
+loadBrand();
+
+
+/* platform branding from config: tab title, wordmark, favicon */
+(function(){
+  document.title = CFG.brandName + ' · Owner view';
+  const mk = document.querySelector('.wm-mark'), nm = document.querySelector('.wm-name');
+  const initial = (CFG.brandName || '?').trim().charAt(0).toUpperCase();
+  if(mk){ mk.textContent = initial; if(/^#[0-9a-f]{6}$/i.test(CFG.accent || '')) mk.style.background = CFG.accent; }
+  if(nm) nm.textContent = CFG.brandName;
+  const fav = document.querySelector('link[rel="icon"]');
+  const acc = /^#[0-9a-f]{6}$/i.test(CFG.accent || '') ? CFG.accent : '#3a6ea5';
+  if(fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + initial + '</text></svg>');
+})();
+
+load();
+</script>
+</body>
+</html>

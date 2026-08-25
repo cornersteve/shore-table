@@ -1,0 +1,537 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>A better night at the table</title>
+<meta name="description" content="A branded table card for independent restaurants. It gives your guests something to do while they wait and something to talk about after, and gives you the honest, private read on your room that the chains pay analytics teams for." />
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='10'%20y='10'%20width='44'%20height='44'%20rx='11'%20fill='%233a6ea5'/%3E%3Cpath%20d='M18%2024Q21.5%2020.4%2025%2024T32%2024T39%2024T46%2024M18%2033Q21.5%2029.4%2025%2033T32%2033T39%2033T46%2033M18%2042Q21.5%2038.4%2025%2042T32%2042T39%2042T46%2042'%20fill='none'%20stroke='%23fff'%20stroke-width='3.4'%20stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+<script>
+/* ================================================================
+   IMAGE URLS. Paste the Supabase Storage PUBLIC URLs between the
+   quotes below. Until a real URL is pasted, the page shows a clean
+   placeholder in that spot, so it is safe to deploy as is.
+   ================================================================ */
+const REPORT_IMAGE_URL = "images/report.png";
+const SCREENSHOT_URL_1 = "images/screenshot-1-landing.png";
+const SCREENSHOT_URL_2 = "images/screenshot-2-hotseat.png";
+const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
+/* Optional. Leave empty and its figure is removed from the page entirely,
+   so nothing looks half finished. Paste images/owner-dashboard.png here. */
+const DASHBOARD_IMAGE_URL = "";
+</script>
+<style>
+  /* ============================================================
+     SHORE TABLE  ·  marketing homepage (lead-facing, bare domain).
+     This is NOT the diner app. The diner app is app.html and is
+     reached only by QR links like /app.html?v=<venueId>.
+     Static file, no build step, deployable to Cloudflare Pages.
+     ============================================================ */
+
+  :root{
+    --bg:#ffffff;
+    --panel:#faf9f6;
+    --panel-2:#efece6;
+    --ink:#1b1813;
+    --ink-dim:#7c766c;
+    --ink-faint:#aaa399;
+    --line:rgba(22,17,10,.10);
+    --line-2:rgba(22,17,10,.16);
+    --accent:#3a6ea5;
+    --accent-soft:#eaf1f8;
+    --on-accent:#ffffff;
+    --radius:18px;
+    --ease:cubic-bezier(.2,.8,.2,1);
+    --shadow:0 1px 2px rgba(22,17,10,.05),0 6px 20px rgba(22,17,10,.06);
+    --shadow-sm:0 1px 2px rgba(22,17,10,.06);
+    --font-d:"Bricolage Grotesque",system-ui,sans-serif;
+    --font-b:"Hanken Grotesk",system-ui,sans-serif;  /* the REAL Google font name; the old "Grotesque" misspelling silently never loaded */
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:var(--font-b);color:var(--ink);background:var(--bg);
+    -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+    line-height:1.55;
+  }
+  img{max-width:100%;display:block}
+
+  .wrap{width:100%;max-width:1040px;margin:0 auto;padding:0 22px}
+
+  /* ---------- header ---------- */
+  header{border-bottom:1px solid var(--line);background:rgba(255,255,255,.92);backdrop-filter:blur(8px);position:sticky;top:0;z-index:10}
+  .header-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 22px}
+  .wordmark{font-family:var(--font-d);font-weight:800;letter-spacing:.03em;font-size:20px;text-transform:uppercase;display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none}
+  .wm-mark{width:26px;height:26px;border-radius:7px;background:#3a6ea5;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none}
+  .wordmark svg{width:28px;height:28px;flex:none}
+  .header-cta{font-family:var(--font-d);font-weight:700;font-size:13px;letter-spacing:.02em;background:var(--accent);color:var(--on-accent);text-decoration:none;border-radius:999px;padding:9px 16px;box-shadow:var(--shadow-sm);white-space:nowrap}
+
+  /* ---------- hero ---------- */
+  .hero{padding:64px 22px 56px;text-align:center}
+  @media(min-width:760px){.hero{padding:96px 22px 80px}}
+  .eyebrow{font-family:var(--font-d);font-weight:700;text-transform:uppercase;letter-spacing:.16em;font-size:12px;color:var(--accent);margin-bottom:16px}
+  .hero h1{font-family:var(--font-d);font-weight:700;font-size:clamp(32px,6vw,54px);line-height:1.06;letter-spacing:-.015em;max-width:820px;margin:0 auto}
+  .hero .lede{color:var(--ink-dim);font-size:clamp(16px,2.2vw,19px);max-width:640px;margin:18px auto 0}
+  .btn{font-family:var(--font-d);font-weight:700;font-size:17px;border:0;border-radius:14px;padding:16px 30px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--accent);color:var(--on-accent);letter-spacing:.01em;box-shadow:var(--shadow);text-decoration:none;transition:transform .12s var(--ease),filter .2s var(--ease)}
+  .btn:hover{filter:brightness(1.06)}
+  .btn:active{transform:scale(.97)}
+  .hero-btns{display:flex;flex-wrap:wrap;gap:12px;justify-content:center;margin-top:30px}
+  .hero .phones{margin-top:52px}
+
+  /* ---------- sections ---------- */
+  section{padding:56px 0}
+  @media(min-width:760px){section{padding:76px 0}}
+  .section-alt{background:var(--panel)}
+  .section-head{max-width:640px;margin:0 auto 40px;text-align:center}
+  .section-head h2{font-family:var(--font-d);font-weight:700;font-size:clamp(24px,4vw,34px);line-height:1.12;letter-spacing:-.01em}
+  .section-head p{color:var(--ink-dim);margin-top:12px;font-size:16px}
+
+  .turn{max-width:680px;margin:46px auto 0;text-align:center;border-top:1px solid var(--line-2);padding-top:40px}
+  .turn h3{font-family:var(--font-d);font-weight:700;font-size:clamp(21px,3.2vw,28px);line-height:1.15;letter-spacing:-.01em}
+  .turn p{color:var(--ink-dim);margin-top:12px;font-size:16px}
+  .turn .btn{margin-top:26px}
+
+  /* ---------- the game library ----------
+     Flex, not grid, so a short last row stays centered at any count. Cards
+     stretch to equal height within a row. Full width on phones: at two-up
+     they came out 159px and every title wrapped differently, which read as
+     ragged rather than as a list. */
+  .games-grid{display:flex;flex-wrap:wrap;justify-content:center;gap:14px}
+  .game{flex:0 1 100%;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:22px 20px;transition:border-color .18s var(--ease)}
+  @media(min-width:600px){.game{flex:0 1 calc(50% - 7px)}}
+  @media(min-width:760px){.games-grid{gap:18px}.game{flex:0 1 calc(33.333% - 12px)}}
+  .game:hover{border-color:var(--accent)}
+  .game-tag{font-family:var(--font-d);font-weight:800;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--accent);margin-bottom:10px}
+  .game h3{font-family:var(--font-d);font-weight:700;font-size:18px;margin-bottom:6px}
+  .game p{color:var(--ink-dim);font-size:14px}
+  .games-note{text-align:center;color:var(--ink-dim);font-size:15px;max-width:580px;margin:28px auto 0}
+  .btn--ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line-2);box-shadow:none}
+  .btn--ghost:hover{filter:none;border-color:var(--accent)}
+  .btn.sm{font-size:15px;padding:13px 24px}
+  .games-cta{display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:22px}
+  .games-cta span{color:var(--ink-faint);font-size:13.5px;text-align:center}
+
+  /* ---------- how it works ---------- */
+  .steps{display:grid;gap:16px;margin-bottom:44px}
+  @media(min-width:760px){.steps{grid-template-columns:repeat(3,1fr);gap:20px}}
+  .step{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow-sm)}
+  .section-alt .step{background:var(--bg)}
+  .step-num{font-family:var(--font-d);font-weight:800;font-size:13px;color:var(--accent);background:var(--accent-soft);border-radius:999px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:14px}
+  .step h3{font-family:var(--font-d);font-weight:700;font-size:18px;margin-bottom:8px}
+  .step p{color:var(--ink-dim);font-size:15px}
+
+  .phones{display:flex;gap:22px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+  .phone-frame{width:230px;flex:none;background:var(--ink);border-radius:32px;padding:10px;box-shadow:0 20px 50px rgba(22,17,10,.18)}
+  .phone-frame .screen{border-radius:24px;overflow:hidden;background:var(--panel-2);aspect-ratio:9/19}
+  .phone-frame img{width:100%;height:100%;object-fit:cover}
+  .phone-frame .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--ink-faint);font-size:13px;text-align:center;padding:16px}
+  .phone-frame .ph .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
+  .phone-caption{text-align:center;color:var(--ink-dim);font-size:13px;margin-top:12px;font-weight:600}
+  @media(min-width:760px){
+    .phones .phone-col:nth-child(2){margin-top:34px}
+  }
+
+  /* ---------- what owners get ---------- */
+  .cards{display:grid;gap:16px}
+  @media(min-width:640px){.cards{grid-template-columns:repeat(2,1fr);gap:20px}}
+  .card{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:26px;box-shadow:var(--shadow-sm)}
+  .card-icon{width:44px;height:44px;border-radius:12px;background:var(--accent-soft);display:flex;align-items:center;justify-content:center;margin-bottom:16px}
+  .card-icon svg{width:22px;height:22px;stroke:var(--accent)}
+  .card h3{font-family:var(--font-d);font-weight:700;font-size:18px;margin-bottom:8px}
+  .card p{color:var(--ink-dim);font-size:15px}
+
+  /* Owner dashboard shot. Removed from the DOM entirely when no URL is set. */
+  .dash-shot{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);margin:26px auto 0;max-width:820px}
+  .dash-shot img{border-radius:10px;margin:0 auto}
+
+  .section-report{background:var(--accent-soft)}
+  .report{display:grid;gap:28px;align-items:center}
+  @media(min-width:820px){.report{grid-template-columns:1fr 1fr;gap:48px}}
+  .report-copy h3{font-family:var(--font-d);font-weight:700;font-size:clamp(20px,3vw,26px);line-height:1.15}
+  .report-copy p{color:var(--ink-dim);margin-top:12px;font-size:16px}
+  .report-img{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:14px;box-shadow:var(--shadow)}
+  .report-img img{display:block;width:auto;max-width:100%;height:auto;max-height:660px;object-fit:contain;border-radius:10px;margin:0 auto}
+  .report-img .ph{min-height:300px;border-radius:10px;background:var(--panel-2);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--ink-faint);font-size:14px;text-align:center;padding:20px}
+  .report-img .ph .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
+
+  /* ---------- local angle (full-bleed dark band, no inner box) ---------- */
+  .section-dark{background:var(--ink);color:#f4f2ee;text-align:center}
+  .section-dark .eyebrow{color:#9fc0e0}
+  .section-dark h2{font-family:var(--font-d);font-weight:700;font-size:clamp(24px,4vw,36px);line-height:1.12;letter-spacing:-.01em;max-width:680px;margin:0 auto}
+  .section-dark p{color:#c9c4bb;max-width:620px;margin:16px auto 0;font-size:16px}
+
+  /* ---------- founding offer ---------- */
+  .offer{text-align:center}
+  .offer-badge{display:inline-flex;align-items:center;gap:8px;font-family:var(--font-d);font-weight:700;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--accent);background:var(--accent-soft);border-radius:999px;padding:8px 18px;margin-bottom:20px}
+  .offer h2{font-family:var(--font-d);font-weight:700;font-size:clamp(24px,4vw,34px);line-height:1.12;max-width:680px;margin:0 auto}
+  .offer p{color:var(--ink-dim);max-width:560px;margin:14px auto 0;font-size:16px}
+  .offer .btn{margin-top:28px}
+
+  /* ---------- footer ---------- */
+  footer{border-top:1px solid var(--line);background:var(--panel);padding:44px 0 36px;text-align:center}
+  footer .wordmark{justify-content:center;margin:0 auto 10px}
+  footer p{color:var(--ink-dim);font-size:15px}
+  footer a.mail{color:var(--accent);font-weight:600;text-decoration:none}
+  footer a.mail:hover{text-decoration:underline}
+  .fineprint{color:var(--ink-faint);font-size:12px;margin-top:18px}
+</style>
+<style id="refresh-2026-08">
+  /* ==========================================================
+     HOMEPAGE VISUAL REFRESH · Aug 2026 · approved from
+     the index-redesign.html sample (deleted after this port).
+     One self-contained layer over the base styles, matching the
+     app's refresh-2026-08 vocabulary: white cards on flat brand-
+     tinted bands, hairline borders, accent-tinted elevation,
+     chip labels, pill buttons, the REAL Hanken Grotesk. Flat
+     colors only (no gradients). Copy untouched.
+     ========================================================== */
+  :root{
+    --accent-deep: var(--accent);
+    --accent-tint: #f7f8fa;
+    --radius: 20px;
+  }
+  @supports (color: color-mix(in srgb, red 50%, white)){
+    :root{
+      --accent-deep: color-mix(in srgb, var(--accent) 68%, #16110a);
+      --accent-tint: color-mix(in srgb, var(--accent) 6%, #fdfcfa);
+      --accent-soft: color-mix(in srgb, var(--accent) 10%, #fff);
+      --shadow: 0 1px 2px rgba(22,17,10,.04), 0 12px 32px color-mix(in srgb, var(--accent) 12%, rgba(22,17,10,.07));
+    }
+  }
+
+  ::selection{background:#e9e4dc}
+  @supports (color: color-mix(in srgb, red 50%, white)){
+    ::selection{background:color-mix(in srgb, var(--accent) 22%, #fff)}
+  }
+  a:focus-visible,button:focus-visible{outline:2px solid var(--accent-deep);outline-offset:3px;border-radius:6px}
+
+  /* header: crisper edge over the tinted bands below */
+  header{background:rgba(255,255,255,.96)}
+  .header-cta{padding:10px 18px}
+
+  /* type: bigger, tighter display; body rhythm untouched */
+  .hero h1{font-size:clamp(34px,6.2vw,58px);letter-spacing:-.025em}
+  .section-head h2,.offer h2,.section-dark h2{letter-spacing:-.02em}
+
+  /* the eyebrow becomes a chip, same component the app uses */
+  .eyebrow{display:inline-flex;align-items:center;background:#fff;border:1px solid var(--line);color:var(--accent-deep);border-radius:999px;padding:7px 14px;font-size:11px;letter-spacing:.13em;margin-bottom:18px;box-shadow:var(--shadow-sm)}
+  .section-dark .eyebrow{background:transparent;border-color:rgba(255,255,255,.22);color:#cfe0f0;box-shadow:none}
+
+  /* buttons: pill silhouette with accent-tinted elevation */
+  .btn{border-radius:999px;padding:17px 32px;transition:transform .14s var(--ease),box-shadow .2s var(--ease),filter .2s var(--ease)}
+  @supports (color: color-mix(in srgb, red 50%, white)){
+    .btn{box-shadow:0 2px 6px color-mix(in srgb, var(--accent) 26%, rgba(22,17,10,.06)), 0 10px 24px color-mix(in srgb, var(--accent) 15%, transparent)}
+  }
+  .btn:hover{filter:brightness(1.05);transform:translateY(-1px)}
+  .btn:active{transform:translateY(1px) scale(.99)}
+  .btn--ghost{background:#fff;border:1px solid var(--line-2);box-shadow:none}
+  .btn--ghost:hover{filter:none;transform:translateY(-1px);border-color:var(--accent)}
+  .btn.sm{padding:13px 26px}
+
+  /* flat brand ambience: the alternating bands carry a whisper of the
+     accent instead of gray beige, matching the app's stage */
+  .section-alt{background:var(--accent-tint)}
+  .section-report{background:var(--accent-tint)}
+  footer{background:var(--accent-tint)}
+
+  /* cards: white surfaces, hairline borders, tinted elevation. Accent
+     leaves the hover perimeters and lives in the tags, tiles, and
+     numbers, exactly like the app's cards. */
+  .game,.step,.card{background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);transition:transform .18s var(--ease),box-shadow .2s var(--ease),border-color .2s var(--ease)}
+  .game:hover{border-color:var(--line-2)}
+  .game-tag{color:var(--accent-deep)}
+  .step-num{background:var(--accent);color:var(--on-accent)}
+  .card-icon{background:var(--accent)}
+  .card-icon svg{stroke:#fff}
+  .offer-badge{background:#fff;border:1px solid var(--line);color:var(--accent-deep);box-shadow:var(--shadow-sm)}
+
+  /* the phone screenshots are the product shot: let their shadows pick
+     up the brand instead of plain gray */
+  @supports (color: color-mix(in srgb, red 50%, white)){
+    .phone-frame{box-shadow:0 20px 50px color-mix(in srgb, var(--accent) 18%, rgba(22,17,10,.14))}
+  }
+  .dash-shot,.report-img{border:1px solid var(--line);box-shadow:var(--shadow)}
+
+  /* one authored moment: the hero settles in once, top to bottom */
+  .hero > *{animation:rise .55s var(--ease) both}
+  .hero > *:nth-child(2){animation-delay:.06s}
+  .hero > *:nth-child(3){animation-delay:.12s}
+  .hero > *:nth-child(4){animation-delay:.18s}
+  .hero > *:nth-child(5){animation-delay:.24s}
+  @keyframes rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion: reduce){ .hero > *{animation:none} }
+</style>
+<script src="config.js"></script>
+</head>
+<body>
+
+<header>
+  <div class="wrap header-inner">
+    <a class="wordmark" href="/"><span class="wm-mark" aria-hidden="true"></span><span class="wm-name"></span></a>
+    <a class="header-cta" href="#" data-mailto="contact">Get in touch</a>
+  </div>
+</header>
+
+<main>
+
+  <!-- ============ HERO ============
+       Say plainly what the thing is, then show it. The screenshots sit here,
+       not further down, because seeing the app answers "what is this" faster
+       than any paragraph can. -->
+  <div class="wrap hero">
+    <div class="eyebrow">For independent restaurants and bars in <span class="cfg-region">your area</span></div>
+    <h1>Give them a better night, not just a better meal.</h1>
+    <p class="lede">Guests scan a card on your table and a branded web app opens on their phone, customized for your restaurant. Games while they wait, an anonymous suggestion box, and a spot for anything you want to tell them that week. You get a private live dashboard with all the important data and insights.</p>
+    <div class="hero-btns">
+      <a class="btn" href="#" data-mailto="contact">Get in touch</a>
+      <a class="btn btn--ghost" href="app.html?v=demo" target="_blank" rel="noopener">Try the demo</a>
+    </div>
+
+    <div class="phones">
+      <div class="phone-col">
+        <div class="phone-frame"><div class="screen" data-img="SCREENSHOT_URL_1"><div class="ph"><span class="dot"></span>App screenshot 1</div></div></div>
+        <div class="phone-caption">What they see first</div>
+      </div>
+      <div class="phone-col">
+        <div class="phone-frame"><div class="screen" data-img="SCREENSHOT_URL_2"><div class="ph"><span class="dot"></span>App screenshot 2</div></div></div>
+        <div class="phone-caption">A game in progress</div>
+      </div>
+      <div class="phone-col">
+        <div class="phone-frame"><div class="screen" data-img="SCREENSHOT_URL_3"><div class="ph"><span class="dot"></span>App screenshot 3</div></div></div>
+        <div class="phone-caption">The suggestion box</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ LOCAL ANGLE ============ -->
+  <section class="section-dark">
+    <div class="wrap">
+      <div class="eyebrow">Local, on purpose</div>
+      <h2>Run by a local, for <span class="cfg-region">local</span> restaurants.</h2>
+      <p class="cfg-story"><span class="cfg-brand">This</span> is not a national software company with a support ticket queue. It is run by a neighbor who eats in these restaurants, drinks at these bars, and answers their own email. When something needs adjusting, you talk to the person who runs it.</p>
+    </div>
+  </section>
+
+  <!-- ============ THE GUEST SIDE ============ -->
+  <section class="section-alt" id="games">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>The game library</h2>
+        <p>Nobody plans the twenty minutes a table spends waiting on the kitchen. Here is what is on the tables now, and we are always working on more.</p>
+      </div>
+
+      <div class="games-grid">
+        <div class="game">
+          <div class="game-tag">Groups</div>
+          <h3>Who Knows Who</h3>
+          <p>One player answers a question about themselves and the table guesses what they picked. Two turns each, two to eight players.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Whole table</div>
+          <h3>Guess the Split</h3>
+          <p>Vote on a two way question, then guess what share of all diners picked the same. Solo, or up to eight players.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Social deduction</div>
+          <h3>Who Invited You?</h3>
+          <p>Everyone gets the same secret word except one player, who gets only the category and has to bluff. Three to eight players.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Solo friendly</div>
+          <h3>Wordy</h3>
+          <p>A quick guess the word puzzle somebody can play alone, without waiting on the rest of the table.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Competitive</div>
+          <h3>Trivia</h3>
+          <p>Fast question rounds at pub difficulty with the answer revealed the second you pick. Solo, or head to head up to eight.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Bid and prove</div>
+          <h3>All Talk</h3>
+          <p>Bid on how many answers in a category you can rattle off in thirty seconds, then the top bidder proves it out loud. Two to eight players.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Teams</div>
+          <h3>Cornhole</h3>
+          <p>The backyard classic on the phone, with your restaurant's logo on the board. Two taps to throw, red versus blue in teams of one or two, or solo practice.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Beat the clock</div>
+          <h3 class="cfg-gname-quick-pour">Quick Pour</h3>
+          <p>Three beer taps, ten glasses, one clock, and your restaurant's logo etched on every glass. Fill each one to the brass line without spilling the foam. Fastest time wins the table.</p>
+        </div>
+        <div class="game">
+          <div class="game-tag">Just for fun</div>
+          <h3>Fortune Teller</h3>
+          <p>Three cards face down in your colors. Pick one for a quick fortune while the kitchen works.</p>
+        </div>
+      </div>
+
+      <p class="games-note">Everything runs in your guest's own browser. No app to download, no tablet, nothing for your staff to explain. New questions go in constantly, and new games get added over time.</p>
+      <div class="games-cta">
+        <a class="btn btn--ghost sm" href="#" data-mailto="game-idea">Suggest a game</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THE OWNER SIDE ============ -->
+  <section id="owners">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>How it helps your restaurant</h2>
+        <p>Four things it changes, none of which need anything from you or your staff after setup.</p>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg></div>
+          <h3>A better guest experience</h3>
+          <p>Guest experience is the part everyone competes on and nobody can buy. A table playing something together is a table enjoying the night, and that is what people remember and repeat. It happens at every table, every service, without a server having to do anything.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg></div>
+          <h3>You hear the complaints first</h3>
+          <p>The suggestion box is anonymous, so people are honest. The music is too loud, the menu is confusing, the bathroom needs attention. You read it in private while you can still fix it, instead of in a public review two weeks later. Asking also says something on its own: guests notice a restaurant that wants to know.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></div>
+          <h3>More Google reviews</h3>
+          <p>Everyone who uses the card sees the same simple, neutral prompt. More of your happy guests actually reach the review page instead of just meaning to.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+          <h3>What diners around here want</h3>
+          <p>Your ratings and your comments are yours alone and never leave your dashboard. Alongside them the survey asks a few general questions about what people look for when they go out, and only those answers get pooled across venues, with nobody's name and no restaurant attached. Chains spend millions on data teams to learn this. You get it from every <span class="cfg-brand">network</span> venue in <span class="cfg-regionshort">the county</span>.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THE MONTHLY REPORT ============ -->
+  <section class="section-report" id="report">
+    <div class="wrap">
+      <div class="report">
+        <div class="report-copy">
+          <div class="eyebrow">The monthly report</div>
+          <h3>Everything worth knowing, on one page</h3>
+          <p>A sample of what lands in your inbox each month. Your feedback, your review activity, and the county picture, in plain English you can read over coffee.</p>
+        </div>
+        <div class="report-img" data-img="REPORT_IMAGE_URL">
+          <div class="ph"><span class="dot"></span>Sample monthly report</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ THE CHANNEL ============
+       White, not section-alt: with the dark band moved up under the hero,
+       this would otherwise run straight into the grey trial section. -->
+  <section id="reach">
+    <div class="wrap">
+      <div class="section-head">
+        <h2>A channel to your guests that you own</h2>
+        <p>Social decides who sees your posts. Ads find people who are not hungry yet. This one is on your own tables, in front of someone sitting in your restaurant right now.</p>
+      </div>
+
+      <div class="cards">
+        <div class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></div>
+          <h3>Tell every table something</h3>
+          <p>Write a message and it appears on the first screen your guests see. Live music Friday. The new brunch. Add a link and the message becomes a button that opens your menu, your tickets, your reservations, or your Instagram. Change it in seconds, any day you want.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></div>
+          <h3>See what happened</h3>
+          <p>You get a private live dashboard. See ratings this month against last, comments as they come in, which games got played, and how many guests tapped the message you posted. No login and nothing to install.</p>
+        </div>
+      </div>
+
+      <div class="dash-shot" data-img="DASHBOARD_IMAGE_URL" data-optional="1">
+        <div class="ph"><span class="dot"></span>Owner dashboard</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ FREE TRIAL ============ -->
+  <section class="section-alt offer" id="offer">
+    <div class="wrap">
+      <div class="offer-badge"><span>&#9670;</span> Free trial</div>
+      <h2>Try it on your tables free for a month.</h2>
+      <p>We set it up with your logo and colors, you put the cards out, and see what your guests think. No contract, and cancel easily at any time.</p>
+      <a class="btn" href="#" data-mailto="contact">Get in touch</a>
+    </div>
+  </section>
+
+</main>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="wrap">
+    <a class="wordmark" href="/"><span class="wm-mark" aria-hidden="true"></span><span class="wm-name"></span></a>
+    <p>Questions, or want it on your tables? Email <a class="mail" href="#" data-mailto="contact"><span class="cfg-email"></span></a></p>
+    <div class="fineprint">Independently run. Serving <span class="cfg-region">your area</span>.</div>
+  </div>
+</footer>
+
+<script>
+/* Applies the image URLs set in the <head> block at the top of this file. */
+const IMAGES = {
+  REPORT_IMAGE_URL,
+  SCREENSHOT_URL_1,
+  SCREENSHOT_URL_2,
+  SCREENSHOT_URL_3,
+  DASHBOARD_IMAGE_URL,
+};
+
+document.querySelectorAll("[data-img]").forEach(el => {
+  const url = IMAGES[el.dataset.img];
+  // data-optional means "no image, no slot": the figure is removed rather than
+  // left showing a placeholder, so an unset one never looks half finished.
+  if((!url || url.startsWith("PASTE_")) && el.dataset.optional){ el.remove(); return; }
+  if(!url || url.startsWith("PASTE_")) return;   // keep the placeholder
+  const img = new Image();
+  // NOTE: no loading="lazy" here; a detached lazy image never loads, so
+  // onload would never fire and the placeholder would never be replaced.
+  img.src = url;
+  img.alt = el.querySelector(".ph") ? el.querySelector(".ph").textContent.trim() : "";
+  img.onload = () => { el.innerHTML = ""; el.appendChild(img); };
+});
+
+/* ---- operator config fill (config.js) ---- */
+(function(){
+  const C = window.OPERATOR_CONFIG || {};
+  const brand = C.brandName || 'This platform';
+  const email = C.contactEmail || '';
+  const region = C.regionName || 'your area';
+  const regionShort = C.regionShort || 'the county';
+  const acc = /^#[0-9a-f]{6}$/i.test(C.accent || '') ? C.accent : '#3a6ea5';
+  document.title = brand + ': a better night at the table, and the truth about it';
+  const initial = brand.trim().charAt(0).toUpperCase();
+  document.querySelectorAll('.wm-mark').forEach(m => { m.textContent = initial; m.style.background = acc; });
+  document.querySelectorAll('.wm-name').forEach(m => { m.textContent = brand; });
+  document.querySelectorAll('.cfg-region').forEach(m => { m.textContent = region; });
+  document.querySelectorAll('.cfg-regionshort').forEach(m => { m.textContent = regionShort; });
+  document.querySelectorAll('.cfg-brand').forEach(m => { m.textContent = brand; });
+  document.querySelectorAll('.cfg-email').forEach(m => { m.textContent = email; });
+  document.querySelectorAll('.cfg-gname-quick-pour').forEach(m => { m.textContent = (C.gameNames || {}).quick_pour || 'Quick Pour'; });
+  if (C.operatorStory) {
+    const s = document.querySelector('.cfg-story');
+    if (s) s.textContent = C.operatorStory;
+  }
+  document.querySelectorAll('[data-mailto]').forEach(a => {
+    if (!email) return;
+    a.href = 'mailto:' + email + (a.dataset.mailto === 'game-idea' ? '?subject=' + encodeURIComponent('Game idea for ' + brand) : '');
+  });
+  const fav = document.querySelector('link[rel="icon"]');
+  if (fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + initial + '</text></svg>');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2324 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Operator Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='10'%20y='10'%20width='44'%20height='44'%20rx='11'%20fill='%233a6ea5'/%3E%3Cpath%20d='M18%2024Q21.5%2020.4%2025%2024T32%2024T39%2024T46%2024M18%2033Q21.5%2029.4%2025%2033T32%2033T39%2033T46%2033M18%2042Q21.5%2038.4%2025%2042T32%2042T39%2042T46%2042'%20fill='none'%20stroke='%23fff'%20stroke-width='3.4'%20stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     PLATFORM · admin.html · the OPERATOR dashboard.
+     Not diner-facing, not owner-facing. Requires the operator's
+     Supabase Auth login (email + password); inert for anyone else.
+     Slice 1: venue management end to end. See 25_operator_admin.sql.
+     ============================================================ */
+  :root{
+    --bg:#ffffff;--page:#f6f4f0;--panel:#faf9f6;--panel-2:#efece6;
+    --ink:#16110a;--ink-dim:#6d6759;--ink-faint:#a49d90;
+    --line:rgba(22,17,10,.09);--line-2:rgba(22,17,10,.18);
+    --good:#2e9e63;--bad:#b3372f;--warn:#b98a1c;--accent:#3a6ea5;--accent-soft:#eaf1f8;
+    --radius:16px;
+    --font-d:"Bricolage Grotesque",system-ui,sans-serif;
+    --font-b:"Hanken Grotesk",system-ui,sans-serif;
+    --shadow-sm:0 1px 2px rgba(22,17,10,.06);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:var(--font-b);color:var(--ink);background:var(--page);line-height:1.5;padding:0 16px 60px}
+  .wrap{max-width:880px;margin:0 auto}
+  header{display:flex;align-items:center;justify-content:space-between;padding:18px 0 14px;border-bottom:1px solid var(--line-2);margin-bottom:22px}
+  .wordmark{font-family:var(--font-d);font-weight:800;letter-spacing:.03em;font-size:16px;text-transform:uppercase;display:inline-flex;align-items:center;gap:9px;color:var(--ink)}
+  .wordmark svg{width:24px;height:24px;flex:none}
+  .wm-mark{width:24px;height:24px;border-radius:7px;background:#3a6ea5;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none}
+  .optag{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);display:flex;gap:14px;align-items:center}
+  .signout{background:none;border:0;color:var(--ink-faint);font-size:12px;cursor:pointer;text-decoration:underline}
+  h1{font-family:var(--font-d);font-weight:700;font-size:clamp(22px,5vw,30px);line-height:1.1;margin:2px 0 14px}
+  section{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);margin-bottom:14px}
+  section h2{font-family:var(--font-d);font-weight:700;font-size:16px;margin-bottom:4px}
+  section .hint{color:var(--ink-dim);font-size:13px;margin-bottom:12px}
+  .btn{font-family:var(--font-d);font-weight:700;font-size:14px;border:0;border-radius:11px;padding:12px 20px;cursor:pointer;background:var(--accent);color:#fff;box-shadow:var(--shadow-sm)}
+  .btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line-2)}
+  .btn.danger{background:var(--bad)}
+  .btn.sm{font-size:13px;padding:9px 14px}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.45;cursor:default}
+  input[type=text],input[type=email],input[type=url],input[type=password],textarea{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:16px;color:var(--ink);background:var(--bg)}
+  textarea{resize:none;display:block}
+  input:focus,textarea:focus{outline:none;border-color:var(--accent)}
+  input::placeholder,textarea::placeholder{color:var(--ink-faint);opacity:.65}
+  label.f{display:block;font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px}
+  .frow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  input[type=color]{width:52px;height:40px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);padding:2px;cursor:pointer}
+  .msg{font-size:13.5px;font-weight:600;min-height:18px;margin-top:8px}
+  .msg.ok{color:var(--good)} .msg.err{color:var(--bad)}
+  .back{background:none;border:0;color:var(--accent);font-family:var(--font-d);font-weight:700;font-size:14px;cursor:pointer;padding:0;margin-bottom:12px}
+
+  /* venue list */
+  .vrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 14px;cursor:pointer;margin-bottom:9px;box-shadow:var(--shadow-sm)}
+  .vrow:hover{border-color:var(--accent)}
+  .vdot{width:14px;height:14px;border-radius:4px;flex:none}
+  .vname{font-family:var(--font-d);font-weight:700;font-size:15.5px}
+  .vid{color:var(--ink-faint);font-size:12.5px}
+  .vspacer{margin-left:auto;display:flex;align-items:center;gap:10px}
+  .badge{font-family:var(--font-d);font-weight:700;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;border-radius:999px;padding:4px 10px}
+  .badge.lead{background:#f3ecd9;color:var(--warn)}
+  .badge.active{background:#e7f5ec;color:var(--good)}
+  .badge.inactive{background:var(--panel-2);color:var(--ink-faint)}
+
+  /* demo watch */
+  .dwrow{display:flex;gap:10px;font-size:13.5px;padding:7px 0;border-bottom:1px solid var(--line)}
+  .dwrow:last-child{border-bottom:0}
+  .dwv{font-weight:700;min-width:110px}
+  .dwt{color:var(--ink-faint);margin-left:auto;white-space:nowrap}
+
+  /* add/edit form + preview */
+  .split{display:grid;gap:16px}
+  @media(min-width:760px){.split{grid-template-columns:1fr 300px;align-items:start}}
+  .radio{display:flex;gap:14px;font-size:14px}
+  .radio label{display:flex;gap:6px;align-items:center;cursor:pointer}
+  /* autofill: logo candidates + place picker */
+  .cands{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .cand{width:74px;height:74px;border:2px solid var(--line-2);border-radius:10px;background:#fff;cursor:pointer;padding:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+  .cand img{max-width:64px;max-height:64px;object-fit:contain}
+  .cand:hover,.cand.sel{border-color:var(--accent)}
+  .swatches{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  .sw{width:34px;height:34px;border-radius:9px;border:2px solid var(--line-2);cursor:pointer}
+  .iconbtn{width:30px;height:30px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+  .iconbtn svg{width:15px;height:15px}
+  .iconbtn.off{color:var(--bad);border-color:rgba(179,55,47,.4)}
+  .spcount{flex:none;width:58px;text-align:right;font-size:11.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
+  .sw:hover{border-color:var(--ink)}
+  /* the live preview phone */
+  .phone{background:var(--ink);border-radius:26px;padding:8px;box-shadow:0 14px 34px rgba(22,17,10,.18)}
+  .phone .scr{background:#fff;border-radius:19px;overflow:hidden;min-height:340px;display:flex;flex-direction:column}
+  .pv-brand{display:flex;align-items:center;justify-content:center;min-height:54px;padding:10px 14px;border-bottom:3px solid #ccc;box-shadow:0 2px 8px rgba(22,17,10,.08)}
+  .pv-brand img{max-height:38px;max-width:150px;object-fit:contain}
+  .pv-wordmark{font-family:var(--font-d);font-weight:800;letter-spacing:.03em;font-size:13px;text-transform:uppercase;display:inline-flex;align-items:center;gap:6px}
+  .pv-wordmark .dot{width:6px;height:6px;border-radius:2px;transform:rotate(45deg)}
+  .pv-body{padding:16px 14px;flex:1;display:flex;flex-direction:column;justify-content:center}
+  .pv-opt{position:relative;border:1.5px solid #ccc;border-radius:13px;padding:12px 12px;margin-top:9px;background:#fff}
+  .pv-opt .t{font-family:var(--font-d);font-weight:700;font-size:13px}
+  .pv-opt .d{color:var(--ink-dim);font-size:11px}
+  .pv-note{text-align:center;color:var(--ink-faint);font-size:11px;margin-top:12px}
+
+  /* detail */
+  /* link text on its own delineated line, the button group below it
+     (the old single row wrapped awkwardly on phones) */
+  .linkrow{display:flex;flex-direction:column;gap:8px;align-items:stretch;margin:6px 0 14px}
+  .linkrow .lk{font-size:12.5px;color:var(--ink-dim);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;overflow-wrap:anywhere}
+  .linkbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .statusbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .mailbtns{display:flex;gap:8px;flex-wrap:wrap}
+  .mailbtns .btn{text-decoration:none;display:inline-flex;align-items:center}
+  select{border:1px solid var(--line-2);border-radius:10px;padding:10px 11px;font-family:var(--font-b);font-size:14.5px;color:var(--ink);background:var(--bg)}
+
+  /* login */
+  .center{max-width:420px;margin:70px auto;text-align:center}
+  .center h1{margin-bottom:8px}
+  .center p{color:var(--ink-dim);font-size:14.5px;margin-bottom:16px}
+  .toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;font-size:13.5px;border-radius:999px;padding:10px 18px;opacity:0;transition:opacity .25s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1}
+</style>
+</head>
+<body>
+
+<div class="wrap" id="page" style="display:none">
+  <header>
+    <span class="wordmark"><span class="wm-mark" aria-hidden="true"></span><span class="wm-name"></span></span>
+    <span class="optag">Operator <button class="signout" id="signOut">sign out</button></span>
+  </header>
+  <div id="main"></div>
+</div>
+
+<div class="center" id="login" style="display:none">
+  <h1>Operator sign in</h1>
+  <div id="loginForm">
+    <p>Sign in with the operator email and password.</p>
+    <input type="email" id="loginEmail" placeholder="you@example.com" autocomplete="email" style="text-align:center" />
+    <input type="password" id="loginPass" placeholder="Password" autocomplete="current-password" style="text-align:center;margin-top:8px" />
+    <button class="btn" id="loginBtn" style="margin-top:12px;width:100%">Sign in</button>
+    <button class="btn ghost" id="pwForgot" style="margin-top:8px;width:100%">Set or reset password (email link)</button>
+  </div>
+  <div id="pwPanel" style="display:none">
+    <p>Choose a new password for the operator account.</p>
+    <input type="password" id="pwNew" placeholder="New password (8+ characters)" autocomplete="new-password" style="text-align:center" />
+    <button class="btn" id="pwSave" style="margin-top:12px;width:100%">Save password</button>
+  </div>
+  <div class="msg" id="loginMsg"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script>
+
+/* =====================================================================
+   PLATFORM UPDATES. This build's number is BUILD below; version.json is
+   what the connected Pages deploy is serving; the database's schema
+   version comes from admin_schema_version(). The one-button flow:
+   sync your fork from upstream (GitHub API, fine-grained token stored
+   in YOUR database via admin_set_setting, never in git), wait for the
+   deploy to serve the new build, reload, then apply any pending
+   database migrations through admin_run_migration (strictly ordered,
+   each exactly once, transactional per migration).
+   Token scope: the token needs Contents read/write on YOUR FORK only.
+   ===================================================================== */
+const BUILD = 1;   // stamped by each release; compare with /version.json
+
+async function platformView(){
+  setView('platform');
+  $('main').innerHTML = '<div class="hint">Loading…</div>';
+  let deployed = null, schema = null, settings = {};
+  try { const r = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' }); if(r.ok) deployed = await r.json(); } catch(e){}
+  try { const { data } = await db.rpc('admin_schema_version'); schema = data; } catch(e){}
+  try { const { data } = await db.rpc('admin_get_settings'); settings = data || {}; } catch(e){}
+  let pending = [];
+  try {
+    const r = await fetch('migrations/index.json?ts=' + Date.now(), { cache: 'no-store' });
+    if(r.ok){ const ix = await r.json(); pending = (ix.migrations || []).filter(m => schema !== null && m.version > schema); }
+  } catch(e){}
+
+  $('main').innerHTML = `
+    <button class="back" id="back">‹ Home</button>
+    <h1>Platform updates</h1>
+    <section>
+      <h2>Versions</h2>
+      <div class="hint">This page: build ${BUILD} · Deployed: ${deployed ? 'build ' + esc(String(deployed.build)) : 'unknown'} · Database: ${schema === null ? 'unknown (run install.sql?)' : 'schema ' + esc(String(schema))}</div>
+      ${deployed && deployed.build > BUILD ? '<div class="msg ok">A newer build is deployed. Reload this page to get it.</div>' : ''}
+      ${pending.length ? '<div class="msg err">' + pending.length + ' database migration(s) pending. Apply them below.</div>' : ''}
+    </section>
+    <section>
+      <h2>GitHub connection</h2>
+      <div class="hint">For the one-button fork sync. The token is a GitHub fine-grained personal access token with Contents read/write on YOUR FORK only; it is stored in your database, never in git. Repo is your fork as owner/name, e.g. jane/my-table-app.</div>
+      <label class="f">Your fork (owner/repo)</label>
+      <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
+      <label class="f">Fine-grained token</label>
+      <input type="password" id="ghToken" value="${esc(settings.gh_token || '')}" placeholder="github_pat_..." autocapitalize="off" spellcheck="false" />
+      <label class="f">Branch</label>
+      <input type="text" id="ghBranch" value="${esc(settings.gh_branch || 'release')}" autocapitalize="off" spellcheck="false" />
+      <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button></div>
+      <div class="msg" id="ghMsg"></div>
+    </section>
+    <section>
+      <h2>Update</h2>
+      <div class="hint">Step 1 pulls the latest release into your fork; Cloudflare Pages then redeploys it automatically (usually under two minutes). Step 2 appears here when a new deploy needs database changes.</div>
+      <div class="frow" style="margin-top:8px">
+        <button class="btn sm" id="syncBtn">Sync fork from upstream</button>
+        <button class="btn sm ${pending.length ? '' : 'ghost'}" id="migBtn" ${pending.length ? '' : 'disabled'}>Apply ${pending.length || 'no'} pending migration${pending.length === 1 ? '' : 's'}</button>
+      </div>
+      <div class="msg" id="platMsg"></div>
+    </section>`;
+  $('back').onclick = ()=> home();
+
+  $('ghSave').onclick = async ()=>{
+    const m = $('ghMsg'); m.className = 'msg'; m.textContent = 'Saving…';
+    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), br = $('ghBranch').value.trim() || 'release';
+    if(repo && !/^[\w.-]+\/[\w.-]+$/.test(repo)){ m.className = 'msg err'; m.textContent = 'Repo must look like owner/name.'; return; }
+    for(const [k, v] of [['gh_repo', repo], ['gh_token', tok], ['gh_branch', br]]){
+      const { data, error } = await db.rpc('admin_set_setting', { p_key: k, p_value: v });
+      if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save.'; return; }
+    }
+    m.className = 'msg ok'; m.textContent = 'Saved.';
+  };
+
+  $('syncBtn').onclick = async ()=>{
+    const m = $('platMsg');
+    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), br = $('ghBranch').value.trim() || 'release';
+    if(!repo || !tok){ m.className = 'msg err'; m.textContent = 'Save your fork + token first.'; return; }
+    m.className = 'msg'; m.textContent = 'Asking GitHub to sync your fork…';
+    let r;
+    try {
+      r = await fetch('https://api.github.com/repos/' + repo + '/merge-upstream', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + tok, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branch: br })
+      });
+    } catch(e){ m.className = 'msg err'; m.textContent = 'Could not reach GitHub.'; return; }
+    if(r.status === 409){ m.className = 'msg err'; m.textContent = 'GitHub reports a conflict; your fork has diverged. Resolve it on GitHub once, then sync again.'; return; }
+    if(!r.ok){ m.className = 'msg err'; m.textContent = 'GitHub said no (' + r.status + '). Check the repo name, the branch, and the token scope.'; return; }
+    const body = await r.json().catch(()=> ({}));
+    if(body && /already up to date/i.test(body.message || '')){ m.className = 'msg ok'; m.textContent = 'Already up to date.'; return; }
+    m.className = 'msg'; m.textContent = 'Synced. Waiting for the new deploy…';
+    // poll version.json until the served build moves past this page's build
+    const t0 = Date.now();
+    const poll = async ()=>{
+      if(Date.now() - t0 > 5 * 60 * 1000){ m.className = 'msg err'; m.textContent = 'Deploy is taking a while. Give it a minute and reload this page.'; return; }
+      try {
+        const vr = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' });
+        if(vr.ok){ const v = await vr.json(); if(v.build > BUILD){ m.className = 'msg ok'; m.textContent = 'New build deployed. Reloading…'; setTimeout(()=> location.reload(), 1200); return; } }
+      } catch(e){}
+      setTimeout(poll, 8000);
+    };
+    poll();
+  };
+
+  $('migBtn').onclick = async ()=>{
+    const m = $('platMsg');
+    if(!pending.length) return;
+    if(!confirm('Apply ' + pending.length + ' database migration(s) now? Each runs in its own transaction, strictly in order.')) return;
+    for(const mig of pending.sort((a, b)=> a.version - b.version)){
+      m.className = 'msg'; m.textContent = 'Applying migration ' + mig.version + '…';
+      let stmts;
+      try {
+        const r = await fetch('migrations/' + mig.file + '?ts=' + Date.now(), { cache: 'no-store' });
+        if(!r.ok) throw new Error('fetch');
+        const j = await r.json();
+        if(j.version !== mig.version || !Array.isArray(j.statements)) throw new Error('shape');
+        stmts = j.statements;
+      } catch(e){ m.className = 'msg err'; m.textContent = 'Could not load migration ' + mig.version + '. Nothing was changed by it.'; return; }
+      const { data, error } = await db.rpc('admin_run_migration', { p_version: mig.version, p_statements: stmts });
+      if(error || !data || data.ok !== true){
+        m.className = 'msg err';
+        m.textContent = 'Migration ' + mig.version + ' failed (' + esc((data && data.error) || (error && error.message) || 'unknown') + '). It was rolled back; later ones were not attempted.';
+        return;
+      }
+    }
+    m.className = 'msg ok'; m.textContent = 'All migrations applied.';
+    setTimeout(()=> platformView(), 1200);
+  };
+}
+
+/* ================================================================
+   CONFIG. Stripe payment links are created in the Stripe dashboard
+   (30 day trial + card required + promotion codes on); paste them
+   here. Empty entries simply do not appear in the plan dropdown.
+   ================================================================ */
+const CFG = window.OPERATOR_CONFIG || null;
+if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
+  document.body.innerHTML = '<div style="max-width:540px;margin:80px auto;font-family:system-ui,sans-serif;line-height:1.5;padding:0 20px"><h2>Almost there</h2><p>This page needs its operator config. In your fork, copy <code>public/config.example.js</code> to <code>public/config.js</code> and fill in your values. SETUP.md walks through it.</p></div>';
+  throw new Error('missing config.js');
+}
+const SUPABASE_URL = CFG.supabaseUrl;
+const SUPABASE_KEY = CFG.supabaseKey;
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+const DOMAIN       = String(CFG.domain || "").replace(/\/+$/, "");
+const LOGO_BUCKET  = "restaurant logos";
+// The autofill worker (worker/autofill-worker.js, deployed once in the
+// Cloudflare dashboard). Blank hides the whole autofill UI; the form works
+// fully manual without it.
+let WORKER_URL     = CFG.workerUrl || "";
+const STRIPE_PLANS = (CFG.stripePlans || []).map(p => ({ name: p.label || p.name || "Plan", url: p.url || "" }));
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* operator signature for the prefilled email templates */
+const SIG = (CFG.operatorName || 'The team') + '\n' + CFG.brandName + ' · ' + String(CFG.domain || '').replace(/^https?:\/\//, '') + (CFG.operatorPhone ? ' · ' + CFG.operatorPhone : '');
+/* platform branding from config: tab title, wordmark, favicon */
+addEventListener('DOMContentLoaded', ()=>{
+  document.title = CFG.brandName + ' · Operator';
+  const mk = document.querySelector('.wm-mark'), nm = document.querySelector('.wm-name');
+  const initial = (CFG.brandName || '?').trim().charAt(0).toUpperCase();
+  if(mk){ mk.textContent = initial; if(/^#[0-9a-f]{6}$/i.test(CFG.accent || '')) mk.style.background = CFG.accent; }
+  if(nm) nm.textContent = CFG.brandName;
+  const fav = document.querySelector('link[rel="icon"]');
+  const acc = /^#[0-9a-f]{6}$/i.test(CFG.accent || '') ? CFG.accent : '#3a6ea5';
+  if(fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + initial + '</text></svg>');
+});
+const $ = id => document.getElementById(id);
+let VENUES = [];      // admin_list_venues cache
+let WATCH  = [];      // admin_demo_watch cache
+
+/* Add-venue DRAFT persistence. iOS Safari evicts background tabs, so the
+   normal flow (hop to the Place ID finder tab, come back) reloaded the page
+   and wiped the form. Every keystroke saves a draft (the processed logo too,
+   as a data URL); a reload within 6 hours resumes the form instead of
+   landing on home. Cleared on successful save or an explicit Back. */
+const DRAFT_KEY = 'st_admin_add_draft';
+function saveDraftObj(d){ try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, at: Date.now() })); } catch(e){} }
+function loadDraft(){
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if(!d) return null;
+    if(Date.now() - d.at > 6*3600*1000){ localStorage.removeItem(DRAFT_KEY); return null; }
+    return d;
+  } catch(e){ return null; }
+}
+function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} }
+
+/* ============================================================
+   Self-contained QR encoder (ISO/IEC 18004), byte mode, ECC
+   level Q, versions 1..10. Ported VERBATIM from the verified
+   encoder in tools/qr-maker.html (output machine-decode
+   checked there); only the export differs, exposing the raw
+   module matrix for canvas drawing. Do not edit the algorithm.
+   ============================================================ */
+const QR = (() => {
+  const EXP = new Array(256), LOG = new Array(256);
+  for (let i = 0, x = 1; i < 256; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11D; }
+  LOG[1] = 0;
+  const gmul = (a, b) => (a === 0 || b === 0) ? 0 : EXP[(LOG[a] + LOG[b]) % 255];
+  const BLOCKS = {
+    1:[13,[[1,13]]], 2:[22,[[1,22]]], 3:[18,[[2,17]]], 4:[26,[[2,24]]],
+    5:[18,[[2,15],[2,16]]], 6:[24,[[4,19]]], 7:[18,[[2,14],[4,15]]],
+    8:[22,[[4,18],[2,19]]], 9:[20,[[4,16],[4,17]]], 10:[24,[[6,19],[2,20]]],
+  };
+  const ALIGN = {2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46],10:[6,28,50]};
+  function dataCapacity(v){ const [,bl] = BLOCKS[v]; return bl.reduce((s,[n,d]) => s + n*d, 0); }
+  function pickVersion(len){
+    for (let v = 1; v <= 10; v++){
+      const countBits = v <= 9 ? 8 : 16;
+      const bits = 4 + countBits + 8*len;
+      if (bits <= dataCapacity(v)*8) return v;
+    }
+    throw new Error("URL too long for this generator (version 10 max)");
+  }
+  function makeCodewords(bytes, v){
+    const capacity = dataCapacity(v);
+    const countBits = v <= 9 ? 8 : 16;
+    const bits = [];
+    const push = (val, n) => { for (let i = n-1; i >= 0; i--) bits.push((val >> i) & 1); };
+    push(0b0100, 4);
+    push(bytes.length, countBits);
+    bytes.forEach(b => push(b, 8));
+    for (let i = 0; i < 4 && bits.length < capacity*8; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    const cw = [];
+    for (let i = 0; i < bits.length; i += 8){
+      let b = 0; for (let j = 0; j < 8; j++) b = (b<<1) | bits[i+j];
+      cw.push(b);
+    }
+    const pads = [0xEC, 0x11];
+    for (let i = 0; cw.length < capacity; i++) cw.push(pads[i % 2]);
+    return cw;
+  }
+  function eccForBlock(data, ecCount){
+    let gen = [1];
+    for (let i = 0; i < ecCount; i++){
+      const next = new Array(gen.length + 1).fill(0);
+      for (let j = 0; j < gen.length; j++){
+        next[j] ^= gmul(gen[j], EXP[i]);
+        next[j+1] ^= gen[j];
+      }
+      gen = next;
+    }
+    gen.reverse();
+    const res = data.concat(new Array(ecCount).fill(0));
+    for (let i = 0; i < data.length; i++){
+      const f = res[i];
+      if (f === 0) continue;
+      for (let j = 0; j < gen.length; j++) res[i+j] ^= gmul(gen[j], f);
+    }
+    return res.slice(data.length);
+  }
+  function interleave(cw, v){
+    const [ec, layout] = BLOCKS[v];
+    const blocks = [];
+    let pos = 0;
+    layout.forEach(([n, dlen]) => {
+      for (let i = 0; i < n; i++){
+        const d = cw.slice(pos, pos + dlen); pos += dlen;
+        blocks.push({ d, e: eccForBlock(d, ec) });
+      }
+    });
+    const out = [];
+    const maxD = Math.max(...blocks.map(b => b.d.length));
+    for (let i = 0; i < maxD; i++) blocks.forEach(b => { if (i < b.d.length) out.push(b.d[i]); });
+    for (let i = 0; i < ec; i++) blocks.forEach(b => out.push(b.e[i]));
+    return out;
+  }
+  const bchDigit = n => { let d = 0; while (n){ d++; n >>>= 1; } return d; };
+  const G15 = 0b10100110111, G15M = 0b101010000010010, G18 = 0b1111100100101;
+  function bch15(data){
+    let d = data << 10;
+    while (bchDigit(d) - bchDigit(G15) >= 0) d ^= G15 << (bchDigit(d) - bchDigit(G15));
+    return ((data << 10) | d) ^ G15M;
+  }
+  function bch18(data){
+    let d = data << 12;
+    while (bchDigit(d) - bchDigit(G18) >= 0) d ^= G18 << (bchDigit(d) - bchDigit(G18));
+    return (data << 12) | d;
+  }
+  const MASKS = [
+    (i,j) => (i+j) % 2 === 0,
+    (i,j) => i % 2 === 0,
+    (i,j) => j % 3 === 0,
+    (i,j) => (i+j) % 3 === 0,
+    (i,j) => (Math.floor(i/2) + Math.floor(j/3)) % 2 === 0,
+    (i,j) => (i*j) % 2 + (i*j) % 3 === 0,
+    (i,j) => ((i*j) % 2 + (i*j) % 3) % 2 === 0,
+    (i,j) => ((i*j) % 3 + (i+j) % 2) % 2 === 0,
+  ];
+  function build(v, dataCw, mask){
+    const mc = v*4 + 17;
+    const m = Array.from({length: mc}, () => new Array(mc).fill(null));
+    const setFinder = (r, c) => {
+      for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++){
+        const rr = r+i, cc = c+j;
+        if (rr < 0 || rr >= mc || cc < 0 || cc >= mc) continue;
+        m[rr][cc] = (i >= 0 && i <= 6 && (j === 0 || j === 6)) ||
+                    (j >= 0 && j <= 6 && (i === 0 || i === 6)) ||
+                    (i >= 2 && i <= 4 && j >= 2 && j <= 4);
+      }
+    };
+    setFinder(0, 0); setFinder(0, mc-7); setFinder(mc-7, 0);
+    const ap = ALIGN[v] || [];
+    ap.forEach(r => ap.forEach(c => {
+      if (m[r][c] !== null) return;
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++)
+        m[r+i][c+j] = Math.max(Math.abs(i), Math.abs(j)) !== 1;
+    }));
+    for (let i = 8; i < mc-8; i++){
+      if (m[i][6] === null) m[i][6] = i % 2 === 0;
+      if (m[6][i] === null) m[6][i] = i % 2 === 0;
+    }
+    const f = bch15((0b11 << 3) | mask);
+    for (let i = 0; i < 15; i++){
+      const bit = ((f >> i) & 1) === 1;
+      if (i < 6) m[i][8] = bit;
+      else if (i < 8) m[i+1][8] = bit;
+      else m[mc-15+i][8] = bit;
+      if (i < 8) m[8][mc-i-1] = bit;
+      else if (i < 9) m[8][15-i-1+1] = bit;
+      else m[8][15-i-1] = bit;
+    }
+    m[mc-8][8] = true;
+    if (v >= 7){
+      const vi = bch18(v);
+      for (let i = 0; i < 18; i++){
+        const bit = ((vi >> i) & 1) === 1;
+        m[Math.floor(i/3)][i%3 + mc - 8 - 3] = bit;
+        m[i%3 + mc - 8 - 3][Math.floor(i/3)] = bit;
+      }
+    }
+    let inc = -1, row = mc-1, bitIdx = 7, byteIdx = 0;
+    for (let col = mc-1; col > 0; col -= 2){
+      if (col === 6) col--;
+      while (true){
+        for (let c = 0; c < 2; c++){
+          if (m[row][col-c] === null){
+            let dark = false;
+            if (byteIdx < dataCw.length) dark = ((dataCw[byteIdx] >>> bitIdx) & 1) === 1;
+            if (MASKS[mask](row, col-c)) dark = !dark;
+            m[row][col-c] = dark;
+            bitIdx--; if (bitIdx === -1){ byteIdx++; bitIdx = 7; }
+          }
+        }
+        row += inc;
+        if (row < 0 || row >= mc){ row -= inc; inc = -inc; break; }
+      }
+    }
+    return m;
+  }
+  function penalty(m){
+    const mc = m.length;
+    let p = 0;
+    for (let pass = 0; pass < 2; pass++){
+      for (let i = 0; i < mc; i++){
+        let run = 1;
+        for (let j = 1; j < mc; j++){
+          const cur = pass ? m[j][i] : m[i][j], prev = pass ? m[j-1][i] : m[i][j-1];
+          if (cur === prev) run++;
+          else { if (run >= 5) p += 3 + (run - 5); run = 1; }
+        }
+        if (run >= 5) p += 3 + (run - 5);
+      }
+    }
+    for (let i = 0; i < mc-1; i++) for (let j = 0; j < mc-1; j++)
+      if (m[i][j] === m[i][j+1] && m[i][j] === m[i+1][j] && m[i][j] === m[i+1][j+1]) p += 3;
+    const pat = [true,false,true,true,true,false,true];
+    const light4 = (arr, s) => s >= 0 && s+3 < arr.length && !arr[s] && !arr[s+1] && !arr[s+2] && !arr[s+3];
+    for (let pass = 0; pass < 2; pass++){
+      for (let i = 0; i < mc; i++){
+        const line = [];
+        for (let j = 0; j < mc; j++) line.push(pass ? m[j][i] : m[i][j]);
+        for (let j = 0; j <= mc-7; j++){
+          let ok = true;
+          for (let k = 0; k < 7; k++) if (line[j+k] !== pat[k]){ ok = false; break; }
+          if (ok && (light4(line, j-4) || light4(line, j+7))) p += 40;
+        }
+      }
+    }
+    let dark = 0;
+    for (let i = 0; i < mc; i++) for (let j = 0; j < mc; j++) if (m[i][j]) dark++;
+    p += Math.floor(Math.abs(dark*100/(mc*mc) - 50) / 5) * 10;
+    return p;
+  }
+  function encode(text){
+    const bytes = Array.from(new TextEncoder().encode(text));
+    const v = pickVersion(bytes.length);
+    const cw = interleave(makeCodewords(bytes, v), v);
+    let best = null, bestP = Infinity;
+    for (let mask = 0; mask < 8; mask++){
+      const m = build(v, cw, mask);
+      const p = penalty(m);
+      if (p < bestP){ bestP = p; best = m; }
+    }
+    return best;
+  }
+  return { encode };
+})();
+
+/* ---------------- auth (email + password; the reset email covers both
+   first-time setup and forgotten passwords) ---------------- */
+let recovering = /type=recovery/.test(location.hash);
+async function init(){
+  const { data:{ session } } = await db.auth.getSession();
+  if(recovering){ showLogin(true); showPwPanel(true); return; }
+  session ? start() : showLogin();
+}
+db.auth.onAuthStateChange((ev)=>{
+  if(ev === 'PASSWORD_RECOVERY'){ recovering = true; showLogin(true); showPwPanel(true); return; }
+  if(ev === 'SIGNED_IN' && !recovering){ showLogin(false); start(); }
+});
+
+function showLogin(show=true){
+  $('login').style.display = show?'block':'none';
+  $('page').style.display  = show?'none':'block';
+}
+function showPwPanel(on){
+  $('pwPanel').style.display   = on?'block':'none';
+  $('loginForm').style.display = on?'none':'block';
+}
+$('loginBtn').onclick = async ()=>{
+  const email = $('loginEmail').value.trim(), pass = $('loginPass').value;
+  const m = $('loginMsg');
+  if(!email || !pass){ m.className='msg err'; m.textContent='Enter the email and password.'; return; }
+  m.className='msg'; m.textContent='Signing in…';
+  const { error } = await db.auth.signInWithPassword({ email, password: pass });
+  if(error){ m.className='msg err'; m.textContent='Wrong email or password.'; }
+  else m.textContent='';
+};
+$('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') $('loginBtn').click(); });
+$('pwForgot').onclick = async ()=>{
+  const email = $('loginEmail').value.trim();
+  const m = $('loginMsg');
+  if(!email){ m.className='msg err'; m.textContent='Enter the operator email above first.'; return; }
+  m.className='msg'; m.textContent='Sending…';
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if(error){ m.className='msg err'; m.textContent='Could not send. Try again.'; }
+  else { m.className='msg ok'; m.textContent='Sent. Open the link from this device to set the password.'; }
+};
+$('pwSave').onclick = async ()=>{
+  const p = $('pwNew').value, m = $('loginMsg');
+  if(p.length < 8){ m.className='msg err'; m.textContent='8 characters minimum.'; return; }
+  m.className='msg'; m.textContent='Saving…';
+  const { error } = await db.auth.updateUser({ password: p });
+  if(error){ m.className='msg err'; m.textContent='Could not save. Open a fresh reset link and try again.'; }
+  else { recovering = false; m.textContent=''; showPwPanel(false); showLogin(false); start(); }
+};
+$('signOut').onclick = async ()=>{ await db.auth.signOut(); location.reload(); };
+
+/* ---------------- data ---------------- */
+async function loadAll(){
+  const [v, w] = await Promise.all([ db.rpc('admin_list_venues'), db.rpc('admin_demo_watch') ]);
+  if(v.error || v.data === null){ VENUES = null; return; }   // null = not an operator (or 25 not run)
+  VENUES = v.data; WATCH = (w.data || []);
+}
+const venueById = id => (VENUES||[]).find(x=>x.id===id);
+
+async function start(){
+  $('main').innerHTML = '<p style="color:var(--ink-dim)">Loading…</p>';
+  await loadAll();
+  if(VENUES === null){
+    $('main').innerHTML = `<section><h2>Not an operator</h2>
+      <div class="hint">This login is not in operator_users, or 25_operator_admin.sql has not been run yet. Fix that, then reload.</div></section>`;
+    return;
+  }
+  // resume an interrupted form: add drafts reopen Add, edit drafts reopen
+  // that venue's Edit (a stale edit draft for a deleted venue is dropped)
+  const d = loadDraft();
+  if(d){
+    if(d.mode === 'edit'){
+      const ve = venueById(d.vid);
+      if(ve){ form(ve); return; }
+      clearDraft();
+    } else { form(null); return; }
+  }
+  // no interrupted form: restore the view the hash remembers (tab evictions)
+  const h = location.hash.slice(1);
+  if(h.startsWith('v=')){ const ve = venueById(h.slice(2)); if(ve){ detail(ve.id); return; } }
+  if(h.startsWith('card=')){ const ve = venueById(h.slice(5)); if(ve){ cardView(ve); return; } }
+  if(h === 'packs'){ packs(); return; }
+  if(h === 'form'){ formBuilder('global', home); return; }
+  if(h === 'platform'){ platformView(); return; }
+  home();
+}
+
+/* ---------------- helpers ---------------- */
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), 2200); }
+/* View memory in the URL hash: iOS evicts background tabs and the reload was
+   landing on home even mid-venue (the drafts fix only
+   covered the add/edit FORM). replaceState = no history spam, and the app's
+   own back buttons stay the only navigation. */
+function setView(h){ try { history.replaceState(null, '', location.pathname + location.search + (h ? '#' + h : '')); } catch(e){} }
+async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Copied'); } catch(e){ prompt('Copy this:', t); } }
+function esc(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function slug(name){ return name.toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'').slice(0,40); }
+function readableOn(hex){
+  const c=(hex||'').replace('#',''); if(c.length<6) return '#16110a';
+  const f=x=>{x/=255; return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};
+  const L=.2126*f(parseInt(c.slice(0,2),16))+.7152*f(parseInt(c.slice(2,4),16))+.0722*f(parseInt(c.slice(4,6),16));
+  return L>.55 ? '#16110a' : '#ffffff';
+}
+const demoLink   = v => `${DOMAIN}/app.html?v=${v.id}`;
+const ownerLink  = v => `${DOMAIN}/owner.html?v=${v.id}&k=${v.owner_key}`;
+const reportLink = v => `${DOMAIN}/report.html?v=${v.id}&k=${v.owner_key}`;   // shares the owner key: Rotate cycles both
+function stripeLink(url, v){
+  if(!url) return '';
+  const sep = url.includes('?') ? '&' : '?';
+  const email = v.owner_email ? `prefilled_email=${encodeURIComponent(v.owner_email)}&` : '';
+  return `${url}${sep}${email}client_reference_id=${encodeURIComponent(v.id)}`;
+}
+function mailto(v, subject, body){
+  return `mailto:${encodeURIComponent(v.owner_email||'')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/* ---------------- content: game metadata shared by the pack importer
+   and the custom questions manager. Field names match admin_add_content
+   in 27_admin_content.sql exactly. ---------------- */
+const GAME_ORDER = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss'];
+const GAMES_META = {
+  who_knows_who:        { name:'Who Knows Who',    fields:[['prompt','Prompt (use {N} for the player name)'],['a','Option A'],['b','Option B'],['c','Option C'],['d','Option D']] },
+  guess_the_split:    { name:'Guess the Split',  fields:[['a','Option A'],['b','Option B']] },
+  wordy:           { name:'Wordy',            fields:[['word','Five-letter word']] },
+  trivia:          { name:'Trivia',           fields:[['question','Question'],['correct','Correct answer'],['wrong1','Wrong answer 1'],['wrong2','Wrong answer 2'],['wrong3','Wrong answer 3']] },
+  who_invited_you: { name:'Who Invited You?', fields:[['category','Category'],['word','Secret word']] },
+  fortune_teller:  { name:'Fortune Teller',   fields:[['text','Fortune text']] },
+  all_talk:        { name:'All Talk',         fields:[['category','Category (plural noun, e.g. dog breeds)']] },
+  cornhole:        { name:'Cornhole',         fields:[] },   // content-less: toggles only, no packs/custom/retire
+  quick_pour:      { name:GNAME.quick_pour,       fields:[] },   // content-less, same as cornhole
+  horse_racing:    { name:'Horse Racing',     fields:[] },   // content-less AND venue-exclusive (38): tick it only where it is sold
+  ring_toss:       { name:'Ring Toss',        fields:[] },   // content-less AND venue-exclusive (39): tick it only where it is sold
+};
+/* games that actually carry question content (packs, custom rows, retire) */
+const CONTENT_GAMES = GAME_ORDER.filter(g => GAMES_META[g].fields.length);
+/* One full round per game; the SAME numbers live in content_floor() in
+   28_custom_only_retire.sql and MIN_CUSTOM_ONLY in app.html. */
+const MIN_CUSTOM_ONLY = { guess_the_split:5, who_knows_who:12, trivia:8, wordy:5, who_invited_you:5, fortune_teller:3, all_talk:5 };
+/* Mirrors the server checks so a bad pack is caught before any call. */
+function validateRow(game, row){
+  const meta = GAMES_META[game];
+  for(const [k] of meta.fields){
+    const val = String(row[k] ?? '').trim();
+    if(!val) return `missing "${k}"`;
+    if(val.length > 300) return `"${k}" over 300 characters`;
+  }
+  if(game === 'wordy' && !/^[a-z]{5}$/i.test(String(row.word).trim())) return 'word must be exactly five letters';
+  if(game === 'who_knows_who' && !String(row.prompt).includes('{N}')) return 'prompt needs the {N} placeholder';
+  return null;
+}
+function validatePack(pack){
+  if(!pack || typeof pack !== 'object' || Array.isArray(pack)) return { error:'Pack must be a JSON object like {"game": "...", "rows": [...]}' };
+  if(!GAMES_META[pack.game] || !GAMES_META[pack.game].fields.length) return { error:`Unknown game "${esc(String(pack.game))}". One of: ${CONTENT_GAMES.join(', ')}` };
+  if(!Array.isArray(pack.rows) || !pack.rows.length) return { error:'"rows" must be a non-empty array' };
+  const bad = [];
+  pack.rows.forEach((r, i)=>{ const e = validateRow(pack.game, r || {}); if(e) bad.push(`row ${i+1}: ${e}`); });
+  return { game: pack.game, rows: pack.rows, bad };
+}
+
+/* Upload straight to the storage REST endpoint with the session token
+   attached EXPLICITLY. The library-managed path produced RLS violations in
+   the field even with correct policies (the request appeared to go out
+   without the session), so nothing here is left to client wiring. Surfaces
+   the server's real status + message on failure. */
+async function uploadLogo(path, blob){
+  const { data:{ session } } = await db.auth.getSession();
+  if(!session) throw new Error('Your sign-in expired. Reload the page and sign in again.');
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(LOGO_BUCKET)}/${encodeURIComponent(path)}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + session.access_token,
+      'apikey': SUPABASE_KEY,
+      'Content-Type': 'image/png',
+      'x-upsert': 'true',
+    },
+    body: blob,
+  });
+  if(!res.ok){
+    let detail = '';
+    try { detail = (await res.json()).message || ''; } catch(e){}
+    throw new Error(`logo upload failed (${res.status}${detail ? ': ' + detail : ''})`);
+  }
+}
+
+/* Normalize any picked image (HEIC photos included, on iOS) into a small
+   transparent-safe PNG: decode via <img>, downscale to max 360px tall,
+   re-encode. Also strips photo metadata for free. */
+async function processLogo(file){
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  await new Promise((res, rej)=>{ img.onload=res; img.onerror=()=>rej(new Error('bad image')); img.src=url; });
+  const scale = Math.min(1, 360/img.naturalHeight, 1200/img.naturalWidth);
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.naturalWidth*scale));
+  c.height= Math.max(1, Math.round(img.naturalHeight*scale));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(url);
+  return await new Promise(r=>c.toBlob(r, 'image/png'));
+}
+
+/* Top few colors in the logo, offered as accent swatches. Coarse on
+   purpose; the color wheel is right next to it for fine tuning. */
+function extractSwatches(img){
+  const c=document.createElement('canvas'); c.width=40; c.height=40;
+  const x=c.getContext('2d'); x.drawImage(img,0,0,40,40);
+  const d=x.getImageData(0,0,40,40).data, tally={};
+  for(let i=0;i<d.length;i+=4){
+    if(d[i+3]<140) continue;                                  // transparent
+    const r=d[i],g=d[i+1],b=d[i+2];
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    if(max>235&&min>215) continue;                            // near white
+    if(max<35) continue;                                      // near black
+    const k=[r,g,b].map(v=>Math.round(v/32)*32).join(',');
+    tally[k]=(tally[k]||0)+1;
+  }
+  return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([k])=>'#'+k.split(',').map(v=>(+v).toString(16).padStart(2,'0')).join(''));
+}
+
+/* ---------------- home: list + tools + demo watch ---------------- */
+function home(){
+  setView('');
+  const sorted = [...VENUES].sort((a,b)=> a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+  const rows = sorted.map(v=>`
+    <button class="vrow" data-id="${esc(v.id)}">
+      <span class="vdot" style="background:${esc(v.accent)}"></span>
+      <span><div class="vname">${esc(v.name)}</div><div class="vid">${esc(v.id)}</div></span>
+      <span class="vspacer"><span class="badge ${esc(v.status)}">${esc(v.status)}</span> ›</span>
+    </button>`).join('');
+
+  // demo watch: rollup per lead venue + the latest raw events
+  const byVenue = {};
+  WATCH.forEach(e=>{ (byVenue[e.venue_id]=byVenue[e.venue_id]||[]).push(e); });
+  const dw = Object.entries(byVenue).map(([vid, evs])=>{
+    const opens = evs.filter(e=>e.event==='app_open').length;
+    const last = new Date(evs[0].at);
+    return `<div class="dwrow"><span class="dwv">${esc((venueById(vid)||{name:vid}).name)}</span>
+      <span>${opens} open${opens===1?'':'s'}, ${evs.length} event${evs.length===1?'':'s'}</span>
+      <span class="dwt">${last.toLocaleDateString([], {month:'short', day:'numeric'})} ${last.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span></div>`;
+  }).join('');
+
+  $('main').innerHTML = `
+    <h1>Venues</h1>
+    <div style="margin-bottom:14px"><button class="btn" id="addBtn">+ Add venue</button></div>
+    ${rows || '<section><div class="hint">No venues yet. Add the first one.</div></section>'}
+    <section style="margin-top:20px">
+      <h2>Tools</h2>
+      <div class="hint">Global tools, not tied to one venue.</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px">
+        <button class="btn sm ghost" id="packsBtn">Question packs</button>
+        <button class="btn sm ghost" id="formBtn">Feedback form</button>
+        <button class="btn sm ghost" id="platBtn">Platform updates</button>
+      </div>
+    </section>
+    <section style="margin-top:20px">
+      <h2>Demo watch</h2>
+      <div class="hint">Every scan on a lead venue's demo, last 14 days. This is your follow-up list.</div>
+      ${dw || '<div class="hint">Quiet. No lead venue activity in the last 14 days.</div>'}
+    </section>`;
+  $('addBtn').onclick = ()=> form(null);
+  $('packsBtn').onclick = ()=> packs();
+  $('formBtn').onclick = ()=> formBuilder('global', home);
+  $('platBtn').onclick = ()=> platformView();
+  document.querySelectorAll('.vrow').forEach(b=> b.onclick = ()=> detail(b.dataset.id));
+}
+
+/* ---------------- feedback form builder (35_feedback_forms.sql) ----------------
+   One builder for the global form (Tools) and any venue's custom form (venue
+   detail). A venue form is seeded as a COPY of global the first time it is
+   opened, so per-venue editing starts from the standard, and later global
+   edits never silently change a paid custom form (replace semantics). */
+const FORM_CORE_META = [
+  ['food',      'How was the food? (1-5 rating)'],
+  ['service',   'How was the service? (1-5 rating)'],
+  ['discovery', "How'd you end up here tonight? (choice)"],
+  ['plate',     'In the food itself, what matters most? (choice)'],
+  ['visit',     'About the visit, what matters most? (choice)'],
+];
+const formQid = ()=> 'x' + Math.random().toString(36).slice(2, 10);
+async function formBuilder(id, backFn){
+  setView(id === 'global' ? 'form' : 'v=' + id);   // a venue form restores to its venue
+  $('main').innerHTML = '<div class="hint">Loading…</div>';
+  const { data, error } = await db.from('feedback_forms').select('*').in('id', id === 'global' ? ['global'] : ['global', id]);
+  if(error){ $('main').innerHTML = '<section><div class="hint">Could not load (has 35_feedback_forms.sql been run?).</div><button class="btn sm ghost" id="fbBack" style="margin-top:10px">Back</button></section>'; $('fbBack').onclick = ()=> backFn(); return; }
+  const rows = {}; (data || []).forEach(r=>{ rows[r.id] = r; });
+  // venue form seeds from a copy of global on first open
+  const seed = rows[id] || rows.global || { core:{}, extras:[] };
+  const core = Object.assign({ food:true, service:true, discovery:true, plate:true, visit:true }, seed.core || {});
+  let extras = Array.isArray(seed.extras) ? JSON.parse(JSON.stringify(seed.extras)) : [];
+  const vName = id === 'global' ? null : (venueById(id) || {}).name;
+
+  function paint(){
+    $('main').innerHTML = `
+      <button class="back" id="fbBack">‹ Back</button>
+      <h1>${vName ? esc(vName) + ' · custom form' : 'Feedback form (all venues)'}</h1>
+      <section>
+        <h2>Standard questions</h2>
+        <div class="hint">Untick a question to hide it${vName ? ' at this venue' : ' everywhere the global form applies'} (a venue that does not serve food can hide the food rating). The comment box always shows, so the form can never be empty.</div>
+        <div style="margin-top:8px">
+          ${FORM_CORE_META.map(([k, label])=>`
+            <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
+              <input type="checkbox" data-core="${k}" ${core[k] !== false ? 'checked' : ''} /> ${esc(label)}
+            </label>`).join('')}
+        </div>
+      </section>
+      <section>
+        <h2>Your questions</h2>
+        <div class="hint">Asked after the standard questions, before the comment box. Ratings average in the owner stats; choices show a breakdown; text shows as a list. Up to 10.</div>
+        <div id="fbList" style="margin-top:8px">
+          ${extras.length ? extras.map((x, i)=>`
+            <div class="frow" style="margin-top:6px;align-items:center" data-ix="${i}">
+              <span style="flex:1;min-width:0">${esc(x.label)} <span style="color:var(--ink-faint);font-size:12px">· ${x.type === 'rating' ? '1-5 rating' : x.type === 'text' ? 'short text' : (x.multi ? 'choice, pick many' : 'choice, pick one') + ': ' + esc((x.opts || []).join(' / '))}</span></span>
+              <button type="button" class="btn sm ghost" data-mv="-1" style="padding:6px 11px">▲</button>
+              <button type="button" class="btn sm ghost" data-mv="1" style="padding:6px 11px">▼</button>
+              <button type="button" class="btn sm danger" data-del style="padding:6px 11px">×</button>
+            </div>`).join('') : '<div class="hint">None yet.</div>'}
+        </div>
+        <label class="f" style="margin-top:14px">Add a question</label>
+        <div class="frow">
+          <select id="fbType"><option value="rating">Rating 1-5</option><option value="choice">Multiple choice</option><option value="text">Short text</option></select>
+          <input type="text" id="fbLabel" maxlength="120" placeholder="The question diners see" style="flex:1;min-width:180px" />
+        </div>
+        <div id="fbChoiceOpts" style="display:none;margin-top:8px">
+          <textarea id="fbOpts" rows="3" placeholder="One option per line (2 to 12)"></textarea>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+            <input type="checkbox" id="fbMulti" /> Allow multiple answers
+          </label>
+        </div>
+        <button class="btn sm" id="fbAdd" style="margin-top:8px">Add question</button>
+        <div class="msg" id="fbAddMsg"></div>
+      </section>
+      <button class="btn" id="fbSave">Save form</button>
+      <div class="msg" id="fbMsg"></div>`;
+    $('fbBack').onclick = ()=> backFn();
+    $('fbType').onchange = ()=>{ $('fbChoiceOpts').style.display = $('fbType').value === 'choice' ? 'block' : 'none'; };
+    document.querySelectorAll('#fbList [data-mv]').forEach(b=> b.onclick = ()=>{
+      const i = +b.closest('[data-ix]').dataset.ix, j = i + (+b.dataset.mv);
+      if(j < 0 || j >= extras.length) return;
+      const t = extras[i]; extras[i] = extras[j]; extras[j] = t;
+      const c = collectCore(); Object.assign(core, c); paint();
+    });
+    document.querySelectorAll('#fbList [data-del]').forEach(b=> b.onclick = ()=>{
+      extras.splice(+b.closest('[data-ix]').dataset.ix, 1);
+      const c = collectCore(); Object.assign(core, c); paint();
+    });
+    $('fbAdd').onclick = ()=>{
+      const m = $('fbAddMsg');
+      const type = $('fbType').value, label = $('fbLabel').value.trim();
+      if(!label){ m.className='msg err'; m.textContent='Write the question first.'; return; }
+      if(extras.length >= 10){ m.className='msg err'; m.textContent='10 questions is the cap. Remove one first.'; return; }
+      const q = { id: formQid(), type, label };
+      if(type === 'choice'){
+        const opts = $('fbOpts').value.split('\n').map(s=>s.trim()).filter(Boolean).slice(0, 12);
+        if(opts.length < 2){ m.className='msg err'; m.textContent='A choice question needs at least 2 options.'; return; }
+        q.opts = opts; q.multi = $('fbMulti').checked;
+      }
+      extras.push(q);
+      const c = collectCore(); Object.assign(core, c); paint();
+    };
+    $('fbSave').onclick = async ()=>{
+      const m = $('fbMsg');
+      m.className='msg'; m.textContent='Saving…';
+      const { data:res, error:err } = await db.rpc('admin_set_form', { p_id: id, p_core: collectCore(), p_extras: extras });
+      if(err || !res || res.ok !== true){ m.className='msg err'; m.textContent='Could not save (has 35_feedback_forms.sql been run?).'; return; }
+      extras = res.extras || extras;
+      m.className='msg ok'; m.textContent='Saved. Live on the next app load.';
+    };
+  }
+  function collectCore(){
+    const c = {};
+    document.querySelectorAll('#main [data-core]').forEach(x=>{ c[x.dataset.core] = x.checked; });
+    return Object.keys(c).length ? c : core;
+  }
+  paint();
+}
+
+/* ---------------- add / edit form with live preview ---------------- */
+function form(existing){
+  const v = existing || { name:'', id:'', accent:'#3a6ea5', logo:'', review:'', header_bg:'', owner_email:'' };
+  const editing = !!existing;
+  $('main').innerHTML = `
+    <button class="back" id="back">‹ ${editing?esc(v.name):'Venues'}</button>
+    <h1>${editing?'Edit venue':'Add venue'}</h1>
+    <div class="split">
+      <section>
+        ${!editing && WORKER_URL ? `
+        <label class="f">Autofill from their website <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <div class="frow">
+          <input type="url" id="fSite" placeholder="https://theirrestaurant.com" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:200px" />
+          <button class="btn sm" id="afBtn">Autofill</button>
+        </div>
+        <div class="msg" id="afMsg"></div>
+        <div class="cands" id="afLogos"></div>
+        <div id="afPlaces"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0 2px" />` : ''}
+        <label class="f">Restaurant name</label>
+        <input type="text" id="fName" value="${esc(v.name)}" placeholder="Bahrs Landing" />
+        <label class="f">Venue id ${editing?'(permanent)':'(permanent, becomes the QR link)'}</label>
+        <input type="text" id="fId" value="${esc(v.id)}" ${editing?'disabled style="opacity:.6"':''} placeholder="bahrs" autocapitalize="off" autocorrect="off" spellcheck="false" />
+        <label class="f">Logo</label>
+        <div class="radio" id="logoMode">
+          <label><input type="radio" name="lm" value="upload"> Upload image</label>
+          <label><input type="radio" name="lm" value="text"> Text wordmark</label>
+          ${editing?'<label><input type="radio" name="lm" value="keep" checked> Keep current</label>':''}
+        </div>
+        <div id="logoUploadRow" style="display:none;margin-top:8px">
+          <input type="file" id="fLogoFile" accept="image/*" />
+          <div class="msg" id="lgMsg"></div>
+          <div class="swatches" id="swatches"></div>
+        </div>
+        <div id="logoTextRow" style="display:none;margin-top:8px">
+          <input type="text" id="fLogoText" placeholder="BAHRS LANDING" value="${esc(!/^https?:\/\//i.test(v.logo||'') ? (v.logo||'') : '')}" />
+        </div>
+        <label class="f">Accent color</label>
+        <div class="frow">
+          <input type="color" id="fAccent" value="${esc(v.accent||'#3a6ea5')}" />
+          <input type="text" id="fAccentHex" value="${esc(v.accent||'#3a6ea5')}" style="width:110px" autocapitalize="off" spellcheck="false" />
+        </div>
+        <label class="f">Header background <span style="font-weight:400;text-transform:none">(optional, for logos that need it; white for everyone else)</span></label>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="fHbOn" ${v.header_bg?'checked':''}/> custom</label>
+          <input type="color" id="fHb" value="${esc(v.header_bg||'#16233a')}" style="${v.header_bg?'':'display:none'}" />
+        </div>
+        <label class="f">Dark mode <span style="font-weight:400;text-transform:none">(black nav + dark app. Only for venues with a dark website AND a light logo — there is no logo filtering; if the logo needs white, leave this off.)</span></label>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="fDark" ${v.dark_mode?'checked':''}/> dark mode</label>
+        </div>
+        <label class="f">Google review link <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener" style="font-weight:400;text-transform:none;color:var(--accent)">Place ID finder</a></label>
+        <div class="frow">
+          <input type="text" id="fReview" value="${esc(v.review||'')}" placeholder="Paste the review link, or just the Place ID (ChIJ...)" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:200px" />
+          <button class="btn sm ghost" id="fReviewTest" type="button">Test</button>
+        </div>
+        <label class="f">Owner email <span style="font-weight:400;text-transform:none">(for the send buttons)</span></label>
+        <input type="email" id="fEmail" value="${esc(v.owner_email||'')}" placeholder="owner@restaurant.com" autocapitalize="off" />
+        <div style="margin-top:18px"><button class="btn" id="fSave">${editing?'Save changes':'Add venue'}</button></div>
+        <div class="msg" id="fMsg"></div>
+      </section>
+      <div>
+        <div class="phone"><div class="scr">
+          <div class="pv-brand" id="pvBrand"></div>
+          <div class="pv-body">
+            <div id="pvOpts"></div>
+            <div class="pv-note">live preview</div>
+          </div>
+        </div></div>
+      </div>
+    </div>`;
+
+  $('back').onclick = ()=>{ clearDraft(); editing ? detail(v.id) : home(); };
+
+  // ----- form state -----
+  // Drafts now cover EDIT too (the operator, Aug 2026: iOS evicted the tab mid-
+  // edit and the screen was gone). One draft slot; an edit draft carries
+  // mode+vid and only resumes onto the same venue.
+  const draftRaw = loadDraft();
+  const draft = draftRaw && (editing ? (draftRaw.mode === 'edit' && draftRaw.vid === v.id)
+                                     : (draftRaw.mode !== 'edit')) ? draftRaw : null;
+  let logoMode = editing ? 'keep' : 'upload';
+  let logoBlob = null;              // processed PNG waiting for upload
+  let logoPreviewUrl = /^https?:\/\//i.test(v.logo||'') ? v.logo : '';
+  let draftLogoDataUrl = (draft && draft.logoData) || null;
+  if(!editing) document.querySelector('#logoMode input[value=upload]').checked = true;
+
+  const state = ()=>({
+    name: $('fName').value.trim(),
+    id: editing ? v.id : $('fId').value.trim(),
+    accent: $('fAccentHex').value.trim(),
+    headerBg: $('fHbOn').checked ? $('fHb').value : '',
+    review: $('fReview').value.trim(),
+    email: $('fEmail').value.trim(),
+    wordmark: $('fLogoText').value.trim(),
+    dark: $('fDark').checked,
+  });
+  function saveDraftNow(){
+    const s = state();
+    // an untouched ADD form drafts nothing, so merely opening Add and
+    // leaving does not hijack the next visit into a resume. An edit form
+    // always drafts (back/save clear it), so eviction can never lose it.
+    if(!editing && !s.name && !s.review && !s.email && !s.wordmark && !logoBlob && !draftLogoDataUrl) return;
+    saveDraftObj({ ...s, logoMode, idTouched,
+      mode: editing ? 'edit' : 'add', vid: editing ? v.id : null,
+      site: $('fSite') ? $('fSite').value.trim() : '',
+      logoData: draftLogoDataUrl });
+  }
+
+  function paint(){
+    const s = state();
+    // The preview mirrors BOTH modes of the refreshed app (dark-2026-08 in
+    // app.html): dark venues get the black nav fallback, near-black cards,
+    // and the accent-tinted near-black stage; light gets white cards on the
+    // accent-tinted paper.
+    const dark = !!($('fDark') && $('fDark').checked);
+    const hb = s.headerBg || (dark ? '#0b0a09' : '#ffffff');
+    const ink = readableOn(hb);
+    const scr = document.querySelector('.phone .scr');
+    if(scr) scr.style.background = dark
+      ? `color-mix(in srgb, ${s.accent} 10%, #121110)`
+      : `color-mix(in srgb, ${s.accent} 6%, #fdfcfa)`;
+    const brand = $('pvBrand');
+    brand.style.background = hb;
+    brand.style.borderBottomColor = s.accent;
+    if(logoMode!=='text' && logoPreviewUrl){
+      brand.innerHTML = `<img src="${esc(logoPreviewUrl)}" alt="" />`;
+    } else {
+      const wm = (logoMode==='text' ? s.wordmark : '') || s.name || 'YOUR RESTAURANT';
+      brand.innerHTML = `<span class="pv-wordmark" style="color:${ink}"><span class="dot" style="background:${esc(s.accent)}"></span>${esc(wm)}</span>`;
+    }
+    // Miniature of the REAL landing cards (app.html refresh-2026-08): icon
+    // tile in the accent, text, arrow chip — in both modes.
+    const cardBg     = dark ? '#1e1b17' : '#ffffff';
+    const cardBorder = dark ? 'rgba(255,255,255,.17)' : 'rgba(22,17,10,.12)';
+    const tColor     = dark ? '#f1ede6' : '#1b1813';
+    const dColor     = dark ? '#a7a196' : 'var(--ink-dim)';
+    const arrowFg    = dark ? `color-mix(in srgb, ${s.accent} 55%, #fff)` : `color-mix(in srgb, ${s.accent} 68%, #16110a)`;
+    const arrowBg    = dark ? `color-mix(in srgb, ${s.accent} 18%, #1e1b17)` : `color-mix(in srgb, ${s.accent} 9%, #fff)`;
+    const ICONS = {
+      dice: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/></svg>`,
+      chat: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5c0 4.14-4.03 7.5-9 7.5-1.02 0-2-.14-2.91-.4L4 20l1.18-3.53C3.83 15.15 3 13.4 3 11.5 3 7.36 7.03 4 12 4s9 3.36 9 7.5z"/></svg>`,
+    };
+    const card = (icon, t, d) => `
+      <div class="pv-opt" style="border:1px solid ${cardBorder};background:${cardBg};border-radius:15px;display:flex;align-items:center;gap:10px;padding:11px 12px">
+        <span style="flex:none;width:34px;height:34px;border-radius:11px;background:${esc(s.accent)};color:${readableOn(s.accent)};display:grid;place-items:center">${ICONS[icon]}</span>
+        <span style="flex:1;min-width:0">
+          <div class="t" style="color:${tColor}">${t}</div>
+          <div class="d" style="color:${dColor}">${d}</div>
+        </span>
+        <span style="flex:none;width:21px;height:21px;border-radius:999px;background:${arrowBg};color:${arrowFg};display:grid;place-items:center;font-size:12px;line-height:1">›</span>
+      </div>`;
+    $('pvOpts').innerHTML =
+      card('dice', 'Play a game', 'Pass the time, solo or with the whole table.') +
+      card('chat', 'Share feedback', `Anonymous, and seen only by ${esc(s.name||'the restaurant')}.`);
+    // Draft on every repaint, not just on DOM events: swatch taps, autofill,
+    // and other PROGRAMMATIC setters change values without firing events (the
+    // bug that lost the chosen accent), but they all call paint().
+    saveDraftNow();
+  }
+
+  // ----- wiring -----
+  let idTouched = editing;
+  $('fName').addEventListener('input', ()=>{ if(!idTouched) $('fId').value = slug($('fName').value); paint(); });
+  if(!editing) $('fId').addEventListener('input', ()=>{ idTouched = true; });
+  $('fAccent').addEventListener('input', ()=>{ $('fAccentHex').value = $('fAccent').value; paint(); });
+  $('fAccentHex').addEventListener('input', ()=>{ if(/^#[0-9a-f]{6}$/i.test($('fAccentHex').value)) { $('fAccent').value = $('fAccentHex').value; paint(); } });
+  $('fHbOn').addEventListener('change', ()=>{ $('fHb').style.display = $('fHbOn').checked ? '' : 'none'; paint(); });
+  $('fHb').addEventListener('input', paint);
+  $('fDark').addEventListener('change', paint);
+  $('fLogoText').addEventListener('input', paint);
+  // Accept either a full review URL or a bare Place ID pasted from Google's
+  // finder page; a bare id composes into the writereview link on blur.
+  $('fReview').addEventListener('change', ()=>{
+    const raw = $('fReview').value.trim();
+    if(raw && !raw.includes('://') && /^[A-Za-z0-9_-]{16,}$/.test(raw)){
+      $('fReview').value = 'https://search.google.com/local/writereview?placeid=' + raw;
+      toast('Review link composed from the Place ID');
+    }
+  });
+  // Open the review link in a new tab so the right business's review box can
+  // be eyeballed BEFORE the venue is saved (or printed).
+  $('fReviewTest').onclick = ()=>{
+    $('fReview').dispatchEvent(new Event('change'));   // compose a bare id first
+    const u = $('fReview').value.trim();
+    if(!u){ toast('Nothing to test yet'); return; }
+    if(!/^https?:\/\//i.test(u)){ toast('That does not look like a link'); return; }
+    window.open(u, '_blank', 'noopener');
+  };
+  document.querySelectorAll('#logoMode input').forEach(r=> r.addEventListener('change', ()=>{
+    logoMode = document.querySelector('#logoMode input:checked').value;
+    $('logoUploadRow').style.display = logoMode==='upload' ? '' : 'none';
+    $('logoTextRow').style.display   = logoMode==='text'   ? '' : 'none';
+    paint();
+  }));
+  $('logoUploadRow').style.display = logoMode==='upload' ? '' : 'none';
+  // Shared by the file input and the autofill candidate picker: normalize
+  // the image, preview it, and offer its colors as accent swatches.
+  async function applyLogoBlob(raw){
+    logoBlob = await processLogo(raw);
+    logoPreviewUrl = URL.createObjectURL(logoBlob);
+    const img = new Image();
+    img.onload = ()=>{ $('swatches').innerHTML = extractSwatches(img).map(c=>`<button class="sw" style="background:${c}" data-c="${c}" title="${c}"></button>`).join('');
+      document.querySelectorAll('.sw').forEach(b=> b.onclick=()=>{ $('fAccent').value=b.dataset.c; $('fAccentHex').value=b.dataset.c; paint(); }); };
+    img.src = logoPreviewUrl;
+    paint();
+    // draft the processed logo too, so a tab eviction cannot lose it
+    if(!editing){
+      const fr = new FileReader();
+      fr.onload = ()=>{ draftLogoDataUrl = fr.result; saveDraftNow(); };
+      fr.readAsDataURL(logoBlob);
+    }
+  }
+  $('fLogoFile').addEventListener('change', async ()=>{
+    const f = $('fLogoFile').files[0]; if(!f) return;
+    $('lgMsg').textContent = '';
+    // the error lives right under the picker: it was landing in fMsg at the
+    // very bottom of the form, where the operator only spotted it by luck
+    try { await applyLogoBlob(f); }
+    catch(e){ $('lgMsg').className='msg err'; $('lgMsg').textContent='Could not read that image. Try a PNG or JPG.'; }
+  });
+
+  // ----- autofill from the restaurant's website (worker-backed) -----
+  if(!editing && WORKER_URL && $('afBtn')){
+    const am = $('afMsg');
+    const wfetch = async (path, params)=>{
+      const { data:{ session } } = await db.auth.getSession();
+      const u = new URL(WORKER_URL.replace(/\/$/,'') + path);
+      Object.entries(params).forEach(([k,val])=> u.searchParams.set(k, val));
+      return fetch(u, { headers: { Authorization: 'Bearer ' + (session ? session.access_token : '') } });
+    };
+    const pickLogo = async (imgUrl, btn)=>{
+      document.querySelectorAll('.cand').forEach(c=> c.classList.toggle('sel', c===btn));
+      am.className='msg'; am.textContent='Fetching that logo…';
+      try {
+        const r = await wfetch('/img', { url: imgUrl });
+        if(!r.ok) throw new Error();
+        const blob = await r.blob();
+        const up = document.querySelector('#logoMode input[value=upload]');
+        up.checked = true; up.dispatchEvent(new Event('change'));
+        await applyLogoBlob(blob);
+        am.className='msg ok'; am.textContent='Logo set. Tap a swatch below it, or fine tune the accent.';
+      } catch(e){ am.className='msg err'; am.textContent='Could not fetch that image. Try another, or upload one.'; }
+    };
+    $('afBtn').onclick = async ()=>{
+      let siteUrl = $('fSite').value.trim();
+      if(!siteUrl){ am.className='msg err'; am.textContent='Paste their website address first.'; return; }
+      if(!/^https?:\/\//i.test(siteUrl)) siteUrl = 'https://' + siteUrl;
+      am.className='msg'; am.textContent='Reading their site…';
+      $('afLogos').innerHTML=''; $('afPlaces').innerHTML='';
+      try {
+        const r = await wfetch('/site', { url: siteUrl });
+        if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error || 'site failed');
+        const d = await r.json();
+        if(d.name && !$('fName').value.trim()){
+          $('fName').value = d.name;
+          if(!idTouched) $('fId').value = slug(d.name);
+        }
+        paint();
+        const imgs = (d.images||[]).slice(0,8);
+        $('afLogos').innerHTML = imgs.map((u,i)=>`<button class="cand" data-u="${esc(u)}" title="candidate ${i+1}"><img src="${esc(u)}" referrerpolicy="no-referrer" alt="logo candidate ${i+1}" /></button>`).join('');
+        document.querySelectorAll('.cand').forEach(b=> b.onclick = ()=> pickLogo(b.dataset.u, b));
+        am.className='msg ok';
+        am.textContent = imgs.length ? `Found ${imgs.length} logo candidate${imgs.length===1?'':'s'}. Tap the best one.` : 'No logo candidates found; upload one instead.';
+        // review link straight off their own site, when they publish one.
+        // Free, no Places key involved.
+        if(d.googleReview && !$('fReview').value.trim()){
+          $('fReview').value = d.googleReview;
+          $('afPlaces').innerHTML = `<div class="hint" style="margin-top:10px">Review link found on their own site and filled in.</div>`;
+          saveDraftNow();
+        } else if(d.googleReviewDerived && !$('fReview').value.trim()){
+          $('fReview').value = d.googleReviewDerived;
+          $('afPlaces').innerHTML = `<div class="hint" style="margin-top:10px">Filled a review link derived from their g.page profile. <a href="${esc(d.googleReviewDerived)}" target="_blank" rel="noopener">Open it</a> and make sure the review box appears before trusting it.</div>`;
+          saveDraftNow();
+        }
+        if(!$('fReview').value.trim()){
+          $('afPlaces').innerHTML = `<div class="hint" style="margin-top:10px">No Google link on their site. Tap the Place ID finder link by the review field and paste the ID.</div>`;
+        }
+      } catch(e){
+        am.className='msg err'; am.textContent='Could not read that site. Fill the form manually.';
+      }
+    };
+  }
+
+  // every edit updates the draft, in BOTH modes
+  {
+    const sec = document.querySelector('#main section');
+    sec.addEventListener('input',  saveDraftNow);
+    sec.addEventListener('change', saveDraftNow);
+  }
+
+  paint();
+
+  // resume a drafted form: refill fields, logo included, after all wiring
+  if(draft){
+    if(editing){
+      // an edit draft is a complete snapshot of the form, so fields set
+      // unconditionally (a cleared review/email stays cleared)
+      $('fName').value = draft.name || v.name;
+      if(/^#[0-9a-f]{6}$/i.test(draft.accent||'')){ $('fAccentHex').value = draft.accent; $('fAccent').value = draft.accent; }
+      if(draft.headerBg){ $('fHbOn').checked = true; $('fHb').style.display=''; $('fHb').value = draft.headerBg; }
+      else { $('fHbOn').checked = false; $('fHb').style.display='none'; }
+      $('fReview').value = draft.review || '';
+      $('fEmail').value = draft.email || '';
+      if(typeof draft.dark === 'boolean') $('fDark').checked = draft.dark;
+      if(draft.logoMode === 'text'){
+        const r = document.querySelector('#logoMode input[value=text]');
+        if(r){ r.checked = true; r.dispatchEvent(new Event('change')); }
+        $('fLogoText').value = draft.wordmark || '';
+      }
+      if(draft.logoData){
+        fetch(draft.logoData).then(r=>r.blob()).then(b=>applyLogoBlob(b)).catch(()=>{});
+      }
+    } else {
+      if(draft.name) $('fName').value = draft.name;
+      if(draft.id){ $('fId').value = draft.id; idTouched = !!draft.idTouched; }
+      if(/^#[0-9a-f]{6}$/i.test(draft.accent||'')){ $('fAccentHex').value = draft.accent; $('fAccent').value = draft.accent; }
+      if(draft.headerBg){ $('fHbOn').checked = true; $('fHb').style.display=''; $('fHb').value = draft.headerBg; }
+      if(draft.review) $('fReview').value = draft.review;
+      if(draft.email) $('fEmail').value = draft.email;
+      if(typeof draft.dark === 'boolean') $('fDark').checked = draft.dark;
+      if(draft.site && $('fSite')) $('fSite').value = draft.site;
+      if(draft.logoMode === 'text'){
+        const r = document.querySelector('#logoMode input[value=text]');
+        if(r){ r.checked = true; r.dispatchEvent(new Event('change')); }
+        $('fLogoText').value = draft.wordmark || '';
+      }
+      if(draft.logoData){
+        fetch(draft.logoData).then(r=>r.blob()).then(b=>applyLogoBlob(b)).catch(()=>{});
+      }
+    }
+    paint();
+    toast(editing ? 'Resumed your unsaved edits' : 'Resumed your unsaved venue');
+  }
+
+  // ----- save -----
+  $('fSave').onclick = async ()=>{
+    const s = state(), m = $('fMsg');
+    if(!s.name){ m.className='msg err'; m.textContent='Name the restaurant.'; return; }
+    if(!/^[a-z0-9-]{2,40}$/.test(s.id)){ m.className='msg err'; m.textContent='Venue id: lowercase letters and numbers only, at least 2 characters.'; return; }
+    if(!/^#[0-9a-f]{6}$/i.test(s.accent)){ m.className='msg err'; m.textContent='Accent must be a hex color like #3a6ea5.'; return; }
+    if(logoMode==='upload' && !logoBlob && !editing){ m.className='msg err'; m.textContent='Pick a logo image, or switch to a text wordmark.'; return; }
+    if(logoMode==='text' && !s.wordmark && !editing){ m.className='msg err'; m.textContent='Type the wordmark text.'; return; }
+    m.className='msg'; m.textContent='Saving…'; $('fSave').disabled = true;
+
+    try {
+      // 1. logo value
+      let logoValue = null;   // null = leave unchanged (edit) / none (add)
+      if(logoMode==='upload' && logoBlob){
+        const path = `${s.id}.png`;
+        await uploadLogo(path, logoBlob);
+        const pub = db.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+        logoValue = `${pub}?u=${Date.now()}`;   // cache-bust so a rebrand shows next load
+      } else if(logoMode==='text'){
+        logoValue = s.wordmark;
+      }
+
+      // 2. row
+      if(editing){
+        const { data, error } = await db.rpc('admin_update_venue', {
+          p_id: s.id, p_name: s.name, p_accent: s.accent,
+          p_logo: logoValue,                        // null = keep
+          p_review: s.review || '',                 // '' clears
+          p_header_bg: s.headerBg || '',            // '' clears back to white
+          p_owner_email: s.email || ''
+        });
+        if(error || !data || data.ok!==true) throw new Error((data&&data.error)||'update failed');
+        if($('fDark').checked !== !!v.dark_mode){
+          const r = await db.rpc('admin_set_dark_mode', { p_id: s.id, p_on: $('fDark').checked });
+          if(r.error || !r.data || r.data.ok!==true) toast('Saved, but dark mode needs 30_dark_mode.sql');
+        }
+        clearDraft();
+        await loadAll(); toast('Saved'); detail(s.id);
+      } else {
+        const { data, error } = await db.rpc('admin_add_venue', {
+          p_id: s.id, p_name: s.name, p_accent: s.accent,
+          p_logo: logoValue, p_review: s.review || null,
+          p_header_bg: s.headerBg || null, p_owner_email: s.email || null
+        });
+        if(error) throw new Error('server error');
+        if(!data || data.ok!==true){
+          const why = { id_taken:'That id is already used (maybe by an inactive venue). Pick another.',
+                        bad_id:'Venue id: lowercase letters and numbers only.',
+                        bad_accent:'Accent must be a hex color.', not_operator:'This login is not an operator.' }[data&&data.error] || 'Could not add.';
+          throw new Error(why);
+        }
+        if($('fDark').checked){
+          const r = await db.rpc('admin_set_dark_mode', { p_id: s.id, p_on: true });
+          if(r.error || !r.data || r.data.ok!==true) toast('Added, but dark mode needs 30_dark_mode.sql');
+        }
+        clearDraft();
+        await loadAll(); toast('Venue added'); detail(s.id);
+      }
+    } catch(e){
+      m.className='msg err'; m.textContent = e.message || 'Something failed. Try again.';
+      $('fSave').disabled = false;
+    }
+  };
+}
+
+/* ---------------- venue detail ---------------- */
+function detail(id){
+  const v = venueById(id);
+  if(!v){ home(); return; }
+  setView('v=' + v.id);
+  const plans = STRIPE_PLANS.filter(p=>p.url);
+  $('main').innerHTML = `
+    <button class="back" id="back">‹ Venues</button>
+    <h1>${esc(v.name)} <span class="badge ${esc(v.status)}" style="vertical-align:6px">${esc(v.status)}</span></h1>
+
+    <section>
+      <h2>Links</h2>
+      <div class="hint">The Live App link is safe to share any time. The Owner Dashboard link is private; rotate it if it ever leaks.</div>
+      <label class="f" style="margin-top:10px">Live App</label>
+      <div class="linkrow">
+        <span class="lk" id="lkDemo">${esc(demoLink(v))}</span>
+        <div class="linkbtns"><a class="btn sm ghost" id="opDemo" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpDemo">Copy</button></div>
+      </div>
+      <label class="f" style="margin-top:10px">Owner Dashboard</label>
+      <div class="linkrow">
+        <span class="lk" id="lkOwner">${esc(ownerLink(v))}</span>
+        <div class="linkbtns"><a class="btn sm ghost" id="opOwner" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpOwner">Copy</button><button class="btn sm danger" id="rotate">Rotate</button></div>
+      </div>
+      <label class="f" style="margin-top:10px">Guest Report <span style="font-weight:400;text-transform:none">(permanent link; the month picker lives on the page. Same key as the owner link, so Rotate cycles both.)</span></label>
+      <div class="linkrow">
+        <span class="lk" id="lkReport">${esc(reportLink(v))}</span>
+        <div class="linkbtns"><a class="btn sm ghost" id="opReport" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpReport">Copy</button></div>
+      </div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;font-size:14px">
+        <input type="checkbox" id="rcFlag2" ${v.report_county !== false ? 'checked' : ''} /> County comparison on the guest report
+      </label>
+      <div class="msg" id="rcMsg2"></div>
+      <label class="f" style="margin-top:10px">Owner passphrase <span style="font-weight:400;text-transform:none">(optional; asked once per device on the Owner Dashboard. Send it by TEXT or in person, never in the same email as the link. Reset = set a new one; Clear = back to link-only.)</span></label>
+      <div class="hint" id="opStatus">${v.has_pass ? 'A passphrase is set.' : 'No passphrase; the link alone opens the dashboard.'}</div>
+      <div class="frow" style="margin-top:8px">
+        <input type="text" id="opPass" placeholder="New passphrase (4+ characters)" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:170px" />
+        <button class="btn sm ghost" id="opSet">Set</button>
+        ${v.has_pass ? '<button class="btn sm danger" id="opClear">Clear</button>' : ''}
+      </div>
+      <div class="msg" id="opMsg"></div>
+    </section>
+
+    <section>
+      <h2>Status</h2>
+      <div class="hint">lead plays but saves nothing · active saves everything · inactive does not load. You flip these by hand when a subscription starts or ends.</div>
+      <div class="statusbtns">
+        ${['lead','active','inactive'].map(s=>`<button class="btn sm ${v.status===s?'':'ghost'}" data-st="${s}" ${v.status===s?'disabled':''}>${s}</button>`).join('')}
+      </div>
+      <div class="msg" id="stMsg"></div>
+    </section>
+
+    <section>
+      <h2>Send an email</h2>
+      <div class="hint">${v.owner_email ? `Opens a prefilled email to ${esc(v.owner_email)} in your mail app. You review, you tap send, it goes from your address.` : 'Add an owner email (Edit venue) to enable these.'}</div>
+      <div class="mailbtns">
+        <a class="btn sm ghost ${v.owner_email?'':'off'}" id="mDemo">Demo link</a>
+        <a class="btn sm ghost" id="mOwner">Owner dashboard link</a>
+        <a class="btn sm ghost" id="mReport">Guest report link</a>
+        ${plans.length ? '<a class="btn sm ghost" id="mStripe">Payment link</a>' : ''}
+      </div>
+    </section>
+
+    <section>
+      <h2>Subscription</h2>
+      <div class="hint">${plans.length ? 'Pick a plan; the link arrives pre-tagged with this venue and prefilled with the owner email.' : 'Paste your Stripe payment links into STRIPE_PLANS at the top of admin.html to enable this.'}</div>
+      ${plans.length ? `
+      <div class="frow">
+        <select id="planSel">${plans.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('')}</select>
+        <button class="btn sm ghost" id="cpPlan">Copy link</button>
+      </div>
+      <div class="linkrow"><span class="lk" id="lkPlan"></span></div>` : ''}
+    </section>
+
+    <section>
+      <h2>Engagement</h2>
+      <div class="hint">Last 30 days from the app. Lead venues count too (that is the demo signal). Ratings and comments stay owner-only on purpose.</div>
+      <div id="engBody" class="hint" style="margin-top:8px">Loading…</div>
+    </section>
+
+    <section>
+      <h2>Games</h2>
+      <div class="hint">What shows in this venue's hub, in this order (arrows reorder; 33_game_order preserves it). At least one stays on. The owner can also edit this from their dashboard.</div>
+      <div id="gToggles" style="margin-top:8px">
+        ${(()=>{
+          const saved = (v.games || []).filter(g => GAME_ORDER.includes(g));
+          const order = saved.concat(GAME_ORDER.filter(g => !saved.includes(g)));
+          return order.map(g=>{
+            const on = !v.games || !v.games.length || v.games.includes(g);
+            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0" data-id="${g}">
+              <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer">
+                <input type="checkbox" data-game="${g}" ${on?'checked':''} /> ${esc(GAMES_META[g].name)}
+              </label>
+              <button type="button" class="btn sm ghost" data-mv="-1" aria-label="Move up" style="padding:6px 11px">▲</button>
+              <button type="button" class="btn sm ghost" data-mv="1" aria-label="Move down" style="padding:6px 11px">▼</button>
+            </div>`;
+          }).join('');
+        })()}
+      </div>
+      <button class="btn sm" id="saveGames" style="margin-top:8px">Save games</button>
+      <div class="msg" id="gMsg"></div>
+    </section>
+
+    <section>
+      <h2>Owner promo</h2>
+      <div class="hint">The one-off promo card on the venue's landing screen (events, notices). Same rules as the owner's editor: text up to 240, optional header up to 26, optional link and last-day. The owner can also edit this from their dashboard.</div>
+      <input type="text" id="apHead" maxlength="26" placeholder="Header (optional)" style="margin-top:8px" value="${esc(v.promo_header || '')}" />
+      <textarea id="apText" maxlength="240" placeholder="Type the promo here. Diners see it on the app landing screen. Example: Live music this Friday 7pm, no cover." rows="3">${esc(v.promo_text || '')}</textarea>
+      <input type="text" id="apUrl" maxlength="500" placeholder="Link (optional), venue.com/events" value="${esc(v.promo_url || '')}" autocapitalize="off" autocorrect="off" spellcheck="false" />
+      <div class="frow" style="margin-top:8px;align-items:center">
+        <label class="f" style="margin:0">Last day</label>
+        <input type="date" id="apExp" value="${esc(v.promo_expires || '')}" style="flex:none" />
+        <button class="btn sm" id="apSave">Save promo</button>
+        <button class="btn sm ghost" id="apClear">Clear</button>
+      </div>
+      <div class="msg" id="apMsg"></div>
+    </section>
+
+    <section>
+      <h2 style="display:flex;align-items:center;gap:8px"><span id="spTitleTxt">${esc(v.specials_title || 'Daily specials')}</span>
+        <button class="iconbtn" id="spEditT" title="Rename this section" aria-label="Rename this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
+        <button class="iconbtn" id="spTagBtn" aria-label="Show or hide the label in the app"></button>
+      </h2>
+      <div id="spTitleRow" style="display:none;margin:8px 0 4px">
+        <div class="frow">
+          <input type="text" id="spTitleIn" maxlength="40" placeholder="Daily specials" style="flex:1;min-width:170px" />
+          <span class="hint" style="margin:0;flex:none"><span id="spTitleCount">0</span>/40</span>
+          <button class="btn sm" id="spTitleSave">Save</button>
+          <button class="btn sm ghost" id="spTitleCancel">Cancel</button>
+        </div>
+        <div class="msg" id="spTitleMsg"></div>
+      </div>
+      <div class="hint">Repeat weekly specials, set once. Diners see only the current day's entry as its own card on the landing screen; a blank day shows no card. The owner can also edit these from their dashboard. The pencil renames the section (the app's weekly screen shows the same name as its label); the eye shows or hides that label in the app.</div>
+      <div id="spRows" style="margin-top:8px">
+        ${[['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']].map(([k,label])=>`
+        <div class="frow" style="margin-top:6px;align-items:center">
+          <label class="f" style="width:42px;flex:none;margin:0">${label}</label>
+          <input type="text" data-day="${k}" maxlength="200" value="${esc((v.specials || {})[k] || '')}" style="flex:1" />
+          <span class="spcount" data-cnt="${k}">0/200</span>
+        </div>`).join('')}
+      </div>
+      <button class="btn sm" id="spSave" style="margin-top:8px">Save specials</button>
+      <div class="msg" id="spMsg"></div>
+    </section>
+
+    <section>
+      <h2>Feedback form</h2>
+      <div class="hint">By default this venue uses the global form (edit it under Tools on the home screen). A custom form is the paid add-on: it fully replaces the global form here, starts as a copy of it, and later global edits never change it. While the flag is on, the venue can also edit their form from their own owner dashboard (42_owner_form_editor.sql).</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
+        <input type="checkbox" id="ffFlag" ${v.form_custom?'checked':''} /> Custom feedback form enabled (paid)
+      </label>
+      <button class="btn sm ghost" id="ffEdit" style="margin-top:10px;display:${v.form_custom?'inline-flex':'none'}">Edit this venue's form</button>
+      <div class="msg" id="ffMsg"></div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer">
+        <input type="checkbox" id="rcFlag" ${v.report_county !== false ? 'checked' : ''} /> County comparison on the guest report
+      </label>
+      <div class="hint" style="margin-top:4px;margin-bottom:0">Untick to leave the "vs county" page and its benchmarks off this venue's monthly report.</div>
+      <div class="msg" id="rcMsg"></div>
+    </section>
+
+    <section>
+      <h2>Custom questions</h2>
+      <div class="hint">The paid add-on. Rows here belong to ${esc(v.name)} only and deal custom-first while the flag is on; turning the flag off hides them without deleting anything.</div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
+        <input type="checkbox" id="cqFlag" ${v.custom_questions?'checked':''} /> Custom questions enabled (paid)
+      </label>
+      <div id="cqOnlyWrap" style="display:${v.custom_questions?'block':'none'};margin-top:14px">
+        <label class="f">Custom-only games <span style="font-weight:400;text-transform:none">(deal ONLY this venue's questions; needs one full round, aim for 3x so repeat visits survive. Below the floor the app quietly blends the shared pool back in.)</span></label>
+        <div id="cqOnly" class="hint">Loading…</div>
+        <button class="btn sm ghost" id="cqOnlySave" style="margin-top:8px">Save custom-only</button>
+        <div class="msg" id="cqOnlyMsg"></div>
+      </div>
+      <label class="f" style="margin-top:14px">Import a pack for this venue <span style="font-weight:400;text-transform:none">(same JSON format as the shared importer; rows land as ${esc(v.name)}'s custom questions)</span></label>
+      <input type="file" id="cqPackFile" accept=".json,application/json" />
+      <div class="msg" id="cqPackMsg"></div>
+      <div id="cqList" class="hint" style="margin-top:10px">Loading…</div>
+      <div style="margin-top:12px">
+        <label class="f">Add a custom row</label>
+        <select id="cqGame">${CONTENT_GAMES.map(g=>`<option value="${g}">${esc(GAMES_META[g].name)}</option>`).join('')}</select>
+        <div id="cqFields" style="margin-top:8px"></div>
+        <button class="btn sm" id="cqAdd" style="margin-top:8px">Add row</button>
+        <div class="msg" id="cqMsg"></div>
+      </div>
+    </section>
+
+    <div style="display:flex;gap:10px;margin-top:4px">
+      <button class="btn ghost" id="editBtn">Edit venue</button>
+      <button class="btn" id="cardBtn">Table card</button>
+    </div>`;
+
+  $('back').onclick = ()=> home();
+  $('editBtn').onclick = ()=> form(v);
+  $('cardBtn').onclick = ()=> cardView(v);
+  $('cpDemo').onclick = ()=> copy(demoLink(v));
+  $('cpOwner').onclick = ()=> copy(ownerLink(v));
+  $('cpReport').onclick = ()=> copy(reportLink(v));
+  $('opDemo').href  = demoLink(v);
+  $('opOwner').href = ownerLink(v);
+  $('opReport').href = reportLink(v);
+
+  // owner passphrase: set / reset / clear (29_owner_passphrase.sql)
+  $('opSet').onclick = async ()=>{
+    const p = $('opPass').value.trim(), m = $('opMsg');
+    if(p.length < 4){ m.className='msg err'; m.textContent='At least 4 characters.'; return; }
+    m.className='msg'; m.textContent='Saving…';
+    const { data, error } = await db.rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 29_owner_passphrase.sql been run?).'; return; }
+    v.has_pass = true; $('opPass').value='';
+    m.className='msg ok'; m.textContent='Set. Owners on other devices will be asked for it; text it to them separately.';
+    detail(v.id);
+  };
+  const opClear = $('opClear');
+  if(opClear) opClear.onclick = async ()=>{
+    if(!confirm(`Remove ${v.name}'s dashboard passphrase? The link alone opens it again.`)) return;
+    const { data, error } = await db.rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
+    if(error || !data || data.ok!==true){ toast('Could not clear'); return; }
+    v.has_pass = false; toast('Cleared. Link-only again.');
+    detail(v.id);
+  };
+
+  $('rotate').onclick = async ()=>{
+    if(!confirm(`Rotate ${v.name}'s owner key? Their current dashboard link stops working immediately.`)) return;
+    const { data, error } = await db.rpc('admin_rotate_owner_key', { p_id: v.id });
+    if(error || !data || data.ok!==true){ toast('Rotate failed'); return; }
+    v.owner_key = data.owner_key;
+    toast('Rotated. Send them the new link.');
+    detail(v.id);
+  };
+
+  document.querySelectorAll('[data-st]').forEach(b=> b.onclick = async ()=>{
+    const st = b.dataset.st;
+    const warn = { active:`Set ${v.name} to ACTIVE? Votes, surveys, and plays start saving for real.`,
+                   inactive:`Set ${v.name} to INACTIVE? Their QR stops loading at the table.`,
+                   lead:`Set ${v.name} back to LEAD? The app keeps working but stops saving.` }[st];
+    if(!confirm(warn)) return;
+    const { data, error } = await db.rpc('admin_set_status', { p_id: v.id, p_status: st });
+    if(error || !data || data.ok!==true){ $('stMsg').className='msg err'; $('stMsg').textContent='Could not change status.'; return; }
+    v.status = st; toast('Status: '+st); detail(v.id);
+  });
+
+  // email buttons (mailto). Disabled look when no owner_email.
+  const mail = (id, subject, body)=>{
+    const a = $(id); if(!a) return;
+    if(!v.owner_email){ a.style.opacity=.45; a.onclick=e=>{e.preventDefault(); toast('Add an owner email first');}; return; }
+    a.href = mailto(v, subject, body);
+  };
+  mail('mDemo', `Your ${v.name} demo`,
+`Hi,
+
+Great meeting you. Here is the ${v.name} demo, live right now with your branding. Open it on your phone and tap around like a guest would:
+
+${demoLink(v)}
+
+First month is free if you want it on your tables. Reply here${CFG.operatorPhone ? ", or call or text me at " + CFG.operatorPhone : ""}.
+
+${SIG}`);
+  mail('mOwner', `Your private ${v.name} dashboard`,
+`Hi,
+
+Here is your private ${v.name} dashboard. Live ratings, comments from your guests, game activity, and the promo card you can update any time:
+
+${ownerLink(v)}
+
+This link is just for you. If it ever gets out, tell me and I will issue a fresh one.
+
+${SIG}`);
+  mail('mReport', `Your ${v.name} guest report`,
+`Hi,
+
+Your ${v.name} guest report is ready. Same link every month, always current:
+
+${reportLink(v)}
+
+Pick any month at the top of the page, and print or save it as a PDF right from there. This link is private to you, like your dashboard.
+
+${SIG}`);
+  if(plans.length){
+    const paint = ()=>{
+      const p = plans[+$('planSel').value];
+      $('lkPlan').textContent = stripeLink(p.url, v);
+      mail('mStripe', `Start your ${v.name} subscription`,
+`Hi,
+
+Here is the signup link for ${v.name}:
+
+${stripeLink(p.url, v)}
+
+Your first month is free. The card goes on file today and nothing is charged for 30 days, and you can cancel any time before that with one click. Questions, just reply.
+
+${SIG}`);
+    };
+    $('planSel').onchange = paint;
+    $('cpPlan').onclick = ()=> copy($('lkPlan').textContent);
+    paint();
+  }
+
+  // ---- engagement snapshot (27_admin_content.sql) ----
+  (async ()=>{
+    const { data, error } = await db.rpc('admin_venue_stats', { p_id: v.id });
+    const el = $('engBody');
+    if(error || !data){ el.textContent = 'Needs 27_admin_content.sql (run it once, then reload).'; return; }
+    const e30 = data.events_30d || {};
+    const stat = (n, label) => `<span style="display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 8px 8px 0"><b style="font-size:17px">${n||0}</b> <span style="color:var(--ink-dim);font-size:13px">${label}</span></span>`;
+    const games30 = (data.games_30d||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.n}`).join(' · ');
+    const playsAll = (data.plays_all_time||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.plays}`).join(' · ');
+    const last = data.last_event_at ? new Date(data.last_event_at).toLocaleDateString([], {month:'short', day:'numeric'}) : 'never';
+    el.className = '';
+    el.innerHTML = `
+      <div>${stat(e30.opens,'opens')}${stat(e30.game_starts,'game starts')}${stat(e30.surveys,'surveys')}${stat(e30.review_clicks,'review clicks')}${stat(e30.promo_clicks,'promo clicks')}</div>
+      ${games30 ? `<div class="hint" style="margin-top:6px">Games, 30 days: ${games30}</div>` : ''}
+      ${playsAll ? `<div class="hint" style="margin-top:2px">All-time plays: ${playsAll}</div>` : ''}
+      <div class="hint" style="margin-top:2px">Last activity: ${last}</div>`;
+  })();
+
+  // ---- game toggles ----
+  $('saveGames').onclick = async ()=>{
+    const picked = [...document.querySelectorAll('#gToggles input:checked')].map(x=>x.dataset.game);
+    const m = $('gMsg');
+    if(!picked.length){ m.className='msg err'; m.textContent='At least one game stays on.'; return; }
+    m.className='msg'; m.textContent='Saving…';
+    const { data, error } = await db.rpc('admin_set_games', { p_id: v.id, p_games: picked });
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 27_admin_content.sql been run?).'; return; }
+    v.games = data.games;
+    m.className='msg ok'; m.textContent='Saved.';
+  };
+  document.querySelectorAll('#gToggles [data-mv]').forEach(b => b.onclick = ()=>{
+    const row = b.closest('[data-id]');
+    if (b.dataset.mv === '-1' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+    if (b.dataset.mv === '1'  && row.nextElementSibling)     row.parentNode.insertBefore(row.nextElementSibling, row);
+  });
+
+  // ---- owner promo, operator-side (33_game_order_admin_promo.sql) ----
+  const savePromo = async ()=>{
+    const m = $('apMsg');
+    m.className='msg'; m.textContent='Saving…';
+    const { data, error } = await db.rpc('admin_set_promo', {
+      p_id: v.id,
+      p_text: $('apText').value.trim() || null,
+      p_expires: $('apExp').value || null,
+      p_header: $('apHead').value.trim() || null,
+      p_url: $('apUrl').value.trim() || null,
+    });
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 33_game_order_admin_promo.sql been run?).'; return; }
+    v.promo_text = $('apText').value.trim() || null;
+    v.promo_header = $('apHead').value.trim() || null;
+    v.promo_url = $('apUrl').value.trim() || null;
+    v.promo_expires = $('apExp').value || null;
+    m.className='msg ok'; m.textContent='Saved. Live on the landing screen now.';
+  };
+  $('apSave').onclick = savePromo;
+  $('apClear').onclick = ()=>{ $('apText').value=''; $('apHead').value=''; $('apUrl').value=''; $('apExp').value=''; savePromo(); };
+
+  // ---- daily specials (32_daily_specials.sql) ----
+  // per-day character counters (cap 200 since 43)
+  document.querySelectorAll('#spRows input').forEach(i=>{
+    const c = document.querySelector('.spcount[data-cnt="' + i.dataset.day + '"]');
+    const upd = ()=>{ c.textContent = i.value.length + '/200'; };
+    i.addEventListener('input', upd);
+    upd();
+  });
+  // title + tag (43_specials_meta.sql): pencil renames the section and the
+  // app's specials-screen label; the eye hides that label in the app
+  const SP_EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const SP_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
+  const spPaintMeta = ()=>{
+    $('spTitleTxt').textContent = v.specials_title || 'Daily specials';
+    $('spTagBtn').innerHTML = v.specials_tag !== false ? SP_EYE_ON : SP_EYE_OFF;
+    $('spTagBtn').classList.toggle('off', v.specials_tag === false);
+    $('spTagBtn').title = v.specials_tag !== false ? 'The label shows in the app. Tap to hide it.' : 'The label is hidden in the app. Tap to show it.';
+  };
+  const spSaveMeta = async (title, show, m)=>{
+    m.className='msg'; m.textContent='Saving…';
+    const { data, error } = await db.rpc('admin_set_specials_meta', { p_id: v.id, p_title: title || null, p_show: show });
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 43_specials_meta.sql been run?).'; return false; }
+    v.specials_title = (title || '').trim().slice(0, 40) || null;
+    v.specials_tag = show;
+    spPaintMeta();
+    m.className='msg ok'; m.textContent='Saved.';
+    return true;
+  };
+  $('spEditT').onclick = ()=>{
+    $('spTitleRow').style.display = '';
+    $('spTitleIn').value = v.specials_title || '';
+    $('spTitleCount').textContent = $('spTitleIn').value.length;
+    $('spTitleIn').focus();
+  };
+  $('spTitleIn').addEventListener('input', ()=>{ $('spTitleCount').textContent = $('spTitleIn').value.length; });
+  $('spTitleSave').onclick = async ()=>{
+    if(await spSaveMeta($('spTitleIn').value, v.specials_tag !== false, $('spTitleMsg'))) $('spTitleRow').style.display = 'none';
+  };
+  $('spTitleCancel').onclick = ()=>{ $('spTitleRow').style.display = 'none'; };
+  $('spTagBtn').onclick = ()=> spSaveMeta(v.specials_title || '', v.specials_tag === false, $('spMsg'));
+  spPaintMeta();
+  $('spSave').onclick = async ()=>{
+    const sp = {};
+    document.querySelectorAll('#spRows input').forEach(i=>{ const t = i.value.trim(); if(t) sp[i.dataset.day] = t; });
+    const m = $('spMsg');
+    m.className='msg'; m.textContent='Saving…';
+    const { data, error } = await db.rpc('admin_set_specials', { p_id: v.id, p_specials: Object.keys(sp).length ? sp : null });
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 32_daily_specials.sql been run?).'; return; }
+    v.specials = Object.keys(sp).length ? sp : null;
+    m.className='msg ok'; m.textContent='Saved.';
+  };
+
+  // ---- feedback form (35_feedback_forms.sql) ----
+  $('ffFlag').onchange = async ()=>{
+    const on = $('ffFlag').checked, m = $('ffMsg');
+    const { data, error } = await db.rpc('admin_set_form_custom', { p_id: v.id, p_on: on });
+    if(error || !data || data.ok!==true){ $('ffFlag').checked = !on; m.className='msg err'; m.textContent='Could not change the flag (has 35_feedback_forms.sql been run?).'; return; }
+    v.form_custom = on;
+    $('ffEdit').style.display = on ? 'inline-flex' : 'none';
+    m.className='msg ok'; m.textContent = on ? 'Custom form ON.' : 'Back to the global form (the custom form is kept).';
+  };
+  $('ffEdit').onclick = ()=> formBuilder(v.id, ()=> detail(v.id));
+
+  // ---- county comparison on the guest report (41_report_county_venue.sql) ----
+  // The same flag has TWO checkboxes on this view (under the report link,
+  // and in the Feedback form section): one save path, always kept in sync.
+  const rcSave = async (on, m)=>{
+    const { data, error } = await db.rpc('admin_set_report_county', { p_id: v.id, p_on: on });
+    if(error || !data || data.ok!==true){
+      $('rcFlag').checked = $('rcFlag2').checked = v.report_county !== false;
+      m.className='msg err'; m.textContent='Could not change it (has 41_report_county_venue.sql been run?).'; return;
+    }
+    v.report_county = on;
+    $('rcFlag').checked = $('rcFlag2').checked = on;
+    m.className='msg ok'; m.textContent = on ? 'County comparison ON.' : 'County comparison hidden on their report.';
+  };
+  $('rcFlag').onchange  = ()=> rcSave($('rcFlag').checked,  $('rcMsg'));
+  $('rcFlag2').onchange = ()=> rcSave($('rcFlag2').checked, $('rcMsg2'));
+
+  // ---- custom questions ----
+  $('cqFlag').onchange = async ()=>{
+    const on = $('cqFlag').checked;
+    const { data, error } = await db.rpc('admin_set_custom_questions', { p_id: v.id, p_on: on });
+    if(error || !data || data.ok!==true){ $('cqFlag').checked = !on; toast('Could not change the flag'); return; }
+    v.custom_questions = on;
+    $('cqOnlyWrap').style.display = on ? 'block' : 'none';
+    toast(on ? 'Custom questions ON' : 'Custom questions off (rows kept, hidden)');
+  };
+
+  // per-game custom-only toggles, drawn with live ACTIVE custom counts so
+  // the floor is visible; under-floor games are shown disabled
+  const cqOnlyPaint = (rows)=>{
+    const counts = {};
+    (rows||[]).forEach(r=>{ if(r.status==='active') counts[r.game]=(counts[r.game]||0)+1; });
+    const sel = v.custom_only || [];
+    $('cqOnly').className='';
+    $('cqOnly').innerHTML = CONTENT_GAMES.map(g=>{
+      const n = counts[g]||0, floor = MIN_CUSTOM_ONLY[g], ok = n >= floor;
+      return `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:${ok?'pointer':'default'};opacity:${ok?1:.5}">
+        <input type="checkbox" data-co="${g}" ${sel.includes(g)?'checked':''} ${ok?'':'disabled'} />
+        ${esc(GAMES_META[g].name)}
+        <span style="color:var(--ink-dim);font-size:12px">${n} active${ok?'':` · needs ${floor}`}</span>
+      </label>`;
+    }).join('');
+  };
+  $('cqOnlySave').onclick = async ()=>{
+    const picked = [...document.querySelectorAll('#cqOnly input:checked')].map(x=>x.dataset.co);
+    const m = $('cqOnlyMsg');
+    m.className='msg'; m.textContent='Saving…';
+    const { data, error } = await db.rpc('admin_set_custom_only', { p_id: v.id, p_games: picked });
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 28_custom_only_retire.sql been run?).'; return; }
+    v.custom_only = data.custom_only;
+    m.className='msg ok'; m.textContent='Saved.';
+  };
+
+  // pack import scoped to this venue: same format + validators as the
+  // shared importer, same RPC, with p_venue_id set
+  $('cqPackFile').addEventListener('change', async ()=>{
+    const f = $('cqPackFile').files[0], m = $('cqPackMsg');
+    if(!f) return;
+    let pack;
+    try { pack = JSON.parse(await f.text()); }
+    catch(e){ m.className='msg err'; m.textContent='Not valid JSON: '+e.message; return; }
+    const res = validatePack(pack);
+    if(res.error){ m.className='msg err'; m.textContent=res.error; return; }
+    if(res.bad.length){ m.className='msg err'; m.textContent=`${res.bad.length} bad row(s): ${res.bad.slice(0,3).join('; ')}${res.bad.length>3?'; …':''}`; return; }
+    if(!confirm(`Import ${res.rows.length} ${GAMES_META[res.game].name} row(s) as ${v.name}'s CUSTOM questions?`)){ $('cqPackFile').value=''; return; }
+    m.className='msg'; m.textContent='Importing…';
+    let inserted = 0, skipped = 0;
+    for(let i = 0; i < res.rows.length; i += 400){
+      const { data, error } = await db.rpc('admin_add_content', { p_game: res.game, p_rows: res.rows.slice(i, i+400), p_venue_id: v.id });
+      if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent=`Import stopped: ${error ? error.message : (data&&data.error)||'unknown'}. ${inserted} rows were inserted.`; return; }
+      inserted += data.inserted; skipped += data.skipped;
+    }
+    m.className = skipped ? 'msg err' : 'msg ok';
+    m.textContent = `Done: ${inserted} inserted${skipped?`, ${skipped} skipped`:''}.`;
+    $('cqPackFile').value='';
+    cqLoad();
+  });
+
+  const cqPaintFields = ()=>{
+    const g = $('cqGame').value;
+    $('cqFields').innerHTML = GAMES_META[g].fields.map(([k, label])=>
+      `<input type="text" data-k="${k}" placeholder="${esc(label)}" style="margin-top:6px" />`).join('');
+  };
+  $('cqGame').onchange = cqPaintFields;
+  cqPaintFields();
+
+  const cqLoad = async ()=>{
+    const { data, error } = await db.rpc('admin_list_custom', { p_id: v.id });
+    const el = $('cqList');
+    if(error || data === null){ el.textContent = 'Needs 27_admin_content.sql.'; $('cqOnly').textContent='Needs 27/28.'; return; }
+    cqOnlyPaint(data);
+    if(!data.length){ el.textContent = 'No custom rows yet.'; return; }
+    el.className = '';
+    el.innerHTML = data.map(r=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)">
+        <span style="flex:1;min-width:0"><span style="color:var(--ink-dim);font-size:12px">${esc((GAMES_META[r.game]||{name:r.game}).name)}</span><br/>
+          <span style="${r.status==='retired'?'text-decoration:line-through;color:var(--ink-dim)':''}">${esc(r.label)}</span></span>
+        <button class="btn sm ghost" data-cq="${esc(r.game)}|${esc(r.key)}|${r.status==='active'?'retired':'active'}">${r.status==='active'?'Retire':'Restore'}</button>
+      </div>`).join('');
+    el.querySelectorAll('[data-cq]').forEach(b=> b.onclick = async ()=>{
+      const [game, key, status] = b.dataset.cq.split('|');
+      const { data:d } = await db.rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+      if(!d || d.ok!==true){ toast('Could not update'); return; }
+      cqLoad();
+    });
+  };
+  cqLoad();
+
+  $('cqAdd').onclick = async ()=>{
+    const g = $('cqGame').value, m = $('cqMsg');
+    const row = {};
+    document.querySelectorAll('#cqFields input').forEach(i=> row[i.dataset.k] = i.value.trim());
+    const bad = validateRow(g, row);
+    if(bad){ m.className='msg err'; m.textContent = bad; return; }
+    m.className='msg'; m.textContent='Adding…';
+    const { data, error } = await db.rpc('admin_add_content', { p_game: g, p_rows: [row], p_venue_id: v.id });
+    if(error || !data || data.ok!==true || data.inserted!==1){
+      m.className='msg err';
+      m.textContent = (data && data.errors && data.errors[0] && data.errors[0].error) || 'Could not add (has 27_admin_content.sql been run?).';
+      return;
+    }
+    m.className='msg ok'; m.textContent='Added.';
+    document.querySelectorAll('#cqFields input').forEach(i=> i.value='');
+    cqLoad();
+  };
+}
+
+/* ================================================================
+   QUESTION PACKS. The content door:
+   plain JSON in, validated client-side AND server-side, inserted
+   through the one typed admin_add_content RPC. Never raw SQL.
+   Pack format: {"game":"trivia","rows":[{...}]} — field names per
+   game are in GAMES_META above (they match 27_admin_content.sql).
+   ================================================================ */
+function packs(){
+  setView('packs');
+  $('main').innerHTML = `
+    <button class="back" id="back">‹ Venues</button>
+    <h1>Question packs</h1>
+
+    <section>
+      <h2>What's live now</h2>
+      <div class="hint">Shared pool per game. Custom = venue-owned rows across all venues.</div>
+      <div id="ccBody" class="hint" style="margin-top:8px">Loading…</div>
+    </section>
+
+    <section>
+      <h2>Import a pack</h2>
+      <div class="hint">A pack is a JSON file like
+        <code style="display:block;background:var(--panel-2);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px;overflow-x:auto">{"game":"trivia","rows":[{"question":"…","correct":"…","wrong1":"…","wrong2":"…","wrong3":"…"}]}</code>
+        Field names per game: who_knows_who prompt/a/b/c/d ({N} = player name) · guess_the_split a/b · wordy word ·
+        trivia question/correct/wrong1..3 · who_invited_you category/word · fortune_teller text · all_talk category.
+        Rows go to the SHARED pool (every venue). Custom rows for one venue are added from that venue's page instead.</div>
+      <input type="file" id="packFile" accept=".json,application/json" style="margin-top:10px" />
+      <label class="f" style="margin-top:12px">Or paste the JSON</label>
+      <textarea id="packText" rows="7" style="width:100%;font-family:monospace;font-size:12px" spellcheck="false"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn sm ghost" id="packCheck">Validate</button>
+        <button class="btn sm" id="packGo" disabled style="opacity:.5">Import</button>
+      </div>
+      <div class="msg" id="packMsg"></div>
+    </section>
+
+    <section>
+      <h2>Retire by upload date</h2>
+      <div class="hint">Retires SHARED-pool rows of one game added before a date (custom rows are never touched). Preview first, always; a retire that would leave a game under one full round is refused. Retired rows are kept and can come back.</div>
+      <div class="frow" style="margin-top:10px">
+        <select id="rbGame">${CONTENT_GAMES.map(g=>`<option value="${g}">${esc(GAMES_META[g].name)}</option>`).join('')}</select>
+        <input type="date" id="rbDate" />
+        <button class="btn sm ghost" id="rbPreview">Preview</button>
+        <button class="btn sm danger" id="rbGo" disabled style="opacity:.5">Retire</button>
+      </div>
+      <div class="msg" id="rbMsg"></div>
+    </section>
+
+    <section>
+      <h2>Find a question</h2>
+      <div class="hint">Search a game's questions (shared and custom, active and retired) to retire a bad one, or bring one back.</div>
+      <div class="frow" style="margin-top:10px">
+        <select id="fqGame">${CONTENT_GAMES.map(g=>`<option value="${g}">${esc(GAMES_META[g].name)}</option>`).join('')}</select>
+        <input type="text" id="fqQ" placeholder="Search text…" style="flex:1;min-width:150px" />
+        <button class="btn sm ghost" id="fqGo">Search</button>
+      </div>
+      <div id="fqList" class="hint" style="margin-top:10px"></div>
+    </section>`;
+  $('back').onclick = ()=> home();
+
+  // ---- retire by date: dry run gates the live run ----
+  let rbChecked = null;
+  const rbInvalidate = ()=>{ rbChecked = null; $('rbGo').disabled = true; $('rbGo').style.opacity = .5; };
+  $('rbGame').onchange = rbInvalidate; $('rbDate').onchange = rbInvalidate;
+  $('rbPreview').onclick = async ()=>{
+    rbInvalidate();
+    const m = $('rbMsg'), g = $('rbGame').value, d = $('rbDate').value;
+    if(!d){ m.className='msg err'; m.textContent='Pick a date.'; return; }
+    m.className='msg'; m.textContent='Checking…';
+    const { data, error } = await db.rpc('admin_retire_before', { p_game: g, p_before: d, p_dry_run: true });
+    if(error || !data){ m.className='msg err'; m.textContent='Failed (has 28_custom_only_retire.sql been run?).'; return; }
+    if(data.ok !== true){
+      m.className='msg err';
+      m.textContent = data.error === 'below_floor'
+        ? `Refused: that would retire ${data.would_retire} of ${data.active_now} and leave the game under its floor of ${data.floor}.`
+        : 'Failed: ' + data.error;
+      return;
+    }
+    if(!data.would_retire){ m.className='msg'; m.textContent='Nothing to retire before that date.'; return; }
+    rbChecked = { g, d };
+    m.className='msg ok';
+    m.textContent = `Would retire ${data.would_retire} of ${data.active_now} active ${GAMES_META[g].name} rows, leaving ${data.left_active}. Tap Retire to do it.`;
+    $('rbGo').disabled = false; $('rbGo').style.opacity = 1;
+  };
+  $('rbGo').onclick = async ()=>{
+    if(!rbChecked) return;
+    const m = $('rbMsg');
+    if(!confirm(`Retire the previewed ${GAMES_META[rbChecked.g].name} rows added before ${rbChecked.d}? They are kept and can be restored, but stop showing on tables immediately.`)) return;
+    const { data, error } = await db.rpc('admin_retire_before', { p_game: rbChecked.g, p_before: rbChecked.d, p_dry_run: false });
+    rbInvalidate();
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Retire failed: ' + (error ? error.message : (data&&data.error)||'unknown'); return; }
+    m.className='msg ok'; m.textContent = `Retired ${data.retired}; ${data.left_active} still active.`;
+    paintCounts();
+  };
+
+  // ---- find + retire/restore one question ----
+  const fqRun = async ()=>{
+    const el = $('fqList'), q = $('fqQ').value.trim();
+    if(!q){ el.className='hint'; el.textContent='Type something to search for.'; return; }
+    el.className='hint'; el.textContent='Searching…';
+    const { data, error } = await db.rpc('admin_search_content', { p_game: $('fqGame').value, p_q: q });
+    if(error || data === null){ el.textContent='Failed (has 28_custom_only_retire.sql been run?).'; return; }
+    if(!data.length){ el.textContent='No matches.'; return; }
+    el.className='';
+    el.innerHTML = data.map(r=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)">
+        <span style="flex:1;min-width:0">
+          <span style="color:var(--ink-dim);font-size:12px">${r.venue_id?esc(r.venue_id)+' custom':'shared'}${r.status==='retired'?' · retired':''}</span><br/>
+          <span style="${r.status==='retired'?'text-decoration:line-through;color:var(--ink-dim)':''}">${esc(r.label)}</span></span>
+        <button class="btn sm ${r.status==='active'?'danger':'ghost'}" data-fq="${esc(r.game)}|${esc(r.key)}|${r.status==='active'?'retired':'active'}">${r.status==='active'?'Retire':'Restore'}</button>
+      </div>`).join('');
+    el.querySelectorAll('[data-fq]').forEach(b=> b.onclick = async ()=>{
+      const [game, key, status] = b.dataset.fq.split('|');
+      const { data:d, error:e } = await db.rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+      if(e || !d || d.ok!==true){
+        toast(d && d.error === 'below_floor' ? `Refused: the game would drop under its floor of ${d.floor}` : 'Could not update');
+        return;
+      }
+      toast(status === 'retired' ? 'Retired' : 'Restored');
+      fqRun(); paintCounts();
+    });
+  };
+  $('fqGo').onclick = fqRun;
+  $('fqQ').addEventListener('keydown', e=>{ if(e.key==='Enter') fqRun(); });
+
+  const paintCounts = async ()=>{
+    const { data, error } = await db.rpc('admin_content_counts');
+    const el = $('ccBody');
+    if(error || !data){ el.textContent = 'Needs 27_admin_content.sql (run it once, then reload).'; return; }
+    el.className = '';
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:14px">
+      <tr style="color:var(--ink-dim);font-size:12px;text-align:left"><th style="padding:4px 0">Game</th><th>Active</th><th>Retired</th><th>Custom</th><th>Newest</th></tr>
+      ${data.map(r=>`<tr style="border-top:1px solid var(--line)">
+        <td style="padding:6px 0">${esc((GAMES_META[r.game]||{name:r.game}).name)}</td>
+        <td>${r.active}</td><td>${r.retired}</td><td>${r.custom}</td>
+        <td style="color:var(--ink-dim)">${r.newest ? new Date(r.newest).toLocaleDateString([], {month:'short', day:'numeric', year:'2-digit'}) : '—'}</td>
+      </tr>`).join('')}
+    </table>`;
+  };
+  paintCounts();
+
+  let checked = null;   // the validated pack, cleared on any input change
+  const m = $('packMsg');
+  const invalidate = ()=>{ checked = null; $('packGo').disabled = true; $('packGo').style.opacity = .5; };
+  $('packText').addEventListener('input', invalidate);
+  $('packFile').addEventListener('change', async ()=>{
+    const f = $('packFile').files[0];
+    if(!f) return;
+    $('packText').value = await f.text();
+    invalidate();
+    $('packCheck').click();
+  });
+
+  $('packCheck').onclick = ()=>{
+    invalidate();
+    let pack;
+    try { pack = JSON.parse($('packText').value); }
+    catch(e){ m.className='msg err'; m.textContent = 'Not valid JSON: ' + e.message; return; }
+    const res = validatePack(pack);
+    if(res.error){ m.className='msg err'; m.textContent = res.error; return; }
+    if(res.bad.length){
+      m.className='msg err';
+      m.innerHTML = `${res.bad.length} bad row${res.bad.length===1?'':'s'} — fix these first:<br/>` +
+        res.bad.slice(0,8).map(esc).join('<br/>') + (res.bad.length>8?'<br/>…':'');
+      return;
+    }
+    checked = res;
+    m.className='msg ok';
+    m.textContent = `Valid: ${res.rows.length} ${GAMES_META[res.game].name} row${res.rows.length===1?'':'s'} ready for the shared pool.`;
+    $('packGo').disabled = false; $('packGo').style.opacity = 1;
+  };
+
+  $('packGo').onclick = async ()=>{
+    if(!checked) return;
+    $('packGo').disabled = true;
+    m.className='msg'; m.textContent = 'Importing…';
+    let inserted = 0, skipped = 0, errs = [];
+    for(let i = 0; i < checked.rows.length; i += 400){         // server caps 500/call
+      const { data, error } = await db.rpc('admin_add_content', {
+        p_game: checked.game, p_rows: checked.rows.slice(i, i+400) });
+      if(error || !data || data.ok!==true){
+        m.className='msg err';
+        m.textContent = `Import stopped at row ${i+1}: ${error ? error.message : (data && data.error) || 'unknown error'}. ${inserted} rows were already inserted.`;
+        return;
+      }
+      inserted += data.inserted; skipped += data.skipped;
+      errs = errs.concat(data.errors || []);
+    }
+    m.className = skipped ? 'msg err' : 'msg ok';
+    m.textContent = `Done: ${inserted} inserted` + (skipped ? `, ${skipped} skipped (${errs.slice(0,3).map(e=>`row ${e.row}: ${e.error}`).join('; ')}${errs.length>3?'; …':''})` : '.');
+    checked = null;
+    paintCounts();
+  };
+}
+
+/* ================================================================
+   TABLE CARD GENERATOR. Reproduces the standard 4x6 card design as a
+   pure-canvas render at 1200x1800 (true 300dpi print). Variables:
+   logo, accent1 (structure: pills, headlines, caps, bottom bar;
+   default deep navy), accent2 (the venue accent: header rule,
+   feedback pill), town line (town only; the Bahrs SINCE line was
+   a one-off and is not part of the template). Both QRs come from
+   the verified encoder above. All type is Hanken Grotesk (sans;
+   serif headlines were rejected early on). NOTE the
+   spelling: the Google font is "Hanken Grotesk". The public pages
+   still request the nonexistent "Hanken Grotesque" and silently
+   fall back to system-ui; canvas has no such fallback, which is
+   how the typo was discovered here.
+   ================================================================ */
+function drawTracked(ctx, text, x, y, ls){
+  let cx = x;
+  for(const ch of text){ ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + ls; }
+  return cx - ls;
+}
+function trackedWidth(ctx, text, ls){
+  let w = 0;
+  for(const ch of text) w += ctx.measureText(ch).width + ls;
+  return w - ls;
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+function drawQrCard(ctx, matrix, x, y, size){
+  ctx.save();
+  ctx.shadowColor = 'rgba(30,25,15,.16)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = '#ffffff';
+  roundRect(ctx, x, y, size, size, 30); ctx.fill();
+  ctx.restore();
+  const pad = 50, inner = size - pad*2, mc = matrix.length, mod = inner/mc;
+  ctx.fillStyle = '#1a1a1a';
+  for(let r=0; r<mc; r++) for(let c=0; c<mc; c++)
+    if(matrix[r][c]) ctx.fillRect(x+pad + c*mod, y+pad + r*mod, Math.ceil(mod), Math.ceil(mod));
+}
+function drawPill(ctx, x, y, label, bg, dotColor){
+  ctx.font = '700 30px "Hanken Grotesk", sans-serif';
+  const ls = 4.5, tw = trackedWidth(ctx, label, ls);
+  const h = 64, dotR = 8, padL = 30, gap = 16, padR = 32;
+  const w = padL + dotR*2 + gap + tw + padR;
+  ctx.fillStyle = bg;
+  roundRect(ctx, x, y, w, h, h/2); ctx.fill();
+  ctx.fillStyle = dotColor;
+  ctx.beginPath(); ctx.arc(x+padL+dotR, y+h/2, dotR, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  drawTracked(ctx, label, x+padL+dotR*2+gap, y+h/2+2, ls);
+  ctx.textBaseline = 'alphabetic';
+}
+async function renderCard(cnv, v, opts){
+  // opts.bleed (px per edge): the background bands extend through the
+  // bleed ring so a commercial printer can trim back to a clean 4x6.
+  // 38px at 300dpi is a hair over the standard 1/8" bleed.
+  // opts.headerBg: custom header band color (venue header_bg prefill).
+  // opts.dark: dark card — dark warm body + light text, header defaults
+  // to the app's black nav, QR cards STAY white so they scan.
+  const W = 1200, H = 1800, B = opts.bleed || 0;
+  cnv.width = W + 2*B; cnv.height = H + 2*B;
+  const ctx = cnv.getContext('2d');
+  const a1 = opts.a1, a2 = opts.a2, DARK = !!opts.dark;
+  const INK    = DARK ? '#ece7dd' : '#33302a';
+  const DIM    = DARK ? '#a7a196' : '#8b8578';
+  const BODY   = DARK ? '#171512' : '#efe8dc';
+  const HEADER = opts.headerBg || (DARK ? '#0b0a09' : '#ffffff');
+  const TOWN   = readableOn(HEADER) === '#ffffff' ? '#a7a196' : '#8b8578';
+  const RULE_L = DARK ? '#3a352e' : '#d9d2c2';    // the hairline divider
+  await Promise.all([
+    document.fonts.load('800 100px "Hanken Grotesk", sans-serif'),
+    document.fonts.load('700 30px "Hanken Grotesk", sans-serif'),
+    document.fonts.load('400 38px "Hanken Grotesk", sans-serif'),
+  ]).catch(()=>{});
+
+  // background bands, painted edge to edge including the bleed ring
+  ctx.fillStyle = BODY; ctx.fillRect(0, 0, W+2*B, H+2*B);
+  ctx.fillStyle = HEADER; ctx.fillRect(0, 0, W+2*B, 332+B);        // header band
+  ctx.fillStyle = a2; ctx.fillRect(0, 332+B, W+2*B, 12);           // accent rule
+  ctx.fillStyle = a1; ctx.fillRect(0, H-54+B, W+2*B, 54+B);        // bottom bar
+  ctx.translate(B, B);  // everything below draws in trim-box coordinates
+
+  // header: logo left (image or wordmark), town right
+  if(opts.logoImg){
+    const img = opts.logoImg, maxW = 430, maxH = 214;
+    const s = Math.min(maxW/img.naturalWidth, maxH/img.naturalHeight, 2.2);
+    const w = img.naturalWidth*s, h = img.naturalHeight*s;
+    ctx.drawImage(img, 110, 166 - h/2, w, h);
+  } else {
+    ctx.fillStyle = a1;
+    ctx.font = '800 58px "Hanken Grotesk", sans-serif';
+    ctx.fillText((v.logo && !/^https?:/i.test(v.logo) ? v.logo : v.name), 110, 188);
+  }
+  if(opts.town){
+    ctx.fillStyle = TOWN;   // header-aware: light dim on dark headers
+    ctx.font = '700 36px "Hanken Grotesk", sans-serif';
+    const t = opts.town.toUpperCase(), ls = 6;
+    drawTracked(ctx, t, W - 110 - trackedWidth(ctx, t, ls), 182, ls);
+  }
+
+  // QR cards
+  const games = QR.encode(`${DOMAIN}/app.html?v=${v.id}&go=games`);
+  const box   = QR.encode(`${DOMAIN}/app.html?v=${v.id}&go=box`);
+  drawQrCard(ctx, games, 710, 435, 380);
+  drawQrCard(ctx, box,   710, 1095, 380);
+
+  // section 1: games
+  drawPill(ctx, 110, 430, 'GAME TIME', a1, a2);
+  ctx.fillStyle = a1; ctx.font = '800 74px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Play games', 110, 592);
+  ctx.fillText('while you wait.', 110, 678);
+  ctx.fillStyle = INK; ctx.font = '400 38px "Hanken Grotesk", sans-serif';
+  ctx.fillText('A few quick games for the table.', 110, 756);
+  ctx.fillText('No app or sign-up required.', 110, 808);
+  ctx.fillStyle = a1; ctx.font = '700 34px "Hanken Grotesk", sans-serif';
+  drawTracked(ctx, 'SCAN TO PLAY TABLE GAMES', 110, 884, 4);
+
+  // divider
+  ctx.fillStyle = RULE_L; ctx.fillRect(110, 972, W-220, 2);
+
+  // section 2: feedback
+  drawPill(ctx, 110, 1090, 'YOUR FEEDBACK', a2, '#ffffff');
+  ctx.fillStyle = a1; ctx.font = '800 74px "Hanken Grotesk", sans-serif';
+  ctx.fillText('How was', 110, 1252);
+  ctx.fillText('everything?', 110, 1338);
+  ctx.fillStyle = INK; ctx.font = '400 38px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Tell us anything, completely', 110, 1416);
+  ctx.fillText('anonymous. No name, no email.', 110, 1468);
+  ctx.fillStyle = a1; ctx.font = '700 34px "Hanken Grotesk", sans-serif';
+  drawTracked(ctx, 'SCAN TO LEAVE FEEDBACK', 110, 1544, 4);
+  ctx.fillStyle = DIM; ctx.font = '400 32px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Takes 30 seconds · 100% anonymous', 110, 1614);
+}
+async function loadCardLogo(v){
+  if(!v.logo || !/^https?:/i.test(v.logo)) return null;
+  try {
+    const res = await fetch(v.logo);
+    if(!res.ok) return null;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    await new Promise((ok, no)=>{ img.onload=ok; img.onerror=no; img.src=url; });
+    return img;
+  } catch(e){ return null; }
+}
+function downloadCanvas(cnv, filename){
+  cnv.toBlob(blob=>{
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+}
+function cardView(v){
+  // The card design is remembered per venue on this device (the operator, Aug
+  // 2026: reopening the generator reverted his settings). Saved on every
+  // repaint; venue fields are only the FIRST-open defaults.
+  setView('card=' + v.id);
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('st_card_' + v.id) || 'null'); } catch(e){}
+  const d = {
+    town: (saved && saved.town) || '',
+    a1:   (saved && /^#[0-9a-f]{6}$/i.test(saved.a1||'') && saved.a1) || '#1e3a5f',
+    a2:   (saved && /^#[0-9a-f]{6}$/i.test(saved.a2||'') && saved.a2) || v.accent,
+    hb:   saved ? (saved.hb || null) : (v.header_bg || null),
+    dark: saved ? !!saved.dark : !!v.dark_mode,
+  };
+  $('main').innerHTML = `
+    <button class="back" id="back">‹ ${esc(v.name)}</button>
+    <h1>Table card</h1>
+    <div class="split">
+      <section>
+        <label class="f">Town line <span style="font-weight:400;text-transform:none">(shown top right)</span></label>
+        <input type="text" id="cTown" value="${esc(d.town)}" placeholder="Springfield, USA" maxlength="30" />
+        <label class="f">Structure color <span style="font-weight:400;text-transform:none">(pills, headlines, bottom bar)</span></label>
+        <div class="frow">
+          <input type="color" id="cA1" value="${esc(d.a1)}" />
+          <input type="text" id="cA1Hex" value="${esc(d.a1)}" style="width:110px" autocapitalize="off" spellcheck="false" />
+        </div>
+        <div class="swatches" id="cSw1"></div>
+        <label class="f">Accent color <span style="font-weight:400;text-transform:none">(header rule, feedback pill; prefilled from the venue)</span></label>
+        <div class="frow">
+          <input type="color" id="cA2" value="${esc(d.a2)}" />
+          <input type="text" id="cA2Hex" value="${esc(d.a2)}" style="width:110px" autocapitalize="off" spellcheck="false" />
+        </div>
+        <div class="swatches" id="cSw2"></div>
+        <label class="f">Header background <span style="font-weight:400;text-transform:none">(prefilled from the venue; white otherwise)</span></label>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="cHbOn" ${d.hb?'checked':''}/> custom</label>
+          <input type="color" id="cHb" value="${esc(d.hb||'#0b0a09')}" style="${d.hb?'':'display:none'}" />
+        </div>
+        <label class="f">Dark card <span style="font-weight:400;text-transform:none">(matches the app's dark mode; QR panels stay white so they scan)</span></label>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="cDark" ${d.dark?'checked':''}/> dark card</label>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="dlPrint">Download print PNG</button>
+          <button class="btn ghost" id="dlBleed">Download with bleed</button>
+        </div>
+        <div class="hint" style="margin-top:12px">Print PNG is exact 4x6 at 300dpi (1200x1800) for borderless home/lab printing. The bleed version (1276x1876) extends the background 1/8&quot; past each edge for commercial printers that trim to size. Always test-scan a printed card before a real run.</div>
+        <div class="msg" id="cMsg"></div>
+      </section>
+      <div><canvas id="cardCanvas" style="width:100%;max-width:340px;border-radius:10px;box-shadow:0 10px 30px rgba(22,17,10,.18);display:block;margin:0 auto"></canvas></div>
+    </div>`;
+  $('back').onclick = ()=> detail(v.id);
+
+  let logoImg = null, timer = null;
+  const opts = ()=>({ town: $('cTown').value.trim(), a1: $('cA1Hex').value, a2: $('cA2Hex').value,
+                      headerBg: $('cHbOn').checked ? $('cHb').value : null,
+                      dark: $('cDark').checked, logoImg });
+  const paint = ()=>{
+    const o = opts();
+    try { localStorage.setItem('st_card_' + v.id, JSON.stringify({ town:o.town, a1:o.a1, a2:o.a2, hb:o.headerBg, dark:o.dark })); } catch(e){}
+    return renderCard($('cardCanvas'), v, o);
+  };
+  const queue = ()=>{ clearTimeout(timer); timer = setTimeout(paint, 150); };
+  [['cA1','cA1Hex'],['cA2','cA2Hex']].forEach(([wheel,hex])=>{
+    $(wheel).addEventListener('input', ()=>{ $(hex).value = $(wheel).value; queue(); });
+    $(hex).addEventListener('input', ()=>{ if(/^#[0-9a-f]{6}$/i.test($(hex).value)){ $(wheel).value = $(hex).value; queue(); } });
+  });
+  $('cTown').addEventListener('input', queue);
+  $('cHbOn').addEventListener('change', ()=>{ $('cHb').style.display = $('cHbOn').checked ? '' : 'none'; queue(); });
+  $('cHb').addEventListener('input', queue);
+  $('cDark').addEventListener('change', queue);
+  $('dlPrint').onclick = async ()=>{ await paint(); downloadCanvas($('cardCanvas'), `${v.id}-table-card.png`); };
+  $('dlBleed').onclick = async ()=>{
+    const b = document.createElement('canvas');
+    await renderCard(b, v, { ...opts(), bleed: 38 });
+    downloadCanvas(b, `${v.id}-table-card-bleed.png`);
+  };
+
+  (async ()=>{
+    $('cMsg').className='msg'; $('cMsg').textContent = 'Rendering…';
+    logoImg = await loadCardLogo(v);
+    await paint();
+    $('cMsg').className='msg ok';
+    $('cMsg').textContent = logoImg ? '' : 'No logo image; using the wordmark in the header.';
+    // color suggestions pulled from the logo, same extractor as Add venue
+    if(logoImg){
+      const sw = extractSwatches(logoImg);
+      [['cSw1','cA1','cA1Hex'],['cSw2','cA2','cA2Hex']].forEach(([box, wheel, hex])=>{
+        $(box).innerHTML = sw.map(c=>`<button class="sw" style="background:${c}" data-c="${c}" title="${c}"></button>`).join('');
+        $(box).querySelectorAll('.sw').forEach(b=> b.onclick = ()=>{
+          $(wheel).value = b.dataset.c; $(hex).value = b.dataset.c; paint();
+        });
+      });
+    }
+  })();
+}
+
+init();
+</script>
+</body>
+</html>

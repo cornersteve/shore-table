@@ -1,0 +1,392 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Guest Report</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='10'%20y='10'%20width='44'%20height='44'%20rx='11'%20fill='%233a6ea5'/%3E%3Cpath%20d='M18%2024Q21.5%2020.4%2025%2024T32%2024T39%2024T46%2024M18%2033Q21.5%2029.4%2025%2033T32%2033T39%2033T46%2033M18%2042Q21.5%2038.4%2025%2042T32%2042T39%2042T46%2042'%20fill='none'%20stroke='%23fff'%20stroke-width='3.4'%20stroke-linecap='round'/%3E%3C/svg%3E" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<style>
+  /* ============================================================
+     SHORE TABLE · report.html · the live guest report.
+     One PERMANENT link per venue (?v=..&k=..), month picker on the
+     page. Owner-key + optional passphrase gate, same as owner.html
+     (rotating the owner link cycles this one too). Data only: no
+     narrative verdicts. Venue logo tops page 1; the platform
+     mark lives in the print footer of every page.
+     ============================================================ */
+  :root{
+    --bg:#ffffff;--page:#f6f4f0;--panel:#faf9f6;--panel-2:#efece6;
+    --ink:#16110a;--ink-dim:#6d6759;--ink-faint:#a49d90;
+    --line:rgba(22,17,10,.10);--line-2:rgba(22,17,10,.18);
+    --good:#2e9e63;--bad:#b3372f;--accent:#3a6ea5;
+    --radius:16px;--shadow:0 1px 2px rgba(22,17,10,.05),0 10px 30px rgba(22,17,10,.06);
+    --font-d:"Bricolage Grotesque",system-ui,sans-serif;
+    --font-b:"Hanken Grotesk",system-ui,sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--page);color:var(--ink);font-family:var(--font-b);font-size:15px;line-height:1.5}
+  .sheet{max-width:820px;margin:0 auto;padding:26px 22px 80px;background:var(--bg)}
+  @media(min-width:880px){ body{padding:26px 0} .sheet{border:1px solid var(--line);border-radius:18px;box-shadow:var(--shadow);padding:44px 48px 90px} }
+
+  /* toolbar (screen only) */
+  .bar{max-width:820px;margin:0 auto 14px;padding:0 22px;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  @media(min-width:880px){ .bar{padding:0} }
+  select{font-family:var(--font-b);font-size:15px;padding:10px 12px;border:1px solid var(--line-2);border-radius:12px;background:var(--bg);color:var(--ink)}
+  .btn{font-family:var(--font-d);font-weight:700;font-size:14px;border:0;border-radius:12px;padding:11px 16px;cursor:pointer;background:var(--accent);color:#fff}
+  .btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line-2)}
+
+  /* report typography */
+  /* The header is an app-style band: venue-colored background (header_bg,
+     or the app's dark nav for dark-mode venues, white otherwise) with the
+     accent divider under it, so a white logo reads here the way it does at
+     the table. The report body below stays white on purpose. */
+  .rhead{display:flex;align-items:center;justify-content:space-between;gap:16px;
+    background:var(--vhead,#ffffff);border-bottom:3px solid var(--accent);
+    margin:-26px -22px 0;padding:22px 22px 18px;
+    -webkit-print-color-adjust:exact;print-color-adjust:exact}
+  @media(min-width:880px){ .rhead{margin:-44px -48px 0;padding:26px 48px 20px;border-radius:18px 18px 0 0} }
+  .vlogo img{max-height:64px;max-width:240px;object-fit:contain;display:block}
+  .vlogo .vname{font-family:var(--font-d);font-weight:800;font-size:26px;letter-spacing:-.01em;color:var(--vhead-ink,var(--ink))}
+  .rmeta{text-align:right}
+  .rmeta .k{font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--vhead-ink,var(--ink))}
+  .rmeta .d{color:var(--vhead-dim,var(--ink-dim));font-size:14px;margin-top:3px}
+  .sec{margin-top:26px}
+  .sec h2{font-family:var(--font-d);font-weight:700;font-size:12.5px;letter-spacing:.15em;text-transform:uppercase;color:var(--ink-dim)}
+  .cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+  @media(max-width:560px){ .cards{grid-template-columns:1fr} }
+  .card{border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px}
+  .card > .k{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
+  .card > .n{font-family:var(--font-d);font-weight:800;font-size:40px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+  .card > .n small{font-size:18px;color:var(--ink-faint);font-weight:700}
+  .chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 10px;font-family:var(--font-d);font-weight:700;font-size:12.5px;margin-top:8px}
+  .chip.up{background:#e7f4ec;color:var(--good)} .chip.down{background:#f9e9e7;color:var(--bad)}
+  .chip.flat{background:var(--panel-2);color:var(--ink-dim)}
+  .chip .vs{font-weight:600;color:var(--ink-dim)}
+  .rowbar{margin-top:10px}
+  .rowbar .r{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:14.5px}
+  .rowbar .lbl{flex:0 0 42%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rowbar .track{flex:1;height:9px;border-radius:99px;background:var(--panel-2);position:relative;overflow:visible}
+  .rowbar .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--accent)}
+  .rowbar .mark{position:absolute;top:-3px;bottom:-3px;width:2.5px;background:var(--ink)}
+  .rowbar .n{flex:0 0 96px;text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-dim)}
+  .rowbar .n b{color:var(--ink)}
+  .legend{display:flex;gap:16px;margin-top:10px;font-size:12.5px;color:var(--ink-dim);align-items:center}
+  .legend .sw{display:inline-block;width:18px;height:8px;border-radius:99px;background:var(--accent);vertical-align:middle;margin-right:5px}
+  .legend .mk{display:inline-block;width:2.5px;height:12px;background:var(--ink);vertical-align:middle;margin-right:6px}
+  .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:10px}
+  @media(max-width:560px){ .grid3{grid-template-columns:1fr} }
+  .empty{color:var(--ink-faint);font-size:14px;margin-top:8px}
+  .note{color:var(--ink-faint);font-size:12.5px;margin-top:6px}
+  .comment{border:1px solid var(--line);border-radius:12px;padding:11px 14px;margin-top:8px;font-size:14.5px}
+  .comment .at{color:var(--ink-faint);font-size:11.5px;margin-top:4px}
+  .pagebreak{border-top:1px dashed var(--line-2);margin-top:30px;padding-top:4px}
+
+  /* the platform footer: repeats on every printed page */
+  .stfoot{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:40px;color:var(--ink-faint);
+          font-family:var(--font-d);font-weight:700;font-size:11.5px;letter-spacing:.14em;text-transform:uppercase}
+  .stfoot svg{width:18px;height:18px}
+  #gate{max-width:420px;margin:60px auto;background:var(--bg);border:1px solid var(--line);border-radius:18px;padding:30px;text-align:center;box-shadow:var(--shadow)}
+  #gate h1{font-family:var(--font-d);font-weight:800;font-size:22px;margin-bottom:8px}
+  #gate p{color:var(--ink-dim);font-size:14.5px;margin-bottom:14px}
+  #gate input{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:12px;font-family:var(--font-b);font-size:16px;text-align:center}
+  #gate .msg{min-height:18px;font-size:13.5px;font-weight:600;color:var(--bad);margin-top:8px}
+
+  @media print{
+    body{background:#fff;padding:0}
+    .bar{display:none}
+    .sheet{max-width:none;border:0;box-shadow:none;border-radius:0;padding:0 0 60px}
+    .rhead{margin:0;border-radius:0;padding:18px 16px 14px}
+    .pagebreak{border-top:0;margin-top:0;padding-top:0;break-before:page}
+    .card,.comment{break-inside:avoid}
+    .stfoot{position:fixed;bottom:0;left:0;right:0;margin:0;padding:8px 0;background:#fff}
+    @page{margin:16mm 14mm 20mm}
+  }
+</style>
+</head>
+<body>
+  <div class="bar" id="toolbar" style="display:none">
+    <select id="period"></select>
+    <button class="btn ghost" id="printBtn">Print / save PDF</button>
+  </div>
+  <div id="gate" style="display:none">
+    <h1>Guest report</h1>
+    <p>Enter the passphrase for this venue's dashboard.</p>
+    <input type="password" id="gatePass" autocomplete="current-password" />
+    <button class="btn" id="gateGo" style="width:100%;margin-top:12px">Open the report</button>
+    <div class="msg" id="gateMsg"></div>
+  </div>
+  <div class="sheet" id="sheet" style="display:none"></div>
+
+<script src="config.js"></script>
+<script src="vendor/supabase.js"></script>
+<script>
+'use strict';
+const CFG = window.OPERATOR_CONFIG || null;
+if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
+  document.body.innerHTML = '<div style="max-width:540px;margin:80px auto;font-family:system-ui,sans-serif;line-height:1.5;padding:0 20px"><h2>Almost there</h2><p>This page needs its operator config. In your fork, copy <code>public/config.example.js</code> to <code>public/config.js</code> and fill in your values. SETUP.md walks through it.</p></div>';
+  throw new Error('missing config.js');
+}
+const SUPABASE_URL = CFG.supabaseUrl;
+const SUPABASE_KEY = CFG.supabaseKey;
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+const params = new URLSearchParams(location.search);
+const V = params.get('v'), K = params.get('k');
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let P = null;
+try { P = localStorage.getItem('st_opass_' + V) || null; } catch(e){}   // shared with owner.html
+
+const ACC = /^#[0-9a-f]{6}$/i.test(CFG.accent || '') ? CFG.accent : '#3a6ea5';
+const HOST = String(CFG.domain || '').replace(/^https?:\/\//, '');
+const REGION = CFG.regionShort || 'the county';
+const ST_MARK = '<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg"><rect x="10" y="10" width="44" height="44" rx="11" fill="' + ACC + '"/><text x="32" y="43" font-family="sans-serif" font-size="26" font-weight="800" fill="#fff" text-anchor="middle">' + esc((CFG.brandName || '?').trim().charAt(0).toUpperCase()) + '</text></svg>';
+document.title = 'Guest Report · ' + CFG.brandName;
+(function(){ const fav = document.querySelector('link[rel="icon"]');
+  if(fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent(ST_MARK); })();
+
+/* ---- period picker: last completed month by default, 18 months back, all time ---- */
+const MONTHS = [];
+(function(){
+  const now = new Date();
+  for(let i = 1; i <= 18; i++){
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    MONTHS.push({ y: d.getFullYear(), m: d.getMonth() });
+  }
+  MONTHS.unshift({ y: now.getFullYear(), m: now.getMonth(), partial: true });
+})();
+const mLabel = p => new Date(p.y, p.m, 1).toLocaleDateString([], { month:'long', year:'numeric' });
+const iso = (y, m) => `${y}-${String(m+1).padStart(2,'0')}-01`;
+function ranges(sel){
+  if(sel === 'all') return { from:null, to:null, pf:null, pt:null, label:'All time' };
+  const p = MONTHS[+sel];
+  const from = iso(p.y, p.m), to = iso(p.m === 11 ? p.y+1 : p.y, (p.m+1) % 12);
+  const prev = new Date(p.y, p.m - 1, 1);
+  return { from, to, pf: iso(prev.getFullYear(), prev.getMonth()), pt: from,
+           label: mLabel(p) + (p.partial ? ' (so far)' : '') };
+}
+
+function paintPicker(){
+  $('period').innerHTML = MONTHS.map((p,i)=>`<option value="${i}">${mLabel(p)}${p.partial?' (so far)':''}</option>`).join('')
+    + '<option value="all">All time</option>';
+  $('period').value = '1';   // last completed month
+}
+
+/* ---- data ---- */
+let FORM = null;
+async function loadForm(fc){
+  try {
+    const { data } = await db.from('feedback_forms').select('*').in('id', fc ? ['global', V] : ['global']);
+    const rows = {}; (data||[]).forEach(r=>{ rows[r.id]=r; });
+    FORM = (fc && rows[V]) ? rows[V] : (rows.global || null);
+  } catch(e){ FORM = null; }
+}
+async function fetchReport(sel){
+  const r = ranges(sel);
+  const { data, error } = await db.rpc('get_report', {
+    p_venue_id: V, p_key: K, p_pass: P,
+    p_from: r.from, p_to: r.to, p_pf: r.pf, p_pt: r.pt });
+  if(error) throw error;
+  return { data, r };
+}
+
+/* ---- rendering helpers ---- */
+// County comparison toggle (41_report_county_venue.sql): the venue's
+// public_venues row (already fetched for header branding) carries
+// report_county; false hides the whole "vs county" page. A missing column
+// (pre-41) or missing row = shown, the original behavior.
+let RC = true;
+const showCounty = () => RC;
+const fmt = x => (x === null || x === undefined) ? '–' : (+x).toFixed(2).replace(/\.00$/,'').replace(/(\.\d)0$/,'$1');
+function chip(cur, prev, unit){
+  if(prev === null || prev === undefined || cur === null || cur === undefined) return '';
+  const d = +(cur - prev).toFixed(2);
+  if(!d) return `<span class="chip flat">even <span class="vs">vs prior</span></span>`;
+  return `<span class="chip ${d > 0 ? 'up' : 'down'}">${d > 0 ? '▲ +' : '▼ '}${fmt(Math.abs(d)*(d>0?1:-1)).replace('-','')}${unit||''} <span class="vs">vs prior</span></span>`;
+}
+function bars(rows, total){
+  if(!rows || !rows.length) return '<div class="empty">No answers in this period.</div>';
+  const max = Math.max(...rows.map(r=>r.n), 1);
+  return '<div class="rowbar">' + rows.map(r=>{
+    const pct = total ? Math.round(100*r.n/total) : 0;
+    return `<div class="r"><span class="lbl">${esc(r.k)}</span><span class="track"><span class="fill" style="width:${Math.round(100*r.n/max)}%"></span></span><span class="n"><b>${pct}%</b> · ${r.n}</span></div>`;
+  }).join('') + '</div>';
+}
+function vsCountyBars(mine, county, totalMine){
+  if(!mine || !mine.length) return '<div class="empty">No answers in this period.</div>';
+  const cmap = {}; (county||[]).forEach(c=>{ cmap[c.k] = +c.pct; });
+  return '<div class="rowbar">' + mine.map(r=>{
+    const myPct = totalMine ? Math.round(100*r.n/totalMine) : 0;
+    const cp = cmap[r.k];
+    return `<div class="r"><span class="lbl">${esc(r.k)}</span><span class="track"><span class="fill" style="width:${myPct}%"></span>${cp !== undefined ? `<span class="mark" style="left:${Math.min(cp,100)}%"></span>` : ''}</span><span class="n"><b>${myPct}%</b>${cp !== undefined ? ` <span style="color:var(--ink-faint)">/ ${cp}%</span>` : ''}</span></div>`;
+  }).join('') + '</div>';
+}
+
+function render(d, r){
+  const cur = d.cur || {}, prev = d.prev, county = d.county || {};
+  const ev = d.events || {}, evp = d.events_prev;
+  const extras = (FORM && Array.isArray(FORM.extras)) ? FORM.extras : [];
+  const exVals = qid => (d.extras || []).map(e => e && e[qid]).filter(x => x !== undefined && x !== null);
+  const totalDisc = (d.discovery||[]).reduce((a,b)=>a+b.n,0);
+  const totalPlate = (d.plate||[]).reduce((a,b)=>a+b.n,0);
+  const totalVisit = (d.visit||[]).reduce((a,b)=>a+b.n,0);
+
+  // custom aggregates (ratings + choices) for the main pages
+  const customAgg = extras.filter(q=>q.type!=='text').map(q=>{
+    const vals = exVals(q.id);
+    if(q.type === 'rating'){
+      const nums = vals.filter(x=>typeof x==='number');
+      const avg = nums.length ? (nums.reduce((a,b)=>a+b,0)/nums.length) : null;
+      return `<div class="card"><div class="k">${esc(q.label)}</div><div class="n">${avg===null?'–':fmt(avg)}<small> / 5</small></div><div class="note">${nums.length} answer${nums.length===1?'':'s'}</div></div>`;
+    }
+    const counts = {};
+    vals.forEach(x=>{ (Array.isArray(x)?x:[x]).forEach(o=>{ counts[o]=(counts[o]||0)+1; }); });
+    const rows = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([k,n])=>({k,n}));
+    const tot = rows.reduce((a,b)=>a+b.n,0);
+    return `<div class="card" style="grid-column:1/-1"><div class="k">${esc(q.label)}</div>${bars(rows, tot)}</div>`;
+  }).join('');
+
+  // appendix: comments + text extras
+  const textQs = extras.filter(q=>q.type==='text');
+  const appendix =
+    ((d.comments||[]).length ? `
+      <div class="sec pagebreak">
+        <h2>Guest comments · ${esc(r.label)}</h2>
+        ${d.comments.map(c=>`<div class="comment"><div>${esc(c.t)}</div><div class="at">${new Date(c.at).toLocaleDateString([], {month:'short', day:'numeric', year:'numeric'})}</div></div>`).join('')}
+      </div>` : '') +
+    textQs.map(q=>{
+      const texts = exVals(q.id).filter(x=>typeof x==='string');
+      if(!texts.length) return '';
+      return `<div class="sec pagebreak"><h2>${esc(q.label)} · ${esc(r.label)}</h2>${texts.map(t=>`<div class="comment"><div>${esc(t)}</div></div>`).join('')}</div>`;
+    }).join('');
+
+  $('sheet').innerHTML = `
+    <div class="rhead">
+      <div class="vlogo">${/^https?:/i.test(d.logo||'') ? `<img src="${esc(d.logo)}" alt="${esc(d.name)}" />` : `<div class="vname">${esc(d.logo || d.name)}</div>`}</div>
+      <div class="rmeta"><div class="k">Guest report</div><div class="d">${esc(r.label)} · ${cur.count||0} guest${cur.count===1?'':'s'} responded</div></div>
+    </div>
+
+    <div class="sec">
+      <h2>Your scores · private to you</h2>
+      <div class="cards">
+        <div class="card"><div class="k">Food</div><div class="n">${fmt(cur.food)}<small> / 5</small></div>${prev ? chip(cur.food, prev.food) : ''}</div>
+        <div class="card"><div class="k">Service</div><div class="n">${fmt(cur.service)}<small> / 5</small></div>${prev ? chip(cur.service, prev.service) : ''}</div>
+      </div>
+    </div>
+
+    <div class="sec">
+      <h2>How they found you</h2>
+      ${bars(d.discovery, totalDisc)}
+    </div>
+
+    <div class="sec">
+      <h2>Activity</h2>
+      <div class="grid3">
+        <div class="card"><div class="k">App opens</div><div class="n">${ev.opens||0}</div>${evp ? chip(ev.opens||0, evp.opens||0) : ''}</div>
+        <div class="card"><div class="k">Sent to Google</div><div class="n">${ev.review_clicks||0}</div>${evp ? chip(ev.review_clicks||0, evp.review_clicks||0) : ''}</div>
+        <div class="card"><div class="k">Promo taps</div><div class="n">${ev.promo_clicks||0}</div>${evp ? chip(ev.promo_clicks||0, evp.promo_clicks||0) : ''}</div>
+      </div>
+    </div>
+
+    ${(d.games||[]).length ? `
+    <div class="sec">
+      <h2>Game starts · all time</h2>
+      ${bars(d.games.map(g=>({k:({guess_the_split:'Guess the Split',who_knows_who:'Who Knows Who',wordy:'Wordy',trivia:'Trivia',who_invited_you:'Who Invited You?',fortune_teller:'Fortune Teller',all_talk:'All Talk',cornhole:'Cornhole',quick_pour:GNAME.quick_pour})[g.game]||g.game, n:g.plays})), d.games.reduce((a,b)=>a+b.plays,0))}
+    </div>` : ''}
+
+    ${customAgg ? `
+    <div class="sec">
+      <h2>Your custom questions · ${esc(r.label)}</h2>
+      <div class="cards">${customAgg}</div>
+    </div>` : ''}
+
+    ${showCounty() ? `
+    <div class="sec pagebreak">
+      <h2>Your guests vs ${esc(REGION)}</h2>
+      <div class="note" style="margin-top:8px">The ${esc(REGION)} numbers are the anonymous average across the ${esc(CFG.brandName)} network. Your venue's answers are the bars; the dark mark is ${esc(REGION)}.</div>
+      <div class="cards" style="margin-top:12px">
+        <div class="card"><div class="k">Food · you vs ${esc(REGION)}</div><div class="n">${fmt(cur.food)} <small>/ ${fmt(county.food)}</small></div></div>
+        <div class="card"><div class="k">Service · you vs ${esc(REGION)}</div><div class="n">${fmt(cur.service)} <small>/ ${fmt(county.service)}</small></div></div>
+      </div>
+      <div class="sec"><h2>How they found you · vs ${esc(REGION)}</h2>${vsCountyBars(d.discovery, county.discovery, totalDisc)}</div>
+      <div class="sec"><h2>In the food, what matters most · vs ${esc(REGION)}</h2>${vsCountyBars(d.plate, county.plate, totalPlate)}</div>
+      <div class="sec"><h2>About the visit, what matters most · vs ${esc(REGION)}</h2>${vsCountyBars(d.visit, county.visit, totalVisit)}</div>
+      <div class="legend"><span><span class="sw"></span>Your venue</span><span><span class="mk"></span>${esc(REGION)} average</span></div>
+    </div>` : ''}
+
+    ${appendix}
+
+    <div class="stfoot">${ST_MARK} ${esc(CFG.brandName)} · ${esc(HOST)}</div>`;
+}
+
+/* ---- venue branding: same anon view the diner app reads. The header band
+   takes the venue's app header color (header_bg, or the dark nav when the
+   venue runs dark mode) and the page accent becomes the venue accent. ---- */
+function readableOn(hex){
+  const c=(hex||'').replace('#',''); if(c.length<6) return '#16110a';
+  const f=x=>{x/=255; return x<=.03928?x/12.92:Math.pow((x+.055)/1.055,2.4);};
+  const L=.2126*f(parseInt(c.slice(0,2),16))+.7152*f(parseInt(c.slice(2,4),16))+.0722*f(parseInt(c.slice(4,6),16));
+  return L>.55 ? '#16110a' : '#ffffff';
+}
+async function applyBrand(){
+  try {
+    const { data: b } = await db.from('public_venues').select('*').eq('id', V).maybeSingle();
+    if(!b) return;
+    RC = b.report_county !== false;
+    const r = document.documentElement.style;
+    if(/^#[0-9a-f]{6}$/i.test(b.accent || '')) r.setProperty('--accent', b.accent);
+    const head = b.header_bg || (b.dark_mode ? '#0b0a09' : null);
+    if(head){
+      r.setProperty('--vhead', head);
+      if(readableOn(head) === '#ffffff'){
+        r.setProperty('--vhead-ink', '#f2efe9');
+        r.setProperty('--vhead-dim', 'rgba(255,255,255,.66)');
+      }
+    }
+  } catch(e){}
+}
+
+/* ---- boot ---- */
+async function boot(){
+  if(!V || !K){ document.body.innerHTML = '<div id="gate" style="display:block"><h1>Guest report</h1><p>This link is missing its key. Use the link from your dashboard email.</p></div>'; return; }
+  paintPicker();
+  // awaited: the county flag must be known before the first render (the
+  // band colors ride along; it is one indexed select, cheap)
+  await applyBrand();
+  await run();
+}
+async function run(){
+  const sel = $('period').value || '1';
+  let res;
+  try { res = await fetchReport(sel); }
+  catch(e){ $('gate').style.display='block'; $('gate').querySelector('p').textContent='Could not load the report. Check the link, or try again.'; $('gatePass').style.display='none'; $('gateGo').style.display='none'; return; }
+  const d = res.data;
+  if(d === null){ $('gate').style.display='block'; $('gate').querySelector('p').textContent='This link is not valid. Ask for a fresh one.'; $('gatePass').style.display='none'; $('gateGo').style.display='none'; return; }
+  if(d && d.need_pass){ $('toolbar').style.display='none'; $('sheet').style.display='none'; $('gate').style.display='block'; return; }
+  if(FORM === null) await loadForm(d.form_custom);
+  $('gate').style.display='none';
+  $('toolbar').style.display='flex';
+  $('sheet').style.display='block';
+  render(d, res.r);
+}
+$('gateGo').onclick = async ()=>{
+  const p = $('gatePass').value;
+  if(!p){ $('gateMsg').textContent = 'Enter the passphrase.'; return; }
+  P = p;
+  try { localStorage.setItem('st_opass_' + V, p); } catch(e){}
+  $('gateMsg').textContent = '';
+  await run();
+  if($('gate').style.display !== 'none') $('gateMsg').textContent = 'That passphrase did not work.';
+};
+$('gatePass').addEventListener('keydown', e=>{ if(e.key==='Enter') $('gateGo').click(); });
+$('period').addEventListener('change', run);
+$('printBtn').onclick = ()=> window.print();
+boot();
+</script>
+</body>
+</html>

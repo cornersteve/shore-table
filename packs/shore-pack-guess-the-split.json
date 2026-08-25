@@ -1,0 +1,27 @@
+{
+  "pack": "Shore pack",
+  "game": "guess_the_split",
+  "note": "Coastal flavor for shore/beach operators. Import from the dashboard Question packs tool. Seeds are set by the community as diners vote.",
+  "rows": [
+    {
+      "a": "Pork roll",
+      "b": "Taylor ham"
+    },
+    {
+      "a": "Sandy Hook",
+      "b": "Sea Bright"
+    },
+    {
+      "a": "Beach bar",
+      "b": "Boardwalk"
+    },
+    {
+      "a": "Wawa",
+      "b": "QuickChek"
+    },
+    {
+      "a": "Parkway",
+      "b": "Backroads"
+    }
+  ]
+}

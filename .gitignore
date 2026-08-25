@@ -1,0 +1,2 @@
+# Each operator's config lives only in their fork; upstream never ships one.
+public/config.js

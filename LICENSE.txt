@@ -1,0 +1,68 @@
+SHORE TABLE PLATFORM LICENSE
+
+Last updated: August 2026
+
+This software, its content library, and its documentation (together,
+"the Platform") are licensed to you, not sold. By accessing the
+repository or using the Platform, you agree to these terms.
+
+1. WHAT YOU MAY DO
+You may use the Platform to build and run your own hospitality
+engagement business: deploy it on infrastructure you control, brand
+it with your own business name and logo, sign your own venue
+customers, set your own pricing, and keep everything you earn.
+
+2. WHAT YOU MAY NOT DO
+You may not share, resell, redistribute, publish, or sublicense the
+Platform itself: no sharing repository access, no reselling or
+giving away the files, no offering the Platform (or a derivative of
+it) to others as a product, template, or community of your own. Your
+license covers running venues, not distributing software.
+
+3. OWNERSHIP
+The code, the question and content library, the documentation, and
+the Shore Table name and marks remain the property of the licensor.
+Your business name, your venue relationships, your venue data, and
+everything in your own database are yours.
+
+4. UPDATES AND YOUR SUBSCRIPTION
+Updates, new games, new content, and community support are provided
+while your community membership is active. If your membership ends,
+your license to keep RUNNING the version you already have continues,
+but access to the repository, updates, and support ends. This
+license terminates entirely if you breach section 2.
+
+5. YOUR RESPONSIBILITIES
+You operate your own business on your own accounts (hosting,
+database, domains, payments). You are responsible for securing those
+accounts, for your own customer relationships and agreements, for
+complying with the laws that apply to your business and territory,
+and for any modifications you make beyond the supported
+configuration file.
+
+6. NO WARRANTY
+The Platform is provided AS IS, without warranty of any kind,
+express or implied, including fitness for a particular purpose,
+uptime, or error-free operation. Third-party services the Platform
+relies on (hosting, database, fonts) are outside the licensor's
+control.
+
+7. NO GUARANTEES OF RESULTS
+No revenue, customer count, or business outcome is promised or
+implied. Any figures shared in the community are illustrations of
+one operator's experience, not projections of yours.
+
+8. LIMITATION OF LIABILITY
+To the maximum extent permitted by law, the licensor is not liable
+for any indirect, incidental, consequential, or special damages, or
+for lost profits, lost data, or business interruption, arising from
+the Platform or its use. Total liability for any claim is limited to
+the membership fees you paid in the three months before the claim
+arose.
+
+9. TERMINATION FOR BREACH
+If you breach these terms, your license ends immediately and you
+must stop using and delete the Platform files. Sections 3 and 6
+through 8 survive termination.
+
+Questions: hello@shoretable.com

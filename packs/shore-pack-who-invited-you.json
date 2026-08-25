@@ -1,0 +1,39 @@
+{
+  "pack": "Shore pack",
+  "game": "who_invited_you",
+  "note": "The \"At the shore\" category. Generic-coastal words; suits any coastal operator.",
+  "rows": [
+    {
+      "category": "At the shore",
+      "word": "Boardwalk"
+    },
+    {
+      "category": "At the shore",
+      "word": "Lifeguard"
+    },
+    {
+      "category": "At the shore",
+      "word": "Sandcastle"
+    },
+    {
+      "category": "At the shore",
+      "word": "Seagull"
+    },
+    {
+      "category": "At the shore",
+      "word": "Surfing"
+    },
+    {
+      "category": "At the shore",
+      "word": "Ferris wheel"
+    },
+    {
+      "category": "At the shore",
+      "word": "Fishing pier"
+    },
+    {
+      "category": "At the shore",
+      "word": "Sunscreen"
+    }
+  ]
+}
