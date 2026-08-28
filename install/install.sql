@@ -329,7 +329,8 @@ with (security_invoker = off) as
          form_custom,
          report_county,
          specials_title,
-         specials_tag
+         specials_tag,
+         (status = 'lead') as demo
   from public.venues
   where status in ('lead', 'active');
 
