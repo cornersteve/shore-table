@@ -14,7 +14,12 @@ hosting). Everything is free tier to start except Supabase Pro
 ## 2. Supabase (the database)
 
 1. Create a project at supabase.com (any name; pick a strong database
-   password and store it in your password manager).
+   password and store it in your password manager). On the creation form:
+   skip the GitHub connection (updates flow through the dashboard, not
+   Supabase-GitHub); leave compute at the default; under Security keep
+   **Enable Data API ON**, leave **Automatically expose new tables**
+   DISABLED (install.sql grants exactly what should be public), and turn
+   **Enable automatic RLS ON**.
 2. Authentication > Sign In / Up: **disable public signups**.
 3. Authentication > Users: **Add user** — your operator email + a strong
    password. This is your dashboard login.

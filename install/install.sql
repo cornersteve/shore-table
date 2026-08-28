@@ -286,6 +286,18 @@ create policy "anon reads active all-talk categories"
   on public.at_categories for select to anon, authenticated
   using (status = 'active');
 
+-- ---------------------------------------------------------------------------
+--  TABLE-LEVEL GRANTS for the public read surface. Required when the
+--  project was created with 'Automatically expose new tables' DISABLED
+--  (the recommended setting), and harmless when it was not: RLS policies
+--  filter rows, but the Data API also needs table privileges. Everything
+--  not granted here stays sealed.
+-- ---------------------------------------------------------------------------
+grant select on public.gts_questions, public.wkw_questions,
+  public.trivia_questions, public.wordy_words, public.wiy_words,
+  public.fortunes, public.at_categories, public.feedback_forms
+  to anon, authenticated;
+
 -- form config is public-readable (labels only; answers are sealed)
 create policy feedback_forms_read on feedback_forms
   for select to anon, authenticated using (true);
