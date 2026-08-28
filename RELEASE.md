@@ -38,6 +38,10 @@ protects that button.
   an instance, never equal across instances.
 - **Never DELETE content.** Retire by status. (The one historical
   exception was the platform-reset cutover.)
+- A new table that pages read DIRECTLY (not via an RPC) needs its own
+  `grant select ... to anon, authenticated` in the same migration:
+  projects created with 'automatically expose new tables' disabled
+  grant nothing by default. Definer-function access needs no grant.
 - Writes stay behind SECURITY DEFINER functions; anything granted to
   `anon` gets the same scrutiny as the original surface. New admin
   functions: revoke from public AND anon, grant to authenticated, gate
