@@ -38,4 +38,8 @@ window.OPERATOR_CONFIG = {
   ],
   workerUrl: "",                        // your deployed autofill Worker URL; empty hides the autofill UI
   gameNames: {},                        // diner-facing display-name overrides, e.g. { quick_pour: "Perfect Pour" }
+  logoSvg: "",                          // optional: your mark as one inline <svg>...</svg> string
+                                        // (include xmlns="http://www.w3.org/2000/svg"; square viewBox
+                                        // works best). Used for wordmarks + favicons; empty = a
+                                        // generated square with your brand initial.
 };
