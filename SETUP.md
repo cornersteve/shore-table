@@ -24,8 +24,7 @@ hosting). Everything is free tier to start except Supabase Pro
 3. Authentication > Users: **Add user** — your operator email + a strong
    password. This is your dashboard login.
 4. Authentication > URL Configuration: set the Site URL to your domain
-   (step 6), and add `https://<your-domain>/admin.html` and
-   `http://localhost:5599/admin.html` to Additional Redirect URLs.
+   (step 6), and add these to Additional Redirect URLs (wildcards on purpose: hosting serves /admin and /admin.html interchangeably, and a reset link whose return address is not on the list silently falls back to the Site URL): `https://<your-domain>/*`, `https://<your-pages-project>.pages.dev/*` (add it at step 3 when you know it), and `http://localhost:5599/*`.
 5. Storage: **New bucket** named exactly `restaurant logos`, PUBLIC.
 6. SQL Editor: open `install/install.sql` from the repo, **edit the one
    marked line** (your operator email), paste the whole file, Run.
