@@ -174,8 +174,8 @@ async function platformView(){
   $('main').innerHTML = '<div class="hint">Loading…</div>';
   let deployed = null, schema = null, settings = {};
   try { const r = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' }); if(r.ok) deployed = await r.json(); } catch(e){}
-  try { const { data } = await db.rpc('admin_schema_version'); schema = data; } catch(e){}
-  try { const { data } = await db.rpc('admin_get_settings'); settings = data || {}; } catch(e){}
+  try { const { data } = await rpc('admin_schema_version'); schema = data; } catch(e){}
+  try { const { data } = await rpc('admin_get_settings'); settings = data || {}; } catch(e){}
   let pending = [];
   try {
     const r = await fetch('migrations/index.json?ts=' + Date.now(), { cache: 'no-store' });
@@ -219,7 +219,7 @@ async function platformView(){
     const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), br = $('ghBranch').value.trim() || 'release';
     if(repo && !/^[\w.-]+\/[\w.-]+$/.test(repo)){ m.className = 'msg err'; m.textContent = 'Repo must look like owner/name.'; return; }
     for(const [k, v] of [['gh_repo', repo], ['gh_token', tok], ['gh_branch', br]]){
-      const { data, error } = await db.rpc('admin_set_setting', { p_key: k, p_value: v });
+      const { data, error } = await rpc('admin_set_setting', { p_key: k, p_value: v });
       if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save.'; return; }
     }
     m.className = 'msg ok'; m.textContent = 'Saved.';
@@ -270,7 +270,7 @@ async function platformView(){
         if(j.version !== mig.version || !Array.isArray(j.statements)) throw new Error('shape');
         stmts = j.statements;
       } catch(e){ m.className = 'msg err'; m.textContent = 'Could not load migration ' + mig.version + '. Nothing was changed by it.'; return; }
-      const { data, error } = await db.rpc('admin_run_migration', { p_version: mig.version, p_statements: stmts });
+      const { data, error } = await rpc('admin_run_migration', { p_version: mig.version, p_statements: stmts });
       if(error || !data || data.ok !== true){
         m.className = 'msg err';
         m.textContent = 'Migration ' + mig.version + ' failed (' + esc((data && data.error) || (error && error.message) || 'unknown') + '). It was rolled back; later ones were not attempted.';
@@ -304,6 +304,20 @@ let WORKER_URL     = CFG.workerUrl || "";
 const STRIPE_PLANS = (CFG.stripePlans || []).map(p => ({ name: p.label || p.name || "Plan", url: p.url || "" }));
 
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* Long-open tabs: the auth token expires while the refresh timer is
+   suspended, so the FIRST call after returning fails. Two defenses:
+   refresh proactively when the tab regains focus, and give every RPC
+   one transparent retry after a forced refresh. */
+addEventListener('focus', ()=>{ try{ db.auth.getSession(); }catch(e){} });
+const rpcRaw = (fn, args) => db.rpc(fn, args);
+async function rpc(fn, args){
+  let r = await rpcRaw(fn, args);
+  if(r && r.error && /jwt|expired|token|401/i.test(String(r.error.message||'') + ' ' + String(r.error.code||''))){
+    try{ await db.auth.refreshSession(); }catch(e){}
+    r = await rpcRaw(fn, args);
+  }
+  return r;
+}
 /* operator signature for the prefilled email templates */
 const SIG = (CFG.operatorName || 'The team') + '\n' + CFG.brandName + ' · ' + String(CFG.domain || '').replace(/^https?:\/\//, '') + (CFG.operatorPhone ? ' · ' + CFG.operatorPhone : '');
 /* platform branding from config: tab title, wordmark, favicon */
@@ -603,7 +617,7 @@ $('signOut').onclick = async ()=>{ await db.auth.signOut(); location.reload(); }
 
 /* ---------------- data ---------------- */
 async function loadAll(){
-  const [v, w] = await Promise.all([ db.rpc('admin_list_venues'), db.rpc('admin_demo_watch') ]);
+  const [v, w] = await Promise.all([ rpc('admin_list_venues'), rpc('admin_demo_watch') ]);
   if(v.error || v.data === null){ VENUES = null; return; }   // null = not an operator (or 25 not run)
   VENUES = v.data; WATCH = (w.data || []);
 }
@@ -912,7 +926,7 @@ async function formBuilder(id, backFn){
     $('fbSave').onclick = async ()=>{
       const m = $('fbMsg');
       m.className='msg'; m.textContent='Saving…';
-      const { data:res, error:err } = await db.rpc('admin_set_form', { p_id: id, p_core: collectCore(), p_extras: extras });
+      const { data:res, error:err } = await rpc('admin_set_form', { p_id: id, p_core: collectCore(), p_extras: extras });
       if(err || !res || res.ok !== true){ m.className='msg err'; m.textContent='Could not save (has 35_feedback_forms.sql been run?).'; return; }
       extras = res.extras || extras;
       m.className='msg ok'; m.textContent='Saved. Live on the next app load.';
@@ -1285,7 +1299,7 @@ function form(existing){
 
       // 2. row
       if(editing){
-        const { data, error } = await db.rpc('admin_update_venue', {
+        const { data, error } = await rpc('admin_update_venue', {
           p_id: s.id, p_name: s.name, p_accent: s.accent,
           p_logo: logoValue,                        // null = keep
           p_review: s.review || '',                 // '' clears
@@ -1294,13 +1308,13 @@ function form(existing){
         });
         if(error || !data || data.ok!==true) throw new Error((data&&data.error)||'update failed');
         if($('fDark').checked !== !!v.dark_mode){
-          const r = await db.rpc('admin_set_dark_mode', { p_id: s.id, p_on: $('fDark').checked });
+          const r = await rpc('admin_set_dark_mode', { p_id: s.id, p_on: $('fDark').checked });
           if(r.error || !r.data || r.data.ok!==true) toast('Saved, but dark mode needs 30_dark_mode.sql');
         }
         clearDraft();
         await loadAll(); toast('Saved'); detail(s.id);
       } else {
-        const { data, error } = await db.rpc('admin_add_venue', {
+        const { data, error } = await rpc('admin_add_venue', {
           p_id: s.id, p_name: s.name, p_accent: s.accent,
           p_logo: logoValue, p_review: s.review || null,
           p_header_bg: s.headerBg || null, p_owner_email: s.email || null
@@ -1313,7 +1327,7 @@ function form(existing){
           throw new Error(why);
         }
         if($('fDark').checked){
-          const r = await db.rpc('admin_set_dark_mode', { p_id: s.id, p_on: true });
+          const r = await rpc('admin_set_dark_mode', { p_id: s.id, p_on: true });
           if(r.error || !r.data || r.data.ok!==true) toast('Added, but dark mode needs 30_dark_mode.sql');
         }
         clearDraft();
@@ -1530,7 +1544,7 @@ function detail(id){
     const p = $('opPass').value.trim(), m = $('opMsg');
     if(p.length < 4){ m.className='msg err'; m.textContent='At least 4 characters.'; return; }
     m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await db.rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
+    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
     if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 29_owner_passphrase.sql been run?).'; return; }
     v.has_pass = true; $('opPass').value='';
     m.className='msg ok'; m.textContent='Set. Owners on other devices will be asked for it; text it to them separately.';
@@ -1539,7 +1553,7 @@ function detail(id){
   const opClear = $('opClear');
   if(opClear) opClear.onclick = async ()=>{
     if(!confirm(`Remove ${v.name}'s dashboard passphrase? The link alone opens it again.`)) return;
-    const { data, error } = await db.rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
+    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
     if(error || !data || data.ok!==true){ toast('Could not clear'); return; }
     v.has_pass = false; toast('Cleared. Link-only again.');
     detail(v.id);
@@ -1547,7 +1561,7 @@ function detail(id){
 
   $('rotate').onclick = async ()=>{
     if(!confirm(`Rotate ${v.name}'s owner key? Their current dashboard link stops working immediately.`)) return;
-    const { data, error } = await db.rpc('admin_rotate_owner_key', { p_id: v.id });
+    const { data, error } = await rpc('admin_rotate_owner_key', { p_id: v.id });
     if(error || !data || data.ok!==true){ toast('Rotate failed'); return; }
     v.owner_key = data.owner_key;
     toast('Rotated. Send them the new link.');
@@ -1560,7 +1574,7 @@ function detail(id){
                    inactive:`Set ${v.name} to INACTIVE? Their QR stops loading at the table.`,
                    lead:`Set ${v.name} back to LEAD? The app keeps working but stops saving.` }[st];
     if(!confirm(warn)) return;
-    const { data, error } = await db.rpc('admin_set_status', { p_id: v.id, p_status: st });
+    const { data, error } = await rpc('admin_set_status', { p_id: v.id, p_status: st });
     if(error || !data || data.ok!==true){ $('stMsg').className='msg err'; $('stMsg').textContent='Could not change status.'; return; }
     v.status = st; toast('Status: '+st); detail(v.id);
   });
@@ -1623,7 +1637,7 @@ ${SIG}`);
 
   // ---- engagement snapshot (27_admin_content.sql) ----
   (async ()=>{
-    const { data, error } = await db.rpc('admin_venue_stats', { p_id: v.id });
+    const { data, error } = await rpc('admin_venue_stats', { p_id: v.id });
     const el = $('engBody');
     if(error || !data){ el.textContent = 'Needs 27_admin_content.sql (run it once, then reload).'; return; }
     const e30 = data.events_30d || {};
@@ -1645,7 +1659,7 @@ ${SIG}`);
     const m = $('gMsg');
     if(!picked.length){ m.className='msg err'; m.textContent='At least one game stays on.'; return; }
     m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await db.rpc('admin_set_games', { p_id: v.id, p_games: picked });
+    const { data, error } = await rpc('admin_set_games', { p_id: v.id, p_games: picked });
     if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 27_admin_content.sql been run?).'; return; }
     v.games = data.games;
     m.className='msg ok'; m.textContent='Saved.';
@@ -1660,7 +1674,7 @@ ${SIG}`);
   const savePromo = async ()=>{
     const m = $('apMsg');
     m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await db.rpc('admin_set_promo', {
+    const { data, error } = await rpc('admin_set_promo', {
       p_id: v.id,
       p_text: $('apText').value.trim() || null,
       p_expires: $('apExp').value || null,
@@ -1697,7 +1711,7 @@ ${SIG}`);
   };
   const spSaveMeta = async (title, show, m)=>{
     m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await db.rpc('admin_set_specials_meta', { p_id: v.id, p_title: title || null, p_show: show });
+    const { data, error } = await rpc('admin_set_specials_meta', { p_id: v.id, p_title: title || null, p_show: show });
     if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 43_specials_meta.sql been run?).'; return false; }
     v.specials_title = (title || '').trim().slice(0, 40) || null;
     v.specials_tag = show;
@@ -1723,7 +1737,7 @@ ${SIG}`);
     document.querySelectorAll('#spRows input').forEach(i=>{ const t = i.value.trim(); if(t) sp[i.dataset.day] = t; });
     const m = $('spMsg');
     m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await db.rpc('admin_set_specials', { p_id: v.id, p_specials: Object.keys(sp).length ? sp : null });
+    const { data, error } = await rpc('admin_set_specials', { p_id: v.id, p_specials: Object.keys(sp).length ? sp : null });
     if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 32_daily_specials.sql been run?).'; return; }
     v.specials = Object.keys(sp).length ? sp : null;
     m.className='msg ok'; m.textContent='Saved.';
@@ -1732,7 +1746,7 @@ ${SIG}`);
   // ---- feedback form (35_feedback_forms.sql) ----
   $('ffFlag').onchange = async ()=>{
     const on = $('ffFlag').checked, m = $('ffMsg');
-    const { data, error } = await db.rpc('admin_set_form_custom', { p_id: v.id, p_on: on });
+    const { data, error } = await rpc('admin_set_form_custom', { p_id: v.id, p_on: on });
     if(error || !data || data.ok!==true){ $('ffFlag').checked = !on; m.className='msg err'; m.textContent='Could not change the flag (has 35_feedback_forms.sql been run?).'; return; }
     v.form_custom = on;
     $('ffEdit').style.display = on ? 'inline-flex' : 'none';
@@ -1744,7 +1758,7 @@ ${SIG}`);
   // The same flag has TWO checkboxes on this view (under the report link,
   // and in the Feedback form section): one save path, always kept in sync.
   const rcSave = async (on, m)=>{
-    const { data, error } = await db.rpc('admin_set_report_county', { p_id: v.id, p_on: on });
+    const { data, error } = await rpc('admin_set_report_county', { p_id: v.id, p_on: on });
     if(error || !data || data.ok!==true){
       $('rcFlag').checked = $('rcFlag2').checked = v.report_county !== false;
       m.className='msg err'; m.textContent='Could not change it (has 41_report_county_venue.sql been run?).'; return;
@@ -1759,7 +1773,7 @@ ${SIG}`);
   // ---- custom questions ----
   $('cqFlag').onchange = async ()=>{
     const on = $('cqFlag').checked;
-    const { data, error } = await db.rpc('admin_set_custom_questions', { p_id: v.id, p_on: on });
+    const { data, error } = await rpc('admin_set_custom_questions', { p_id: v.id, p_on: on });
     if(error || !data || data.ok!==true){ $('cqFlag').checked = !on; toast('Could not change the flag'); return; }
     v.custom_questions = on;
     $('cqOnlyWrap').style.display = on ? 'block' : 'none';
@@ -1786,7 +1800,7 @@ ${SIG}`);
     const picked = [...document.querySelectorAll('#cqOnly input:checked')].map(x=>x.dataset.co);
     const m = $('cqOnlyMsg');
     m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await db.rpc('admin_set_custom_only', { p_id: v.id, p_games: picked });
+    const { data, error } = await rpc('admin_set_custom_only', { p_id: v.id, p_games: picked });
     if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 28_custom_only_retire.sql been run?).'; return; }
     v.custom_only = data.custom_only;
     m.className='msg ok'; m.textContent='Saved.';
@@ -1807,7 +1821,7 @@ ${SIG}`);
     m.className='msg'; m.textContent='Importing…';
     let inserted = 0, skipped = 0;
     for(let i = 0; i < res.rows.length; i += 400){
-      const { data, error } = await db.rpc('admin_add_content', { p_game: res.game, p_rows: res.rows.slice(i, i+400), p_venue_id: v.id });
+      const { data, error } = await rpc('admin_add_content', { p_game: res.game, p_rows: res.rows.slice(i, i+400), p_venue_id: v.id });
       if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent=`Import stopped: ${error ? error.message : (data&&data.error)||'unknown'}. ${inserted} rows were inserted.`; return; }
       inserted += data.inserted; skipped += data.skipped;
     }
@@ -1826,7 +1840,7 @@ ${SIG}`);
   cqPaintFields();
 
   const cqLoad = async ()=>{
-    const { data, error } = await db.rpc('admin_list_custom', { p_id: v.id });
+    const { data, error } = await rpc('admin_list_custom', { p_id: v.id });
     const el = $('cqList');
     if(error || data === null){ el.textContent = 'Needs 27_admin_content.sql.'; $('cqOnly').textContent='Needs 27/28.'; return; }
     cqOnlyPaint(data);
@@ -1840,7 +1854,7 @@ ${SIG}`);
       </div>`).join('');
     el.querySelectorAll('[data-cq]').forEach(b=> b.onclick = async ()=>{
       const [game, key, status] = b.dataset.cq.split('|');
-      const { data:d } = await db.rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+      const { data:d } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
       if(!d || d.ok!==true){ toast('Could not update'); return; }
       cqLoad();
     });
@@ -1854,7 +1868,7 @@ ${SIG}`);
     const bad = validateRow(g, row);
     if(bad){ m.className='msg err'; m.textContent = bad; return; }
     m.className='msg'; m.textContent='Adding…';
-    const { data, error } = await db.rpc('admin_add_content', { p_game: g, p_rows: [row], p_venue_id: v.id });
+    const { data, error } = await rpc('admin_add_content', { p_game: g, p_rows: [row], p_venue_id: v.id });
     if(error || !data || data.ok!==true || data.inserted!==1){
       m.className='msg err';
       m.textContent = (data && data.errors && data.errors[0] && data.errors[0].error) || 'Could not add (has 27_admin_content.sql been run?).';
@@ -1935,7 +1949,7 @@ function packs(){
     const m = $('rbMsg'), g = $('rbGame').value, d = $('rbDate').value;
     if(!d){ m.className='msg err'; m.textContent='Pick a date.'; return; }
     m.className='msg'; m.textContent='Checking…';
-    const { data, error } = await db.rpc('admin_retire_before', { p_game: g, p_before: d, p_dry_run: true });
+    const { data, error } = await rpc('admin_retire_before', { p_game: g, p_before: d, p_dry_run: true });
     if(error || !data){ m.className='msg err'; m.textContent='Failed (has 28_custom_only_retire.sql been run?).'; return; }
     if(data.ok !== true){
       m.className='msg err';
@@ -1954,7 +1968,7 @@ function packs(){
     if(!rbChecked) return;
     const m = $('rbMsg');
     if(!confirm(`Retire the previewed ${GAMES_META[rbChecked.g].name} rows added before ${rbChecked.d}? They are kept and can be restored, but stop showing on tables immediately.`)) return;
-    const { data, error } = await db.rpc('admin_retire_before', { p_game: rbChecked.g, p_before: rbChecked.d, p_dry_run: false });
+    const { data, error } = await rpc('admin_retire_before', { p_game: rbChecked.g, p_before: rbChecked.d, p_dry_run: false });
     rbInvalidate();
     if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Retire failed: ' + (error ? error.message : (data&&data.error)||'unknown'); return; }
     m.className='msg ok'; m.textContent = `Retired ${data.retired}; ${data.left_active} still active.`;
@@ -1966,7 +1980,7 @@ function packs(){
     const el = $('fqList'), q = $('fqQ').value.trim();
     if(!q){ el.className='hint'; el.textContent='Type something to search for.'; return; }
     el.className='hint'; el.textContent='Searching…';
-    const { data, error } = await db.rpc('admin_search_content', { p_game: $('fqGame').value, p_q: q });
+    const { data, error } = await rpc('admin_search_content', { p_game: $('fqGame').value, p_q: q });
     if(error || data === null){ el.textContent='Failed (has 28_custom_only_retire.sql been run?).'; return; }
     if(!data.length){ el.textContent='No matches.'; return; }
     el.className='';
@@ -1979,7 +1993,7 @@ function packs(){
       </div>`).join('');
     el.querySelectorAll('[data-fq]').forEach(b=> b.onclick = async ()=>{
       const [game, key, status] = b.dataset.fq.split('|');
-      const { data:d, error:e } = await db.rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+      const { data:d, error:e } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
       if(e || !d || d.ok!==true){
         toast(d && d.error === 'below_floor' ? `Refused: the game would drop under its floor of ${d.floor}` : 'Could not update');
         return;
@@ -1992,7 +2006,7 @@ function packs(){
   $('fqQ').addEventListener('keydown', e=>{ if(e.key==='Enter') fqRun(); });
 
   const paintCounts = async ()=>{
-    const { data, error } = await db.rpc('admin_content_counts');
+    const { data, error } = await rpc('admin_content_counts');
     const el = $('ccBody');
     if(error || !data){ el.textContent = 'Needs 27_admin_content.sql (run it once, then reload).'; return; }
     el.className = '';
@@ -2044,7 +2058,7 @@ function packs(){
     m.className='msg'; m.textContent = 'Importing…';
     let inserted = 0, skipped = 0, errs = [];
     for(let i = 0; i < checked.rows.length; i += 400){         // server caps 500/call
-      const { data, error } = await db.rpc('admin_add_content', {
+      const { data, error } = await rpc('admin_add_content', {
         p_game: checked.game, p_rows: checked.rows.slice(i, i+400) });
       if(error || !data || data.ok!==true){
         m.className='msg err';
