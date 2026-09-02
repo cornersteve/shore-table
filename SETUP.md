@@ -80,9 +80,12 @@ Supabase account itself.
 
 Dashboard > Tools > **Platform updates**:
 
-- Connect it once: your fork's `owner/repo`, a GitHub fine-grained
-  personal access token (Contents read/write, YOUR FORK ONLY), branch
-  `release`. The token is stored in your database, never in git.
+- Connect it once: your fork as `owner/repo`, branch `release`, and a
+  GitHub personal access token (CLASSIC, scope `repo`, from the same
+  account that owns your fork). Classic on purpose: syncing must READ
+  the private upstream repository, which your collaborator account can
+  but a fork-scoped fine-grained token cannot. The token is stored in
+  your database, never in git.
 - When an update ships, press **Sync fork from upstream**. Pages
   redeploys; the page reloads itself; if the update needs database
   changes, an **Apply pending migrations** button appears — press it.
