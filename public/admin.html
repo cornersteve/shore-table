@@ -225,7 +225,7 @@ async function platformView(){
       if(!nr.ok) return;
       const nj = await nr.json();
       if(nj.parent && nj.parent.html_url)
-        .innerHTML = '<a href="' + esc(nj.parent.html_url) + '/releases" target="_blank" rel="noopener">What&#39;s new: release notes &rsaquo;</a> (sign in as your fork account)';
+        $('whatsNew').innerHTML = '<a href="' + esc(nj.parent.html_url) + '/releases" target="_blank" rel="noopener">What&#39;s new: release notes &rsaquo;</a> (sign in as your fork account)';
     } catch(e){}
   })();
 
