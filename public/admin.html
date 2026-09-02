@@ -242,7 +242,7 @@ async function platformView(){
       });
     } catch(e){ m.className = 'msg err'; m.textContent = 'Could not reach GitHub.'; return; }
     if(r.status === 409){ m.className = 'msg err'; m.textContent = 'GitHub reports a conflict; your fork has diverged. Resolve it on GitHub once, then sync again.'; return; }
-    if(!r.ok){ m.className = 'msg err'; m.textContent = 'GitHub said no (' + r.status + '). Check the repo name, the branch, and the token scope.'; return; }
+    if(!r.ok){ const b = await r.json().catch(()=> ({})); m.className = 'msg err'; m.textContent = 'GitHub said no (' + r.status + (b.message ? ': ' + b.message : '') + '). Check the repo name, the branch, and the token scope.'; return; }
     const body = await r.json().catch(()=> ({}));
     if(body && /already up to date/i.test(body.message || '')){ m.className = 'msg ok'; m.textContent = 'Already up to date.'; return; }
     m.className = 'msg'; m.textContent = 'Synced. Waiting for the new deploy…';
