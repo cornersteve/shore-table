@@ -214,6 +214,7 @@ async function platformView(){
       <div class="msg" id="platMsg"></div>
     </section>`;
   $('back').onclick = ()=> home();
+  draftify('platform', ['ghRepo','ghToken','ghBranch']);
 
   $('ghSave').onclick = async ()=>{
     const m = $('ghMsg'); m.className = 'msg'; m.textContent = 'Saving…';
@@ -224,6 +225,7 @@ async function platformView(){
       if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save.'; return; }
     }
     m.className = 'msg ok'; m.textContent = 'Saved.';
+    draftClear('platform');
   };
 
   $('syncBtn').onclick = async ()=>{
