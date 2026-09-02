@@ -725,6 +725,14 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
 const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+/* favicon from operator config (the page itself wears venue branding) */
+(function(){ try{
+  const fav = document.querySelector('link[rel="icon"]'); if(!fav) return;
+  const svg = (typeof CFG.logoSvg === 'string' && CFG.logoSvg.trim().startsWith('<svg')) ? CFG.logoSvg : '';
+  const acc = /^#[0-9a-f]{6}$/i.test(CFG.accent || '') ? CFG.accent : '#3a6ea5';
+  const ini = (CFG.brandName || '?').trim().charAt(0).toUpperCase();
+  fav.href = 'data:image/svg+xml,' + encodeURIComponent(svg || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + ini + '</text></svg>');
+}catch(e){} })();
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 /* Filled in at boot from the database (see loadVenues / loadContent near the
