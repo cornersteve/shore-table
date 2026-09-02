@@ -47,6 +47,10 @@ protects that button.
   functions: revoke from public AND anon, grant to authenticated, gate
   with is_operator() inside.
 
+- Every new admin view with a FORM calls draftify(key, [field ids])
+  after painting and draftClear(key) on successful save: backgrounded
+  tabs get evicted and reload, and unsaved fields must survive it.
+
 ## Shipping a new game
 
 Same release, all together (missing one of these has bitten before):

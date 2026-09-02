@@ -168,7 +168,7 @@
    each exactly once, transactional per migration).
    Token scope: the token needs Contents read/write on YOUR FORK only.
    ===================================================================== */
-const BUILD = 2;   // stamped by each release; compare with /version.json
+const BUILD = 3;   // stamped by each release; compare with /version.json
 
 async function platformView(){
   setView('platform');
@@ -310,6 +310,29 @@ const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
    refresh proactively when the tab regains focus, and give every RPC
    one transparent retry after a forced refresh. */
 addEventListener('focus', ()=>{ try{ db.auth.getSession(); }catch(e){} });
+/* Draft persistence for form fields: browsers (iOS especially) evict
+   backgrounded tabs, and the reload wipes unsaved form state. Any view
+   calls draftify(key, [ids]) after painting: values restore on repaint
+   (only into empty fields, so DB prefills win) and clear via
+   draftClear(key) on a successful save. RELEASE RULE: every new admin
+   view with a form gets this. */
+function draftify(key, ids){
+  const K = 'st_draft_' + key;
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(K) || '{}'); } catch(e){}
+  ids.forEach(id => {
+    const el = $(id); if(!el) return;
+    if(saved[id] !== undefined && !el.value) el.value = saved[id];
+    el.addEventListener('input', ()=>{
+      try {
+        const cur = JSON.parse(localStorage.getItem(K) || '{}');
+        cur[id] = el.value;
+        localStorage.setItem(K, JSON.stringify(cur));
+      } catch(e){}
+    });
+  });
+}
+function draftClear(key){ try { localStorage.removeItem('st_draft_' + key); } catch(e){} }
 const rpcRaw = (fn, args) => db.rpc(fn, args);
 async function rpc(fn, args){
   let r = await rpcRaw(fn, args);
