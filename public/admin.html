@@ -166,7 +166,7 @@
    deploy to serve the new build, reload, then apply any pending
    database migrations through admin_run_migration (strictly ordered,
    each exactly once, transactional per migration).
-   Token scope: the token needs Contents read/write on YOUR FORK only.
+   Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
 const BUILD = 5;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
@@ -198,8 +198,8 @@ async function platformView(){
       <div class="hint">For the one-button fork sync. The token is a GitHub personal access token (CLASSIC, scope "repo", created on the account that owns your fork - classic on purpose: updating must read the private upstream repository, which your account can but a fork-limited token cannot). It is stored in your database, never in git. Repo is your fork as owner/name, e.g. jane/my-table-app.</div>
       <label class="f">Your fork (owner/repo)</label>
       <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
-      <label class="f">Fine-grained token</label>
-      <input type="password" id="ghToken" value="${esc(settings.gh_token || '')}" placeholder="github_pat_..." autocapitalize="off" spellcheck="false" />
+      <label class="f">GitHub token (classic)</label>
+      <input type="password" id="ghToken" value="${esc(settings.gh_token || '')}" placeholder="ghp_..." autocapitalize="off" spellcheck="false" />
       <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button></div>
       <div class="msg" id="ghMsg"></div>
     </section>
