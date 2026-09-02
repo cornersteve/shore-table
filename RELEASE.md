@@ -21,7 +21,9 @@ protects that button.
    consecutive integers; the runner refuses gaps and repeats.
 3. Merge `dev` -> `release` (a normal merge; **never force-push
    `release`** — a rewritten history strands every operator fork).
-4. Test as operator 0 first: sync YOUR fork, apply the migration on your
+4. Publish a GitHub RELEASE on the upstream repo with plain-language
+   notes (operators reach it from the dashboard's What's-new link).
+5. Test as operator 0 first: sync YOUR fork, apply the migration on your
    own instance, play with it live. Then announce in the community.
 
 ## Hard rules for migrations

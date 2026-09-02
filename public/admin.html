@@ -168,7 +168,7 @@
    each exactly once, transactional per migration).
    Token scope: the token needs Contents read/write on YOUR FORK only.
    ===================================================================== */
-const BUILD = 3;   // stamped by each release; compare with /version.json
+const BUILD = 4;   // stamped by each release; compare with /version.json
 
 async function platformView(){
   setView('platform');
@@ -194,33 +194,46 @@ async function platformView(){
     </section>
     <section>
       <h2>GitHub connection</h2>
-      <div class="hint">For the one-button fork sync. The token is a GitHub fine-grained personal access token with Contents read/write on YOUR FORK only; it is stored in your database, never in git. Repo is your fork as owner/name, e.g. jane/my-table-app.</div>
+      <div class="hint">For the one-button fork sync. The token is a GitHub personal access token (CLASSIC, scope "repo", created on the account that owns your fork - classic on purpose: updating must read the private upstream repository, which your account can but a fork-limited token cannot). It is stored in your database, never in git. Repo is your fork as owner/name, e.g. jane/my-table-app.</div>
       <label class="f">Your fork (owner/repo)</label>
       <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
       <label class="f">Fine-grained token</label>
       <input type="password" id="ghToken" value="${esc(settings.gh_token || '')}" placeholder="github_pat_..." autocapitalize="off" spellcheck="false" />
-      <label class="f">Branch</label>
-      <input type="text" id="ghBranch" value="${esc(settings.gh_branch || 'release')}" autocapitalize="off" spellcheck="false" />
       <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button></div>
       <div class="msg" id="ghMsg"></div>
     </section>
     <section>
       <h2>Update</h2>
-      <div class="hint">Step 1 pulls the latest release into your fork; Cloudflare Pages then redeploys it automatically (usually under two minutes). Step 2 appears here when a new deploy needs database changes.</div>
+      <div class="hint">The update button pulls the latest version into your fork; your site redeploys automatically (usually under two minutes) and this page reloads itself. The second button lights up when an update needs database changes.</div>
       <div class="frow" style="margin-top:8px">
-        <button class="btn sm" id="syncBtn">Sync fork from upstream</button>
+        <button class="btn sm" id="syncBtn">Update to the latest version</button>
         <button class="btn sm ${pending.length ? '' : 'ghost'}" id="migBtn" ${pending.length ? '' : 'disabled'}>Apply ${pending.length || 'no'} pending migration${pending.length === 1 ? '' : 's'}</button>
       </div>
       <div class="msg" id="platMsg"></div>
+      <div class="hint" id="whatsNew" style="margin-top:8px"></div>
     </section>`;
   $('back').onclick = ()=> home();
-  draftify('platform', ['ghRepo','ghToken','ghBranch']);
+  draftify('platform', ['ghRepo','ghToken']);
+  // release-notes link: GitHub knows every fork's parent, so this needs no
+  // hardcoded upstream coordinates
+  (async ()=>{
+    const nrepo = (settings.gh_repo || '').trim(), ntok = (settings.gh_token || '').trim();
+    if(!nrepo || !ntok) return;
+    try {
+      const nr = await fetch('https://api.github.com/repos/' + nrepo, {
+        headers: { 'Authorization': 'Bearer ' + ntok, 'Accept': 'application/vnd.github+json' } });
+      if(!nr.ok) return;
+      const nj = await nr.json();
+      if(nj.parent && nj.parent.html_url)
+        .innerHTML = '<a href="' + esc(nj.parent.html_url) + '/releases" target="_blank" rel="noopener">What&#39;s new: release notes &rsaquo;</a> (sign in as your fork account)';
+    } catch(e){}
+  })();
 
   $('ghSave').onclick = async ()=>{
     const m = $('ghMsg'); m.className = 'msg'; m.textContent = 'Saving…';
-    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), br = $('ghBranch').value.trim() || 'release';
+    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim();
     if(repo && !/^[\w.-]+\/[\w.-]+$/.test(repo)){ m.className = 'msg err'; m.textContent = 'Repo must look like owner/name.'; return; }
-    for(const [k, v] of [['gh_repo', repo], ['gh_token', tok], ['gh_branch', br]]){
+    for(const [k, v] of [['gh_repo', repo], ['gh_token', tok]]){
       const { data, error } = await rpc('admin_set_setting', { p_key: k, p_value: v });
       if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save.'; return; }
     }
@@ -230,7 +243,7 @@ async function platformView(){
 
   $('syncBtn').onclick = async ()=>{
     const m = $('platMsg');
-    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), br = $('ghBranch').value.trim() || 'release';
+    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), br = 'release';
     if(!repo || !tok){ m.className = 'msg err'; m.textContent = 'Save your fork + token first.'; return; }
     m.className = 'msg'; m.textContent = 'Asking GitHub to sync your fork…';
     let r;
