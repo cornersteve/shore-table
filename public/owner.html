@@ -82,7 +82,8 @@
   .cbox__main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;cursor:pointer;text-align:left;font-family:var(--font-b);color:var(--ink)}
   .cbox__ic{flex:none;width:34px;height:34px;border-radius:10px;background:var(--accent);color:#fff;display:grid;place-items:center}
   .cbox__ic svg{width:19px;height:19px;display:block}
-  .cbox__t{font-family:var(--font-d);font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cbox__t{flex:1 1 auto;min-width:0;font-family:var(--font-d);font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  @media (max-width:430px){ .cbox__type{display:none} }
   .cbox__type{flex:none;font-family:var(--font-d);font-weight:700;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);background:var(--panel-2);border-radius:999px;padding:4px 8px}
   .cbox__body{border-top:1px solid var(--line);padding:12px}
   .cfl{display:block;font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);margin:12px 0 5px}
@@ -99,6 +100,15 @@
   .lirow .li-n{flex:1;min-width:130px}
   .lirow .li-p{width:76px;flex:none}
   .lirow .li-d{flex-basis:100%}
+  /* drag-to-reorder: the grip is the only draggable spot, so the page still
+     scrolls with a finger anywhere else on the row */
+  .grip{flex:none;border:0;background:none;padding:6px 4px;color:var(--ink-faint);cursor:grab;display:inline-flex;align-items:center;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+  .grip:active{cursor:grabbing;color:var(--ink-dim)}
+  .grip svg{width:15px;height:15px;display:block}
+  .dragrow{opacity:.35}
+  .dragrow .cbox__body{display:none}
+  .dragghost{position:fixed;z-index:999;pointer-events:none;opacity:.97;margin:0;box-shadow:0 14px 34px rgba(0,0,0,.28);border-radius:14px;background:var(--bg)}
+  .dragghost .cbox__body{display:none}
   .cbox textarea{width:100%;min-height:84px;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:15px;color:var(--ink);background:var(--bg);resize:vertical}
   .cbox textarea:focus{outline:none;border-color:var(--accent)}
   input[type=date]{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
@@ -429,6 +439,7 @@ function fePaint(){
     <div id="feList">
       ${feExtras.length ? feExtras.map((x, i) => `
         <div class="gamerow" data-ix="${i}">
+          <button type="button" class="grip" aria-label="Drag to reorder">${GRIP}</button>
           <span style="flex:1;min-width:0;font-size:14.5px">${esc(x.label)} <span style="color:var(--ink-faint);font-size:12px">· ${x.type === 'rating' ? '1-5 rating' : x.type === 'text' ? 'short text' : (x.multi ? 'choice, pick many' : 'choice, pick one') + ': ' + esc((x.opts || []).join(' / '))}</span></span>
           <span class="gmove"><button type="button" data-mv="-1" aria-label="Move up">▲</button><button type="button" data-mv="1" aria-label="Move down">▼</button><button type="button" data-del aria-label="Remove">×</button></span>
         </div>`).join('') : '<div class="empty">None yet.</div>'}
@@ -460,6 +471,11 @@ function fePaint(){
   document.querySelectorAll('#feList [data-del]').forEach(b => b.onclick = ()=>{
     Object.assign(feCore, feCollectCore());
     feExtras.splice(+b.closest('[data-ix]').dataset.ix, 1);
+    fePaint();
+  });
+  dragSort($('feList'), '[data-ix]', '[data-ix] > .grip', order => {
+    Object.assign(feCore, feCollectCore());
+    feExtras = order.map(i => feExtras[i]);
     fePaint();
   });
   $('feAdd').onclick = ()=>{
@@ -538,6 +554,65 @@ const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 
 let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1;
 
+const GRIP = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/></svg>';
+
+/* Pointer-drag reordering for every arrow-reorderable list, one mechanic:
+   drag the grip, the row lifts as a ghost, the others part around it, drop
+   commits. Pointer events cover mouse AND touch; the grip alone carries
+   touch-action:none, so the page still scrolls normally. The arrows stay
+   for one-slot nudges and accessibility. onDrop(order) receives the rows'
+   ORIGINAL indexes in their new order; pass null for lists whose save
+   simply reads the DOM order. */
+function dragSort(list, rowSel, gripSel, onDrop){
+  list.querySelectorAll(gripSel).forEach(grip => grip.addEventListener('pointerdown', (e) => {
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    e.preventDefault();
+    const row = grip.closest(rowSel);
+    const rows = [...list.querySelectorAll(rowSel)];
+    if (rows.length < 2) return;
+    rows.forEach((r, i) => r.dataset.dragOrig = i);
+    const rect = row.getBoundingClientRect();
+    const dy = e.clientY - rect.top;
+    const ghost = row.cloneNode(true);
+    ghost.classList.add('dragghost');
+    ghost.style.left = rect.left + 'px'; ghost.style.top = rect.top + 'px'; ghost.style.width = rect.width + 'px';
+    document.body.appendChild(ghost);
+    row.classList.add('dragrow');
+    try { grip.setPointerCapture(e.pointerId); } catch(_){}
+    const move = (ev) => {
+      ev.preventDefault();
+      ghost.style.top = (ev.clientY - dy) + 'px';
+      // finger near a viewport edge drags the page along
+      const vh = innerHeight || document.documentElement.clientHeight;
+      if (vh > 200){
+        if (ev.clientY < 80) window.scrollBy(0, -14);
+        else if (ev.clientY > vh - 80) window.scrollBy(0, 14);
+      }
+      const others = [...list.querySelectorAll(rowSel)].filter(r => r !== row);
+      let ref = null;
+      for (const r of others){
+        const rr = r.getBoundingClientRect();
+        if (ev.clientY < rr.top + rr.height / 2){ ref = r; break; }
+      }
+      if (ref) ref.parentNode.insertBefore(row, ref);
+      else { const last = others[others.length - 1]; last.parentNode.insertBefore(row, last.nextSibling); }
+    };
+    const up = () => {
+      grip.removeEventListener('pointermove', move);
+      grip.removeEventListener('pointerup', up);
+      grip.removeEventListener('pointercancel', up);
+      ghost.remove();
+      row.classList.remove('dragrow');
+      const order = [...list.querySelectorAll(rowSel)].map(r => +r.dataset.dragOrig);
+      rows.forEach(r => delete r.dataset.dragOrig);
+      if (onDrop && order.some((v, i) => v !== i)) onDrop(order);
+    };
+    grip.addEventListener('pointermove', move);
+    grip.addEventListener('pointerup', up);
+    grip.addEventListener('pointercancel', up);
+  }));
+}
+
 // a localStorage draft survives tab eviction (phones especially); it clears
 // on a successful save and wins over the server copy until then
 const cardDraftK = ()=> 'st_owner_cards_' + (V || '');
@@ -572,6 +647,7 @@ function cardBody(c, ix){
     <label class="cfl">The list</label>
     ${(c.items || []).map((i, j) => `
       <div class="lirow">
+        <button type="button" class="grip" aria-label="Drag to reorder">${GRIP}</button>
         <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Name">
         <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="$" inputmode="decimal">
         <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
@@ -607,6 +683,7 @@ function renderCards(){
   $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
     <div class="cbox${c.off ? ' isoff' : ''}">
       <div class="cbox__head">
+        <button type="button" class="grip" aria-label="Drag to reorder">${GRIP}</button>
         <button type="button" class="cbox__main" data-open="${ix}">
           <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
           <span class="cbox__t">${esc(c.title || 'Untitled card')}</span>
@@ -648,6 +725,17 @@ function wireCards(){
   }));
   L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
   L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
+  dragSort(L, '.cbox', '.cbox__head > .grip', order => {
+    CARDS = order.map(i => CARDS[i]);
+    if (CARD_OPEN >= 0) CARD_OPEN = order.indexOf(CARD_OPEN);
+    cardSaveDraft(); renderCards();
+  });
+  const body = L.querySelector('.cbox__body');
+  if (body && CARDS[CARD_OPEN] && CARDS[CARD_OPEN].t === 'list') dragSort(body, '.lirow', '.lirow > .grip', order => {
+    const c = CARDS[CARD_OPEN];
+    c.items = order.map(j => c.items[j]);
+    cardSaveDraft(); renderCards();
+  });
 }
 
 document.querySelectorAll('#cardAddRow [data-add]').forEach(b => b.onclick = ()=>{
@@ -731,6 +819,7 @@ function renderGameToggles(list){
     const g = GAME_LIB.find(x => x.id === id);
     const on = !list || !list.length || list.includes(g.id);
     return `<div class="gamerow" data-id="${g.id}">
+      <button type="button" class="grip" aria-label="Drag ${g.name} to reorder">${GRIP}</button>
       <label><input type="checkbox" value="${g.id}" ${on?'checked':''}><span class="gname">${g.name}</span><span class="gsub">${g.sub}</span></label>
       <span class="gmove"><button type="button" data-mv="-1" aria-label="Move ${g.name} up">▲</button><button type="button" data-mv="1" aria-label="Move ${g.name} down">▼</button></span>
     </div>`;
@@ -740,6 +829,8 @@ function renderGameToggles(list){
     if (b.dataset.mv === '-1' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
     if (b.dataset.mv === '1'  && row.nextElementSibling)     row.parentNode.insertBefore(row.nextElementSibling, row);
   });
+  // the save reads the DOM order, so a drop needs no bookkeeping
+  dragSort($('gameToggles'), '.gamerow', '.gamerow > .grip', null);
 }
 $('gamesSave').onclick = async () => {
   const ids = [...document.querySelectorAll('#gameToggles input:checked')].map(i=>i.value);
