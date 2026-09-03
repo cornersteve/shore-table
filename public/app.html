@@ -167,7 +167,7 @@
   .landing-opt__t{font-family:var(--font-d);font-weight:700;font-size:21px}
   .landing-opt__d{color:var(--ink-dim);font-size:14px;line-height:1.4;margin-top:5px}
   .landing-opt__arrow{position:absolute;right:18px;top:50%;transform:translateY(-50%);color:var(--ink-faint);font-size:22px}
-  /* daily specials: the landing card teases today, tapping opens the week */
+  /* schedule cards: the landing card teases today, tapping opens the week */
   .lo-special{color:var(--ink);font-size:15px;line-height:1.45;margin-top:5px;white-space:pre-line}
   .spd{display:flex;gap:12px;align-items:flex-start;background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm)}
   .spd + .spd{margin-top:10px}
@@ -177,6 +177,16 @@
   .spd.today{border:1.5px solid var(--accent)}
   .spd.today{background:color-mix(in srgb, var(--accent) 4%, white)}
   .spd.today .spd__day{color:var(--accent)}
+  /* landing cards: the quiet inline notice, and list-card rows */
+  a.landing-opt{display:flex;text-decoration:none;color:var(--ink)}
+  .ncard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
+  .ncard__k{font-family:var(--font-d);font-weight:700;text-transform:uppercase;letter-spacing:.13em;font-size:13px;color:var(--accent-deep);margin-bottom:5px}
+  .ncard__t{font-size:15px;line-height:1.5;white-space:pre-line}
+  .lr{display:flex;gap:12px;align-items:baseline;padding:13px 2px;border-bottom:1px solid var(--line)}
+  .lr__l{flex:1;min-width:0}
+  .lr__n{font-family:var(--font-d);font-weight:700;font-size:16px}
+  .lr__d{color:var(--ink-dim);font-size:14px;line-height:1.45;margin-top:3px}
+  .lr__p{flex:none;margin-left:auto;font-family:var(--font-d);font-weight:700;font-size:15px;color:var(--accent-deep);white-space:nowrap}
 
   /* ---------- this or that ---------- */
   .totq{font-family:var(--font-d);font-weight:700;font-size:clamp(24px,6.6vw,30px);line-height:1.1;letter-spacing:-.01em;margin-bottom:4px}
@@ -616,7 +626,7 @@
 
   /* surfaces the light refresh layer pinned to white */
   html.dark .landing-opt, html.dark .gamecard, html.dark .howto, html.dark .fortune-panel,
-  html.dark .endcard, html.dark .choice, html.dark .spd{background:#1e1b17;border-color:var(--line-2)}
+  html.dark .endcard, html.dark .choice, html.dark .spd, html.dark .ncard{background:#1e1b17;border-color:var(--line-2)}
   html.dark .spd.today{border-color:var(--accent)}
   @supports (color: color-mix(in srgb, red 50%, white)){
     html.dark .spd.today{background:color-mix(in srgb, var(--accent) 10%, #1e1b17)}
@@ -947,29 +957,96 @@ function surveyMarkDone(venueId){ lsSet("st_survey_"+venueId, todayStr()); }
 
 function startEntry(){
   applyBranding();
+  // games-off venues (operator-set): a games QR falls back to the chooser
+  // rather than a dead end, and is logged as the chooser it lands on
+  if (state.entry === 'games' && venue().gamesEnabled === false) state.entry = 'landing';
   logEvent('app_open', state.entry === 'games' ? 'games' : state.entry === 'suggest' ? 'box' : 'chooser');
   if (state.entry === 'landing') go('landing');
   else if (state.entry === 'games') go('hub');
   else go('sb_intro');
 }
 
+/* Curated card icons, drawn in the same stroke style as the landing tiles.
+   Keys are what the owner editors save; an unknown key falls back to the
+   star, so removing an icon from this set can never blank a card. */
+const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const CARD_ICONS = {
+  calendar: CI('<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'),
+  clock: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 1.9"/>'),
+  beer: CI('<path d="M7 4.5h8.5v14.5a1.8 1.8 0 0 1-1.8 1.8H8.8A1.8 1.8 0 0 1 7 19z"/><path d="M15.5 8.5h1.9a1.9 1.9 0 0 1 1.9 1.9v2.7a1.9 1.9 0 0 1-1.9 1.9h-1.9M10 8.5V17M12.5 8.5V17"/>'),
+  wine: CI('<path d="M8 3.5h8c0 5.2-1.7 7.8-4 7.8s-4-2.6-4-7.8z"/><path d="M12 11.3v8.2M8.5 20.5h7"/>'),
+  cocktail: CI('<path d="M4.5 4.5h15L12 13.2z"/><path d="M12 13.2v6.3M8.5 20.5h7M8 8h8"/>'),
+  coffee: CI('<path d="M4.5 9.5h12v6.5a3.5 3.5 0 0 1-3.5 3.5H8a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M16.5 11.5h1.3a2.4 2.4 0 0 1 0 4.8h-1.4M8.2 3.5c0 1.3 1 1.4 1 2.7M12.2 3.5c0 1.3 1 1.4 1 2.7"/>'),
+  plate: CI('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/>'),
+  pizza: CI('<path d="M4 6a18.5 18.5 0 0 1 16 0L12 21z"/><circle cx="9.6" cy="8.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.4" cy="8.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="12.6" r="1.05" fill="currentColor" stroke="none"/>'),
+  burger: CI('<path d="M4 10a8 8 0 0 1 16 0z"/><path d="M4 13.5h16"/><path d="M4.5 17h15v.8a2.7 2.7 0 0 1-2.7 2.7H7.2a2.7 2.7 0 0 1-2.7-2.7z"/>'),
+  dessert: CI('<path d="M7.5 10.5a4.5 4.5 0 1 1 9 0"/><path d="M7.5 10.5h9L12 21z"/>'),
+  music: CI('<path d="M9 18.5V6.2l10-2.2v12.3"/><circle cx="6.6" cy="18.6" r="2.4"/><circle cx="16.6" cy="16.4" r="2.4"/>'),
+  mic: CI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>'),
+  trophy: CI('<path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3.2 4M17 6h3a3 3 0 0 1-3.2 4M12 15v3.5M8 21h8l-.9-2.5H8.9z"/>'),
+  star: CI('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
+  tag: CI('<path d="M3.5 12.5v-9h9L21 12l-8.5 8.5z"/><circle cx="8" cy="8" r="1.4"/>'),
+  gift: CI('<rect x="4" y="9.5" width="16" height="11" rx="2"/><path d="M12 9.5v11M4 13.5h16M7.5 6.7A2.1 2.1 0 0 1 11.3 5c.7 1 .7 4.5.7 4.5S8 9.7 7.5 6.7zM16.5 6.7A2.1 2.1 0 0 0 12.7 5c-.7 1-.7 4.5-.7 4.5s4 .2 4.5-2.8z"/>'),
+  dice: CI('<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/>'),
+  megaphone: CI('<path d="M3.5 10.2v3.6l3.2.6L18.5 19V5L6.7 9.6z"/><path d="M18.5 9.2a3.1 3.1 0 0 1 0 5.6M7.8 14.8l1 5.2h2.9l-.8-4.6"/>'),
+  info: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 11.2v5.3"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/>'),
+  pin: CI('<path d="M12 21s-7-6.4-7-11.4a7 7 0 0 1 14 0C19 14.6 12 21 12 21z"/><circle cx="12" cy="9.6" r="2.5"/>'),
+  book: CI('<path d="M12 6.2C10.5 4.5 7.5 4.1 4 4.6V19c3.5-.5 6.5-.1 8 1.6 1.5-1.7 4.5-2.1 8-1.6V4.6c-3.5-.5-6.5-.1-8 1.6z"/><path d="M12 6.2v14.4"/>'),
+  flame: CI('<path d="M12 3.5c.8 2.9-4.7 5.3-4.7 9.9a4.7 4.7 0 0 0 9.4 0c0-1.9-.9-3.4-1.9-4.5-.1 1.4-.7 2.2-1.5 2.5.9-2.4-.6-5.7-1.3-7.9z"/>'),
+  leaf: CI('<path d="M5 19C5 9.5 12 4.5 20 4.5c0 8-5 14.5-15 14.5z"/><path d="M5 19c3-6 7-9 11-11"/>'),
+  heart: CI('<path d="M12 20.5S3.5 15 3.5 8.9A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 8.5 1.6C20.5 15 12 20.5 12 20.5z"/>'),
+  sun: CI('<circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/>'),
+  moon: CI('<path d="M20 13.6A8.5 8.5 0 1 1 10.4 4 7 7 0 0 0 20 13.6z"/>'),
+  sparkle: CI('<path d="M11 3.5l1.6 4.9 4.9 1.6-4.9 1.6L11 16.5l-1.6-4.9-4.9-1.6 4.9-1.6z"/><path d="M18 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>')
+};
+
 /* ---------- LANDING (single-QR chooser) ---------- */
 reg('landing', (el)=>{
-  // Daily specials (32_daily_specials.sql): the venue sets a week of repeat
-  // specials once; diners see only the current day's entry, by device-local
-  // day. No entry today (or no specials at all) = no card.
+  const V = venue();
   const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
-  const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()];
-  const todaysSp = (venue().specials || {})[dayKey];
-  const spCard = !todaysSp ? '' : `
-      <button class="landing-opt" id="toSpecials">
-        <span class="lo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/><circle cx="8.4" cy="14.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="14.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.6" cy="14.5" r="1.1" fill="currentColor" stroke="none"/></svg></span>
+  // Landing cards (schema 2): preset types only, owner-ordered, capped by the
+  // sanitizer server-side. Each card renders in place, so the order the owner
+  // sets is the order diners see below the two pinned rows.
+  const cardsHtml = (V.cards || []).map((c, ix) => {
+    if (!c || c.off) return '';
+    const ic = CARD_ICONS[c.icon] || CARD_ICONS.star;
+    if (c.t === 'notice' && (c.mode || 'inline') === 'inline') return `
+      <div class="ncard">
+        <div class="ncard__k">${escHtml(c.title)}</div>
+        ${c.body ? `<div class="ncard__t">${escHtml(c.body)}</div>` : ''}
+      </div>`;
+    if (c.t === 'notice' && c.mode === 'link'){
+      const u = safeUrl(c.url);
+      if (!u) return '';
+      return `
+      <a class="landing-opt" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">
+        <span class="lo-ic" aria-hidden="true">${ic}</span>
         <span class="lo-body">
-          <div class="landing-opt__t">${dayName} at ${escHtml(venue().name)}</div>
-          <div class="lo-special">${escHtml(todaysSp)}</div>
+          <div class="landing-opt__t">${escHtml(c.title)}</div>
+          ${c.desc ? `<div class="landing-opt__d">${escHtml(c.desc)}</div>` : ''}
+        </span>
+        <span class="landing-opt__arrow">›</span>
+      </a>`;
+    }
+    let sub = c.desc ? `<div class="landing-opt__d">${escHtml(c.desc)}</div>` : '';
+    if (c.t === 'schedule'){
+      const today = (c.days || {})[dayKey];
+      // no entry today hides the card, unless "always" keeps it up so diners
+      // can still browse the rest of the week
+      if (!today && !c.always) return '';
+      sub = today ? `<div class="lo-special">${escHtml(today)}</div>`
+                  : `<div class="landing-opt__d">${escHtml(c.desc || 'See the week.')}</div>`;
+    }
+    return `
+      <button class="landing-opt" data-cardix="${ix}">
+        <span class="lo-ic" aria-hidden="true">${ic}</span>
+        <span class="lo-body">
+          <div class="landing-opt__t">${escHtml(c.title)}</div>
+          ${sub}
         </span>
         <span class="landing-opt__arrow">›</span>
       </button>`;
+  }).join('');
   // Owner promo: a plain card, or a tappable button when the owner set a link.
   const pUrl = venue().promo ? safeUrl(venue().promoUrl) : null;
   const pInner = venue().promo ? `
@@ -980,14 +1057,14 @@ reg('landing', (el)=>{
     : `<div class="promo">${pInner}</div>`;
   el.innerHTML = `
     <div class="stack" style="margin-top:4px">
-      <button class="landing-opt" id="toGames">
-        <span class="lo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/></svg></span>
+      ${V.gamesEnabled === false ? '' : `<button class="landing-opt" id="toGames">
+        <span class="lo-ic" aria-hidden="true">${CARD_ICONS.dice}</span>
         <span class="lo-body">
           <div class="landing-opt__t">Play a game</div>
           <div class="landing-opt__d">Pass the time, solo or with the whole table.</div>
         </span>
         <span class="landing-opt__arrow">›</span>
-      </button>
+      </button>`}
       <button class="landing-opt" id="toBox">
         <span class="lo-ic" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5c0 4.14-4.03 7.5-9 7.5-1.02 0-2-.14-2.91-.4L4 20l1.18-3.53C3.83 15.15 3 13.4 3 11.5 3 7.36 7.03 4 12 4s9 3.36 9 7.5z"/></svg></span>
         <span class="lo-body">
@@ -996,40 +1073,76 @@ reg('landing', (el)=>{
         </span>
         <span class="landing-opt__arrow">›</span>
       </button>
-      ${spCard}
+      ${cardsHtml}
     </div>
     ${pCard}
     <div class="spacer"></div>
     ${venue().demo ? `<div style="text-align:center;font-size:12px;color:var(--ink-faint,#a49d90);margin-bottom:6px">Preview. Built for ${escHtml(venue().name)} by ${escHtml(CFG.brandName)}. Not live yet.</div>` : ''}
     <div style="text-align:center"><button class="privacy-link" id="privacyLink">Privacy</button></div>`;
-  el.querySelector('#toGames').onclick = ()=> go('hub');
+  el.querySelector('#toGames')?.addEventListener('click', ()=> go('hub'));
   el.querySelector('#toBox').onclick   = ()=> go('sb_intro');
-  el.querySelector('#toSpecials')?.addEventListener('click', ()=> go('specials'));
   el.querySelector('#privacyLink').onclick = openPrivacy;
+  // Card taps are worth counting the same way promo taps are: it is how the
+  // owner knows a card earns its slot.
+  el.querySelectorAll('[data-cardix]').forEach(n => {
+    const ix = +n.dataset.cardix, c = (V.cards || [])[ix];
+    n.addEventListener('click', ()=>{
+      logEvent('card_open', c && c.t);
+      if (n.tagName !== 'A'){ state.cardIx = ix; go('card'); }
+    });
+  });
   // Promo taps are worth counting: it is how the owner knows the card works.
   // The link opens in a new tab, so this page stays put and the call completes.
   el.querySelector('a.promo')?.addEventListener('click', ()=> logEvent('promo_click'));
 });
 
-/* ---------- DAILY SPECIALS (week view; reached from the landing card) ---------- */
-reg('specials__back', ()=> go('landing'));
-reg('specials', (el)=>{
-  backBtn.style.display='block';   // always reached from the landing card
-  const sp = venue().specials || {};
-  const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
-  const week = [['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
-  const rows = week.filter(([k]) => sp[k]).map(([k, name]) => `
-    <div class="spd${k === dayKey ? ' today' : ''}">
-      <div class="spd__day">${name}</div>
-      <div class="spd__t">${escHtml(sp[k])}</div>
-      ${k === dayKey ? '<span class="spd__tag">Today</span>' : ''}
-    </div>`).join('');
-  // the tag is venue-configurable (43_specials_meta.sql): custom title, or
-  // hidden entirely; the default stays "Daily specials"
+/* ---------- CARD DETAIL (schedule week / list / notice page) ---------- */
+reg('card__back', ()=> go('landing'));
+reg('card', (el)=>{
+  backBtn.style.display='block';   // always reached from the landing
+  const c = (venue().cards || [])[state.cardIx];
+  if(!c){ go('landing'); return; }
+  if (c.t === 'schedule'){
+    const sp = c.days || {};
+    const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+    const week = [['mon','Monday'],['tue','Tuesday'],['wed','Wednesday'],['thu','Thursday'],['fri','Friday'],['sat','Saturday'],['sun','Sunday']];
+    const rows = week.filter(([k]) => sp[k]).map(([k, name]) => `
+      <div class="spd${k === dayKey ? ' today' : ''}">
+        <div class="spd__day">${name}</div>
+        <div class="spd__t">${escHtml(sp[k])}</div>
+        ${k === dayKey ? '<span class="spd__tag">Today</span>' : ''}
+      </div>`).join('');
+    el.innerHTML = `
+      <div class="eyebrow">${escHtml(c.title)}</div>
+      <h1 class="big">This week at ${escHtml(venue().name)}.</h1>
+      <div style="margin-top:18px">${rows || '<p class="lede">Nothing this week.</p>'}</div>
+      <div class="spacer"></div>`;
+    return;
+  }
+  if (c.t === 'list'){
+    const rows = (c.items || []).map(i => `
+      <div class="lr">
+        <div class="lr__l">
+          <div class="lr__n">${escHtml(i.n)}</div>
+          ${i.d ? `<div class="lr__d">${escHtml(i.d)}</div>` : ''}
+        </div>
+        ${i.p ? `<div class="lr__p">${escHtml(i.p)}</div>` : ''}
+      </div>`).join('');
+    el.innerHTML = `
+      <div class="eyebrow">${escHtml(venue().name)}</div>
+      <h1 class="big">${escHtml(c.title)}</h1>
+      ${c.desc ? `<p class="lede">${escHtml(c.desc)}</p>` : ''}
+      <div style="margin-top:14px">${rows || '<p class="lede">Nothing here yet.</p>'}</div>
+      <div class="spacer"></div>`;
+    return;
+  }
+  // notice, "page" mode: the longer read, with an optional link at the end
+  const u = safeUrl(c.url);
   el.innerHTML = `
-    ${venue().specialsTag === false ? '' : `<div class="eyebrow">${escHtml(venue().specialsTitle || 'Daily specials')}</div>`}
-    <h1 class="big">This week at ${escHtml(venue().name)}.</h1>
-    <div style="margin-top:18px">${rows || '<p class="lede">No specials this week.</p>'}</div>
+    <div class="eyebrow">${escHtml(venue().name)}</div>
+    <h1 class="big">${escHtml(c.title)}</h1>
+    <div class="privacy-body" style="white-space:pre-line;margin-top:14px">${escHtml(c.body || '')}</div>
+    ${u ? `<div style="margin-top:18px"><a class="btn" style="text-decoration:none" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">Learn more ↗</a></div>` : ''}
     <div class="spacer"></div>`;
 });
 
@@ -4025,9 +4138,9 @@ reg('sb_done', (el)=>{
           <a class="btn reviewcta__btn" href="${v.review}" target="_blank" rel="noopener">Leave a Google review ↗</a>
         </div>` : ''}
     </div>
-    <button class="btn btn--ghost" id="games">Play a game while you wait ›</button>
+    ${venue().gamesEnabled === false ? '' : '<button class="btn btn--ghost" id="games">Play a game while you wait ›</button>'}
     <div style="text-align:center;margin-top:10px"><button class="privacy-link" id="privacyLink">Privacy</button></div>`;
-  el.querySelector('#games').onclick=()=>{state.entry='games';go('hub');};
+  el.querySelector('#games')?.addEventListener('click', ()=>{state.entry='games';go('hub');});
   el.querySelector('#privacyLink').onclick = openPrivacy;
   el.querySelector('.reviewcta__btn')?.addEventListener('click', ()=> logEvent('review_click'));
 });
@@ -4609,7 +4722,7 @@ async function loadVenues(){
   const { data, error } = await db.from('public_venues').select('*');
   if(error) throw error;
   const map={};
-  data.forEach(v=>{ map[v.id]={ name:v.name, logo:v.logo, accent:v.accent, review:v.google_review_link, promo:v.promo || null, promoHeader:v.promo_header || null, promoUrl:v.promo_url || null, games:v.games || null, customQuestions:!!v.custom_questions, headerBg:v.header_bg || null, customOnly:v.custom_only || [], darkMode:!!v.dark_mode, specials:v.specials || null, formCustom:!!v.form_custom, specialsTitle:v.specials_title || null, specialsTag:v.specials_tag !== false, demo:v.demo === true }; });
+  data.forEach(v=>{ map[v.id]={ name:v.name, logo:v.logo, accent:v.accent, review:v.google_review_link, promo:v.promo || null, promoHeader:v.promo_header || null, promoUrl:v.promo_url || null, games:v.games || null, customQuestions:!!v.custom_questions, headerBg:v.header_bg || null, customOnly:v.custom_only || [], darkMode:!!v.dark_mode, cards:Array.isArray(v.cards) ? v.cards : [], gamesEnabled:v.games_enabled !== false, formCustom:!!v.form_custom, demo:v.demo === true }; });
   return map;
 }
 async function loadContent(){

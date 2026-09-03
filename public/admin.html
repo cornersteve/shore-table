@@ -88,6 +88,25 @@
   .swatches{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   .sw{width:34px;height:34px;border-radius:9px;border:2px solid var(--line-2);cursor:pointer}
   .iconbtn{width:30px;height:30px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+  /* home screen cards editor */
+  .cbox{border:1px solid var(--line-2);border-radius:12px;margin-top:10px;background:var(--bg)}
+  .cbox.isoff{opacity:.55}
+  .cbox__head{display:flex;align-items:center;gap:8px;padding:9px 11px}
+  .cbox__main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
+  .cbox__ic{flex:none;width:32px;height:32px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center}
+  .cbox__ic svg{width:18px;height:18px;display:block}
+  .cbox__t{font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cbox__type{flex:none;font-weight:700;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);background:var(--panel-2);border-radius:999px;padding:3px 8px}
+  .cbox__body{border-top:1px solid var(--line);padding:12px}
+  .cbox__body input[type=checkbox],.cbox__body input[type=radio]{accent-color:var(--accent)}
+  .icongrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .icopt{width:36px;height:36px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .icopt svg{width:19px;height:19px}
+  .icopt.sel{border:1.5px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
+  .lirow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+  .lirow .li-n{flex:1;min-width:130px}
+  .lirow .li-p{width:76px;flex:none}
+  .lirow .li-d{flex-basis:100%}
   .iconbtn svg{width:15px;height:15px}
   .iconbtn.off{color:var(--bad);border-color:rgba(179,55,47,.4)}
   .spcount{flex:none;width:58px;text-align:right;font-size:11.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
@@ -168,7 +187,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 5;
+const BUILD = 6;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 async function platformView(){
@@ -1485,30 +1504,27 @@ function detail(id){
     </section>
 
     <section>
-      <h2 style="display:flex;align-items:center;gap:8px"><span id="spTitleTxt">${esc(v.specials_title || 'Daily specials')}</span>
-        <button class="iconbtn" id="spEditT" title="Rename this section" aria-label="Rename this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
-        <button class="iconbtn" id="spTagBtn" aria-label="Show or hide the label in the app"></button>
-      </h2>
-      <div id="spTitleRow" style="display:none;margin:8px 0 4px">
-        <div class="frow">
-          <input type="text" id="spTitleIn" maxlength="40" placeholder="Daily specials" style="flex:1;min-width:170px" />
-          <span class="hint" style="margin:0;flex:none"><span id="spTitleCount">0</span>/40</span>
-          <button class="btn sm" id="spTitleSave">Save</button>
-          <button class="btn sm ghost" id="spTitleCancel">Cancel</button>
-        </div>
-        <div class="msg" id="spTitleMsg"></div>
+      <h2>Home screen cards</h2>
+      <div class="hint">Extra cards on the app's home screen, under the two pinned rows: weekly schedule (daily specials, live music nights), menu or list (tap list), announcement. The owner edits these from their dashboard too; this is the same editor. Tap a card to open it; arrows reorder, the eye hides one without deleting it.</div>
+      <div id="cardList"></div>
+      <div class="frow" id="cardAddRow" style="margin-top:10px">
+        <button class="btn sm ghost" data-add="schedule">+ Weekly schedule</button>
+        <button class="btn sm ghost" data-add="list">+ Menu or list</button>
+        <button class="btn sm ghost" data-add="notice">+ Announcement</button>
       </div>
-      <div class="hint">Repeat weekly specials, set once. Diners see only the current day's entry as its own card on the landing screen; a blank day shows no card. The owner can also edit these from their dashboard. The pencil renames the section (the app's weekly screen shows the same name as its label); the eye shows or hides that label in the app.</div>
-      <div id="spRows" style="margin-top:8px">
-        ${[['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']].map(([k,label])=>`
-        <div class="frow" style="margin-top:6px;align-items:center">
-          <label class="f" style="width:42px;flex:none;margin:0">${label}</label>
-          <input type="text" data-day="${k}" maxlength="200" value="${esc((v.specials || {})[k] || '')}" style="flex:1" />
-          <span class="spcount" data-cnt="${k}">0/200</span>
-        </div>`).join('')}
+      <button class="btn sm" id="cardsSave" style="margin-top:10px">Save cards</button>
+      <div class="msg" id="cardsMsg"></div>
+      <div class="frow" style="margin-top:14px;align-items:center">
+        <label class="f" style="margin:0">Card cap</label>
+        <input type="number" id="capIn" min="0" max="20" value="${v.card_cap ?? 4}" style="width:74px;flex:none" />
+        <button class="btn sm ghost" id="capSave">Save cap</button>
+        <span class="hint" style="margin:0;flex:none">Per-venue slot count (default 4); the sellable knob.</span>
       </div>
-      <button class="btn sm" id="spSave" style="margin-top:8px">Save specials</button>
-      <div class="msg" id="spMsg"></div>
+      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">
+        <input type="checkbox" id="gamesOn" ${v.games_enabled === false ? '' : 'checked'} /> Games enabled for this venue
+      </label>
+      <div class="hint">Off = the games side of the app disappears for this venue (feedback-and-cards venues). The landing keeps Share feedback, so it can never be empty, and a games QR falls back to the chooser. Operator-set only; owners never see this switch.</div>
+      <div class="msg" id="cgMsg"></div>
     </section>
 
     <section>
@@ -1718,57 +1734,200 @@ ${SIG}`);
   $('apSave').onclick = savePromo;
   $('apClear').onclick = ()=>{ $('apText').value=''; $('apHead').value=''; $('apUrl').value=''; $('apExp').value=''; savePromo(); };
 
-  // ---- daily specials (32_daily_specials.sql) ----
-  // per-day character counters (cap 200 since 43)
-  document.querySelectorAll('#spRows input').forEach(i=>{
-    const c = document.querySelector('.spcount[data-cnt="' + i.dataset.day + '"]');
-    const upd = ()=>{ c.textContent = i.value.length + '/200'; };
-    i.addEventListener('input', upd);
-    upd();
+  // ---- home screen cards (schema 2): the same working-copy editor the
+  // owner dashboard has; Save pushes the whole array through admin_set_cards.
+  // A localStorage draft keyed by venue survives tab eviction (draftify rule;
+  // the fields are dynamic, so the cards get their own JSON draft).
+  const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+  const CARD_ICONS = {
+    calendar: CI('<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'),
+    clock: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 1.9"/>'),
+    beer: CI('<path d="M7 4.5h8.5v14.5a1.8 1.8 0 0 1-1.8 1.8H8.8A1.8 1.8 0 0 1 7 19z"/><path d="M15.5 8.5h1.9a1.9 1.9 0 0 1 1.9 1.9v2.7a1.9 1.9 0 0 1-1.9 1.9h-1.9M10 8.5V17M12.5 8.5V17"/>'),
+    wine: CI('<path d="M8 3.5h8c0 5.2-1.7 7.8-4 7.8s-4-2.6-4-7.8z"/><path d="M12 11.3v8.2M8.5 20.5h7"/>'),
+    cocktail: CI('<path d="M4.5 4.5h15L12 13.2z"/><path d="M12 13.2v6.3M8.5 20.5h7M8 8h8"/>'),
+    coffee: CI('<path d="M4.5 9.5h12v6.5a3.5 3.5 0 0 1-3.5 3.5H8a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M16.5 11.5h1.3a2.4 2.4 0 0 1 0 4.8h-1.4M8.2 3.5c0 1.3 1 1.4 1 2.7M12.2 3.5c0 1.3 1 1.4 1 2.7"/>'),
+    plate: CI('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/>'),
+    pizza: CI('<path d="M4 6a18.5 18.5 0 0 1 16 0L12 21z"/><circle cx="9.6" cy="8.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.4" cy="8.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="12.6" r="1.05" fill="currentColor" stroke="none"/>'),
+    burger: CI('<path d="M4 10a8 8 0 0 1 16 0z"/><path d="M4 13.5h16"/><path d="M4.5 17h15v.8a2.7 2.7 0 0 1-2.7 2.7H7.2a2.7 2.7 0 0 1-2.7-2.7z"/>'),
+    dessert: CI('<path d="M7.5 10.5a4.5 4.5 0 1 1 9 0"/><path d="M7.5 10.5h9L12 21z"/>'),
+    music: CI('<path d="M9 18.5V6.2l10-2.2v12.3"/><circle cx="6.6" cy="18.6" r="2.4"/><circle cx="16.6" cy="16.4" r="2.4"/>'),
+    mic: CI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>'),
+    trophy: CI('<path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3.2 4M17 6h3a3 3 0 0 1-3.2 4M12 15v3.5M8 21h8l-.9-2.5H8.9z"/>'),
+    star: CI('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
+    tag: CI('<path d="M3.5 12.5v-9h9L21 12l-8.5 8.5z"/><circle cx="8" cy="8" r="1.4"/>'),
+    gift: CI('<rect x="4" y="9.5" width="16" height="11" rx="2"/><path d="M12 9.5v11M4 13.5h16M7.5 6.7A2.1 2.1 0 0 1 11.3 5c.7 1 .7 4.5.7 4.5S8 9.7 7.5 6.7zM16.5 6.7A2.1 2.1 0 0 0 12.7 5c-.7 1-.7 4.5-.7 4.5s4 .2 4.5-2.8z"/>'),
+    dice: CI('<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/>'),
+    megaphone: CI('<path d="M3.5 10.2v3.6l3.2.6L18.5 19V5L6.7 9.6z"/><path d="M18.5 9.2a3.1 3.1 0 0 1 0 5.6M7.8 14.8l1 5.2h2.9l-.8-4.6"/>'),
+    info: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 11.2v5.3"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/>'),
+    pin: CI('<path d="M12 21s-7-6.4-7-11.4a7 7 0 0 1 14 0C19 14.6 12 21 12 21z"/><circle cx="12" cy="9.6" r="2.5"/>'),
+    book: CI('<path d="M12 6.2C10.5 4.5 7.5 4.1 4 4.6V19c3.5-.5 6.5-.1 8 1.6 1.5-1.7 4.5-2.1 8-1.6V4.6c-3.5-.5-6.5-.1-8 1.6z"/><path d="M12 6.2v14.4"/>'),
+    flame: CI('<path d="M12 3.5c.8 2.9-4.7 5.3-4.7 9.9a4.7 4.7 0 0 0 9.4 0c0-1.9-.9-3.4-1.9-4.5-.1 1.4-.7 2.2-1.5 2.5.9-2.4-.6-5.7-1.3-7.9z"/>'),
+    leaf: CI('<path d="M5 19C5 9.5 12 4.5 20 4.5c0 8-5 14.5-15 14.5z"/><path d="M5 19c3-6 7-9 11-11"/>'),
+    heart: CI('<path d="M12 20.5S3.5 15 3.5 8.9A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 8.5 1.6C20.5 15 12 20.5 12 20.5z"/>'),
+    sun: CI('<circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/>'),
+    moon: CI('<path d="M20 13.6A8.5 8.5 0 1 1 10.4 4 7 7 0 0 0 20 13.6z"/>'),
+    sparkle: CI('<path d="M11 3.5l1.6 4.9 4.9 1.6-4.9 1.6L11 16.5l-1.6-4.9-4.9-1.6 4.9-1.6z"/><path d="M18 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>')
+  };
+  const CARD_TYPES = { schedule:'Weekly schedule', list:'Menu or list', notice:'Announcement' };
+  const SP_DAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
+  const SP_TODAY = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+  const EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+  const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
+  const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+  const ARR_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+  const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+
+  const cardDraftK = 'st_admin_cards_' + v.id;
+  let CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : [];
+  try { const d = localStorage.getItem(cardDraftK); if(d) CARDS = JSON.parse(d); } catch(e){}
+  let CARD_OPEN = -1;
+  const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK, JSON.stringify(CARDS)); } catch(e){} };
+
+  const defaultCard = t =>
+      t === 'schedule' ? { t, title:'Daily specials', icon:'calendar', days:{} }
+    : t === 'list'     ? { t, title:'', icon:'beer', items:[{n:'',d:'',p:''}] }
+    :                    { t, title:'', icon:'megaphone', mode:'inline', body:'' };
+
+  const cardBody = (c, ix)=>{
+    const common = `
+      <label class="f">Card name</label>
+      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'On tap this week' : c.t === 'notice' ? 'Trivia night is back' : 'Daily specials'}" />
+      <label class="f">Icon</label>
+      <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}">${CARD_ICONS[k]}</button>`).join('')}</div>`;
+    if (c.t === 'schedule') return common + `
+      <div class="hint" style="margin:10px 0 2px">One line per day. Diners see today's line on the home screen and can tap in for the week. Blank days show no card that day.</div>
+      ${SP_DAYS.map(([k, label]) => `
+        <div class="frow" style="margin-top:6px;align-items:center">
+          <label class="f" style="width:42px;flex:none;margin:0${k === SP_TODAY ? ';color:var(--accent)' : ''}">${label}</label>
+          <input type="text" maxlength="200" data-day="${k}" data-ix="${ix}" value="${esc((c.days || {})[k] || '')}" style="flex:1" />
+        </div>`).join('')}
+      <label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;cursor:pointer">
+        <input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''} style="margin-top:3px" /> Keep the card on the home screen even on blank days
+      </label>`;
+    if (c.t === 'list') return common + `
+      <label class="f">Short line under the name (optional)</label>
+      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="Rotating drafts, updated often" />
+      <label class="f">The list</label>
+      ${(c.items || []).map((i, j) => `
+        <div class="lirow">
+          <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Name" />
+          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="$" />
+          <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
+          <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Details (optional)" />
+        </div>`).join('')}
+      <button type="button" class="btn sm ghost" data-additem="${ix}" style="margin-top:8px">+ Add a row</button>`;
+    const mode = c.mode || 'inline';
+    return common + `
+      <label class="f">What it does</label>
+      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''} /> The message sits right on the home screen</label>
+      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''} /> Tapping it opens a link</label>
+      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''} /> Tapping it opens a page with more details</label>
+      ${mode === 'inline' ? `
+        <label class="f">Message</label>
+        <textarea data-f="body" data-ix="${ix}" maxlength="240" rows="3">${esc(c.body || '')}</textarea>` : `
+        <label class="f">Short line under the name (optional)</label>
+        <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" />`}
+      ${mode === 'page' ? `
+        <label class="f">The details page</label>
+        <textarea data-f="body" data-ix="${ix}" maxlength="1500" rows="5">${esc(c.body || '')}</textarea>` : ''}
+      ${mode !== 'inline' ? `
+        <label class="f">Link${mode === 'page' ? ' (optional, shown as a button on the page)' : ''}</label>
+        <input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="https://theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />` : ''}`;
+  };
+
+  const renderCards = ()=>{
+    $('cardAddRow').style.display = CARDS.length < (v.card_cap ?? 4) ? '' : 'none';
+    $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
+      <div class="cbox${c.off ? ' isoff' : ''}">
+        <div class="cbox__head">
+          <button type="button" class="cbox__main" data-open="${ix}">
+            <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
+            <span class="cbox__t">${esc(c.title || 'Untitled card')}</span>
+            <span class="cbox__type">${CARD_TYPES[c.t]}</span>
+          </button>
+          <button type="button" class="iconbtn" data-up="${ix}" title="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
+          <button type="button" class="iconbtn" data-down="${ix}" title="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
+          <button type="button" class="iconbtn" data-eye="${ix}" title="${c.off ? 'Hidden in the app. Tap to show it.' : 'Shows in the app. Tap to hide it.'}">${c.off ? EYE_OFF : EYE_ON}</button>
+          <button type="button" class="iconbtn" data-del="${ix}" title="Delete this card">${TRASH}</button>
+        </div>
+        ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}</div>` : ''}
+      </div>`).join('') : '<div class="hint">No cards yet. Add one below.</div>';
+    wireCards();
+  };
+
+  function wireCards(){
+    const L = $('cardList');
+    L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; renderCards(); });
+    L.querySelectorAll('[data-up]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.up; [CARDS[ix-1], CARDS[ix]] = [CARDS[ix], CARDS[ix-1]]; if(CARD_OPEN === ix) CARD_OPEN = ix - 1; else if(CARD_OPEN === ix - 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-down]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.down; [CARDS[ix], CARDS[ix+1]] = [CARDS[ix+1], CARDS[ix]]; if(CARD_OPEN === ix) CARD_OPEN = ix + 1; else if(CARD_OPEN === ix + 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; if(!confirm('Delete "' + (CARDS[ix].title || 'this card') + '"? This takes effect when you save.')) return; CARDS.splice(ix, 1); if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-icon]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.ix].icon = b.dataset.icon; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('input[data-f], textarea[data-f]').forEach(i => i.addEventListener('input', ()=>{
+      const c = CARDS[+i.dataset.ix];
+      if(i.type === 'checkbox') c[i.dataset.f] = i.checked; else c[i.dataset.f] = i.value;
+      if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
+      cardSaveDraft();
+    }));
+    L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{
+      const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft();
+    }));
+    L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards(); }));
+    L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{ CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft(); }));
+    L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
+  }
+
+  document.querySelectorAll('#cardAddRow [data-add]').forEach(b => b.onclick = ()=>{
+    if(CARDS.length >= (v.card_cap ?? 4)) return;
+    CARDS.push(defaultCard(b.dataset.add));
+    CARD_OPEN = CARDS.length - 1;
+    cardSaveDraft(); renderCards();
   });
-  // title + tag (43_specials_meta.sql): pencil renames the section and the
-  // app's specials-screen label; the eye hides that label in the app
-  const SP_EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
-  const SP_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
-  const spPaintMeta = ()=>{
-    $('spTitleTxt').textContent = v.specials_title || 'Daily specials';
-    $('spTagBtn').innerHTML = v.specials_tag !== false ? SP_EYE_ON : SP_EYE_OFF;
-    $('spTagBtn').classList.toggle('off', v.specials_tag === false);
-    $('spTagBtn').title = v.specials_tag !== false ? 'The label shows in the app. Tap to hide it.' : 'The label is hidden in the app. Tap to show it.';
+
+  $('cardsSave').onclick = async ()=>{
+    const m = $('cardsMsg');
+    if(CARDS.some(c => !(c.title || '').trim())){ m.className = 'msg err'; m.textContent = 'Every card needs a name.'; return; }
+    const out = CARDS.map(c => {
+      const d = { ...c };
+      d.title = d.title.trim();
+      if(d.url && !/^(https?:\/\/|mailto:|tel:)/i.test(d.url.trim())) d.url = 'https://' + d.url.trim();
+      if(d.t === 'list') d.items = (d.items || []).filter(i => i.n && i.n.trim());
+      if(d.t === 'schedule'){ const days = {}; SP_DAYS.forEach(([k]) => { const t = ((d.days || {})[k] || '').trim(); if(t) days[k] = t; }); d.days = days; }
+      return d;
+    });
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const { data, error } = await rpc('admin_set_cards', { p_id: v.id, p_cards: out.length ? out : null });
+    if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save (has the schema 2 migration been applied?).'; return; }
+    CARDS = out; v.cards = out;
+    try { localStorage.removeItem(cardDraftK); } catch(e){}
+    renderCards();
+    m.className = 'msg ok'; m.textContent = 'Saved. Live on their tables now.';
   };
-  const spSaveMeta = async (title, show, m)=>{
-    m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await rpc('admin_set_specials_meta', { p_id: v.id, p_title: title || null, p_show: show });
-    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 43_specials_meta.sql been run?).'; return false; }
-    v.specials_title = (title || '').trim().slice(0, 40) || null;
-    v.specials_tag = show;
-    spPaintMeta();
-    m.className='msg ok'; m.textContent='Saved.';
-    return true;
+
+  $('capSave').onclick = async ()=>{
+    const m = $('cgMsg');
+    const n = parseInt($('capIn').value, 10);
+    if(isNaN(n) || n < 0 || n > 20){ m.className = 'msg err'; m.textContent = 'The cap is a number from 0 to 20.'; return; }
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const { data, error } = await rpc('admin_set_card_cap', { p_id: v.id, p_cap: n });
+    if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save the cap.'; return; }
+    v.card_cap = n;
+    // lowering the cap trims saved cards server-side; mirror that here
+    if(CARDS.length > n){ CARDS = CARDS.slice(0, n); v.cards = v.cards ? v.cards.slice(0, n) : v.cards; if(CARD_OPEN >= n) CARD_OPEN = -1; }
+    renderCards();
+    m.className = 'msg ok'; m.textContent = 'Cap saved.';
   };
-  $('spEditT').onclick = ()=>{
-    $('spTitleRow').style.display = '';
-    $('spTitleIn').value = v.specials_title || '';
-    $('spTitleCount').textContent = $('spTitleIn').value.length;
-    $('spTitleIn').focus();
+
+  $('gamesOn').onchange = async ()=>{
+    const on = $('gamesOn').checked, m = $('cgMsg');
+    const { data, error } = await rpc('admin_set_games_enabled', { p_id: v.id, p_on: on });
+    if(error || !data || data.ok !== true){ $('gamesOn').checked = !on; m.className = 'msg err'; m.textContent = 'Could not change it (has the schema 2 migration been applied?).'; return; }
+    v.games_enabled = on;
+    m.className = 'msg ok'; m.textContent = on ? 'Games are on for this venue.' : 'Games are off for this venue. The landing keeps feedback and cards.';
   };
-  $('spTitleIn').addEventListener('input', ()=>{ $('spTitleCount').textContent = $('spTitleIn').value.length; });
-  $('spTitleSave').onclick = async ()=>{
-    if(await spSaveMeta($('spTitleIn').value, v.specials_tag !== false, $('spTitleMsg'))) $('spTitleRow').style.display = 'none';
-  };
-  $('spTitleCancel').onclick = ()=>{ $('spTitleRow').style.display = 'none'; };
-  $('spTagBtn').onclick = ()=> spSaveMeta(v.specials_title || '', v.specials_tag === false, $('spMsg'));
-  spPaintMeta();
-  $('spSave').onclick = async ()=>{
-    const sp = {};
-    document.querySelectorAll('#spRows input').forEach(i=>{ const t = i.value.trim(); if(t) sp[i.dataset.day] = t; });
-    const m = $('spMsg');
-    m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await rpc('admin_set_specials', { p_id: v.id, p_specials: Object.keys(sp).length ? sp : null });
-    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 32_daily_specials.sql been run?).'; return; }
-    v.specials = Object.keys(sp).length ? sp : null;
-    m.className='msg ok'; m.textContent='Saved.';
-  };
+
+  renderCards();
 
   // ---- feedback form (35_feedback_forms.sql) ----
   $('ffFlag').onchange = async ()=>{

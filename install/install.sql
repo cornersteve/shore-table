@@ -65,11 +65,11 @@ create table venues (
   custom_only        text[]      not null default '{}',
   owner_pass         text,
   dark_mode          boolean     not null default false,
-  specials           jsonb,
+  cards              jsonb,
+  card_cap           smallint    not null default 4 check (card_cap between 0 and 20),
+  games_enabled      boolean     not null default true,
   form_custom        boolean     not null default false,
   report_county      boolean     not null default true,
-  specials_title     text check (specials_title is null or char_length(specials_title) <= 40),
-  specials_tag       boolean     not null default true,
   owner_email        text check (owner_email is null or owner_email ~* '^[^\s@]+@[^\s@]+\.[^\s@]+$')
 );
 
@@ -81,7 +81,9 @@ comment on column venues.games        is 'Enabled game ids, in display order. Ex
 comment on column venues.owner_email  is 'Owner contact email. PII: operator-facing only. NEVER expose via public_venues or get_owner_stats.';
 comment on column venues.owner_pass   is 'Optional bcrypt hash gating the owner dashboard. NULL = link-only (default, and the off switch).';
 comment on column venues.report_county is 'Show the "vs county" comparison on this venue''s guest report. Default true.';
-comment on column venues.specials_title is 'Custom label for the daily-specials feature (max 40 chars). Null = "Daily specials".';
+comment on column venues.cards is 'Landing-screen cards, a jsonb array of preset card objects (schedule / list / notice). Written only through clean_cards; capped at card_cap.';
+comment on column venues.card_cap is 'How many landing cards this venue may have. Operator-set per venue; the default is 4.';
+comment on column venues.games_enabled is 'Operator-set. False hides the games side of the app entirely (feedback-and-cards venues); the landing always keeps feedback, so it can never be empty.';
 
 -- ---------------------------------------------------------------------------
 --  SURVEY RESPONSES  (anonymous; no device id, no ip, no name)
@@ -193,7 +195,7 @@ create table events (
   id         bigint      generated always as identity primary key,
   venue_id   text        not null references venues(id),
   event      text        not null check (event in
-               ('app_open','game_start','survey_submit','review_click','promo_click')),
+               ('app_open','game_start','survey_submit','review_click','promo_click','card_open')),
   meta       text        check (meta is null or char_length(meta) <= 20),
   created_at timestamptz not null default now()
 );
@@ -232,8 +234,8 @@ create table schema_migrations (
   version    integer     primary key,
   applied_at timestamptz not null default now()
 );
-comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; version 1 is this install.';
-insert into schema_migrations (version) values (1);
+comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
+insert into schema_migrations (version) values (1), (2);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -337,11 +339,10 @@ with (security_invoker = off) as
          header_bg,
          custom_only,
          dark_mode,
-         specials,
+         cards,
+         games_enabled,
          form_custom,
          report_county,
-         specials_title,
-         specials_tag,
          (status = 'lead') as demo
   from public.venues
   where status in ('lead', 'active');
@@ -654,7 +655,9 @@ begin
     'status', v_row.status,
     'games',  v_row.games,
     'promo',  json_build_object('text', v_row.promo_text, 'header', v_row.promo_header, 'url', v_row.promo_url, 'expires', v_row.promo_expires),
-    'specials', v_row.specials,
+    'cards', v_row.cards,
+    'card_cap', v_row.card_cap,
+    'games_enabled', v_row.games_enabled,
     'form_custom', v_row.form_custom,
     'extras_month', (
       select coalesce(json_agg(extra order by created_at desc), '[]'::json)
@@ -704,7 +707,8 @@ begin
       select json_build_object(
         'opens',         count(*) filter (where event = 'app_open'),
         'review_clicks', count(*) filter (where event = 'review_click'),
-        'promo_clicks',  count(*) filter (where event = 'promo_click'))
+        'promo_clicks',  count(*) filter (where event = 'promo_click'),
+        'card_opens',    count(*) filter (where event = 'card_open'))
       from public.events
       where venue_id = v_row.id and created_at > now() - interval '30 days')
   );
@@ -815,23 +819,80 @@ $$;
 revoke all on function public.set_venue_games(text, text, text[], text) from public;
 grant execute on function public.set_venue_games(text, text, text[], text) to anon, authenticated;
 
-create or replace function public.clean_specials(p jsonb)
+-- Landing cards: every write path funnels through this sanitizer. A card is
+-- one of three preset shapes (schedule / list / notice); anything else, and
+-- any field beyond each shape's whitelist, is dropped. Cards past the cap
+-- are dropped from the tail. Booleans are compared as jsonb so a malformed
+-- value can never abort the write.
+create or replace function public.clean_cards(p jsonb, p_cap integer)
 returns jsonb
-language sql
+language plpgsql
 immutable
 set search_path = ''
 as $$
-  select case
-    when p is null or jsonb_typeof(p) <> 'object' then null
-    else nullif(coalesce(
-      (select jsonb_object_agg(d.k, left(btrim(p->>d.k), 200))
-         from (values ('mon'),('tue'),('wed'),('thu'),('fri'),('sat'),('sun')) d(k)
-        where nullif(btrim(coalesce(p->>d.k, '')), '') is not null),
-      '{}'::jsonb), '{}'::jsonb)
-  end;
+declare
+  v_out   jsonb := '[]'::jsonb;
+  v_el    jsonb;
+  v_c     jsonb;
+  v_t     text;
+  v_title text;
+  v_days  jsonb;
+  v_items jsonb;
+  v_mode  text;
+begin
+  if p is null or jsonb_typeof(p) <> 'array' then return null; end if;
+  for v_el in select * from jsonb_array_elements(p) loop
+    exit when jsonb_array_length(v_out) >= greatest(coalesce(p_cap, 4), 0);
+    continue when jsonb_typeof(v_el) <> 'object';
+    v_t := v_el->>'t';
+    continue when v_t is null or v_t not in ('schedule','list','notice');
+    v_title := nullif(left(btrim(coalesce(v_el->>'title', '')), 40), '');
+    continue when v_title is null;
+
+    v_c := jsonb_build_object(
+      't', v_t, 'title', v_title,
+      'icon', case when coalesce(v_el->>'icon', '') ~ '^[a-z0-9_]{1,24}$' then v_el->>'icon' end,
+      'off',  v_el->'off' = 'true'::jsonb,
+      'desc', nullif(left(btrim(coalesce(v_el->>'desc', '')), 120), ''));
+
+    if v_t = 'schedule' then
+      select jsonb_object_agg(d.k, left(btrim(v_el->'days'->>d.k), 200))
+        into v_days
+        from (values ('mon'),('tue'),('wed'),('thu'),('fri'),('sat'),('sun')) d(k)
+       where jsonb_typeof(v_el->'days') = 'object'
+         and nullif(btrim(coalesce(v_el->'days'->>d.k, '')), '') is not null;
+      v_c := v_c || jsonb_build_object(
+        'days',   coalesce(v_days, '{}'::jsonb),
+        'always', v_el->'always' = 'true'::jsonb);
+    elsif v_t = 'list' then
+      select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
+               'n', left(btrim(i.el->>'n'), 60),
+               'd', nullif(left(btrim(coalesce(i.el->>'d', '')), 120), ''),
+               'p', nullif(left(btrim(coalesce(i.el->>'p', '')), 20), ''))) order by i.ord), '[]'::jsonb)
+        into v_items
+        from (select t.el, t.ord from jsonb_array_elements(
+                case when jsonb_typeof(v_el->'items') = 'array' then v_el->'items' else '[]'::jsonb end)
+                with ordinality t(el, ord)
+               limit 40) i
+       where jsonb_typeof(i.el) = 'object'
+         and nullif(btrim(coalesce(i.el->>'n', '')), '') is not null;
+      v_c := v_c || jsonb_build_object('items', coalesce(v_items, '[]'::jsonb));
+    else  -- notice
+      v_mode := v_el->>'mode';
+      if v_mode is null or v_mode not in ('inline','link','page') then v_mode := 'inline'; end if;
+      v_c := v_c || jsonb_build_object(
+        'mode', v_mode,
+        'body', nullif(left(btrim(coalesce(v_el->>'body', '')), 1500), ''),
+        'url',  nullif(left(btrim(coalesce(v_el->>'url', '')), 500), ''));
+    end if;
+
+    v_out := v_out || jsonb_build_array(jsonb_strip_nulls(v_c));
+  end loop;
+  return nullif(v_out, '[]'::jsonb);
+end;
 $$;
 
-create or replace function public.set_venue_specials(p_venue_id text, p_key text, p_specials jsonb, p_pass text default null)
+create or replace function public.set_venue_cards(p_venue_id text, p_key text, p_cards jsonb, p_pass text default null)
 returns boolean
 language plpgsql
 security definer
@@ -849,42 +910,14 @@ begin
   end if;
 
   update public.venues
-     set specials = public.clean_specials(p_specials)
+     set cards = public.clean_cards(p_cards, v_row.card_cap)
    where id = p_venue_id;
   return true;
 end;
 $$;
 
-revoke all on function public.set_venue_specials(text, text, jsonb, text) from public;
-grant execute on function public.set_venue_specials(text, text, jsonb, text) to anon, authenticated;
-
-create or replace function public.set_venue_specials_meta(p_venue_id text, p_key text, p_title text, p_show boolean, p_pass text default null)
-returns boolean
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_row public.venues%rowtype;
-begin
-  select * into v_row from public.venues where id = p_venue_id;
-  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
-    return false;
-  end if;
-  if not public.owner_pass_ok(v_row.owner_pass, p_pass) then
-    return false;
-  end if;
-
-  update public.venues
-     set specials_title = nullif(left(btrim(coalesce(p_title, '')), 40), ''),
-         specials_tag   = coalesce(p_show, true)
-   where id = p_venue_id;
-  return true;
-end;
-$$;
-
-revoke all on function public.set_venue_specials_meta(text, text, text, boolean, text) from public;
-grant execute on function public.set_venue_specials_meta(text, text, text, boolean, text) to anon, authenticated;
+revoke all on function public.set_venue_cards(text, text, jsonb, text) from public;
+grant execute on function public.set_venue_cards(text, text, jsonb, text) to anon, authenticated;
 
 create or replace function public.set_venue_form(p_venue_id text, p_key text, p_core jsonb, p_extras jsonb, p_pass text default null)
 returns boolean
@@ -1189,8 +1222,8 @@ begin
       'owner_email', owner_email, 'owner_key', owner_key,
       'custom_questions', custom_questions, 'games', games,
       'custom_only', custom_only, 'has_pass', owner_pass is not null,
-      'dark_mode', dark_mode, 'specials', specials,
-      'specials_title', specials_title, 'specials_tag', specials_tag,
+      'dark_mode', dark_mode, 'cards', cards,
+      'card_cap', card_cap, 'games_enabled', games_enabled,
       'promo_text', promo_text, 'promo_header', promo_header,
       'promo_url', promo_url, 'promo_expires', promo_expires,
       'form_custom', form_custom, 'report_county', report_county,
@@ -1326,7 +1359,8 @@ begin
         'game_starts',   count(*) filter (where event = 'game_start'),
         'surveys',       count(*) filter (where event = 'survey_submit'),
         'review_clicks', count(*) filter (where event = 'review_click'),
-        'promo_clicks',  count(*) filter (where event = 'promo_click'))
+        'promo_clicks',  count(*) filter (where event = 'promo_click'),
+        'card_opens',    count(*) filter (where event = 'card_open'))
       from public.events
       where venue_id = p_id and created_at > now() - interval '30 days'),
     'games_30d', (
@@ -2027,7 +2061,7 @@ revoke all on function public.admin_set_promo(text, text, date, text, text) from
 revoke execute on function public.admin_set_promo(text, text, date, text, text) from anon;
 grant execute on function public.admin_set_promo(text, text, date, text, text) to authenticated;
 
-create or replace function public.admin_set_specials(p_id text, p_specials jsonb)
+create or replace function public.admin_set_cards(p_id text, p_cards jsonb)
 returns json
 language plpgsql
 security definer
@@ -2035,17 +2069,19 @@ set search_path = ''
 as $$
 begin
   if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
-  update public.venues set specials = public.clean_specials(p_specials) where id = p_id;
+  update public.venues set cards = public.clean_cards(p_cards, card_cap) where id = p_id;
   if not found then return json_build_object('ok', false, 'error', 'no_such_venue'); end if;
   return json_build_object('ok', true);
 end;
 $$;
 
-revoke all on function public.admin_set_specials(text, jsonb) from public;
-revoke execute on function public.admin_set_specials(text, jsonb) from anon;
-grant execute on function public.admin_set_specials(text, jsonb) to authenticated;
+revoke all on function public.admin_set_cards(text, jsonb) from public;
+revoke execute on function public.admin_set_cards(text, jsonb) from anon;
+grant execute on function public.admin_set_cards(text, jsonb) to authenticated;
 
-create or replace function public.admin_set_specials_meta(p_id text, p_title text, p_show boolean)
+-- Raising the cap is the sellable knob; lowering it re-trims the saved cards
+-- through the sanitizer so the app and the editors always agree.
+create or replace function public.admin_set_card_cap(p_id text, p_cap integer)
 returns json
 language plpgsql
 security definer
@@ -2053,18 +2089,37 @@ set search_path = ''
 as $$
 begin
   if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
+  if p_cap is null or p_cap < 0 or p_cap > 20 then return json_build_object('ok', false, 'error', 'bad_cap'); end if;
   update public.venues
-     set specials_title = nullif(left(btrim(coalesce(p_title, '')), 40), ''),
-         specials_tag   = coalesce(p_show, true)
+     set card_cap = p_cap,
+         cards    = public.clean_cards(cards, p_cap)
    where id = p_id;
   if not found then return json_build_object('ok', false, 'error', 'no_such_venue'); end if;
   return json_build_object('ok', true);
 end;
 $$;
 
-revoke all on function public.admin_set_specials_meta(text, text, boolean) from public;
-revoke execute on function public.admin_set_specials_meta(text, text, boolean) from anon;
-grant execute on function public.admin_set_specials_meta(text, text, boolean) to authenticated;
+revoke all on function public.admin_set_card_cap(text, integer) from public;
+revoke execute on function public.admin_set_card_cap(text, integer) from anon;
+grant execute on function public.admin_set_card_cap(text, integer) to authenticated;
+
+create or replace function public.admin_set_games_enabled(p_id text, p_on boolean)
+returns json
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
+  update public.venues set games_enabled = coalesce(p_on, true) where id = p_id;
+  if not found then return json_build_object('ok', false, 'error', 'no_such_venue'); end if;
+  return json_build_object('ok', true);
+end;
+$$;
+
+revoke all on function public.admin_set_games_enabled(text, boolean) from public;
+revoke execute on function public.admin_set_games_enabled(text, boolean) from anon;
+grant execute on function public.admin_set_games_enabled(text, boolean) to authenticated;
 
 create or replace function public.admin_set_form_custom(p_id text, p_on boolean)
 returns json

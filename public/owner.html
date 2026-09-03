@@ -75,6 +75,32 @@
   .sprow input{flex:1;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:15px;color:var(--ink);background:var(--bg)}
   .sprow input:focus{outline:none;border-color:var(--accent)}
   .sprow.today input{border-color:var(--accent)}
+  /* home screen cards editor */
+  .cbox{border:1px solid var(--line-2);border-radius:14px;margin-top:10px;background:var(--bg)}
+  .cbox.isoff{opacity:.55}
+  .cbox__head{display:flex;align-items:center;gap:8px;padding:10px 12px}
+  .cbox__main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;cursor:pointer;text-align:left;font-family:var(--font-b);color:var(--ink)}
+  .cbox__ic{flex:none;width:34px;height:34px;border-radius:10px;background:var(--accent);color:#fff;display:grid;place-items:center}
+  .cbox__ic svg{width:19px;height:19px;display:block}
+  .cbox__t{font-family:var(--font-d);font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .cbox__type{flex:none;font-family:var(--font-d);font-weight:700;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);background:var(--panel-2);border-radius:999px;padding:4px 8px}
+  .cbox__body{border-top:1px solid var(--line);padding:12px}
+  .cfl{display:block;font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);margin:12px 0 5px}
+  .cfl:first-child{margin-top:0}
+  .icongrid{display:flex;flex-wrap:wrap;gap:6px}
+  .icopt{width:38px;height:38px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .icopt svg{width:20px;height:20px}
+  .icopt.sel{border:1.5px solid var(--accent);color:var(--accent);background:var(--panel)}
+  .ck{display:flex;align-items:flex-start;gap:8px;font-size:14px;color:var(--ink);margin-top:8px;cursor:pointer}
+  .ck input{margin-top:3px;accent-color:var(--accent)}
+  .lirow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+  .lirow input{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
+  .lirow input:focus{outline:none;border-color:var(--accent)}
+  .lirow .li-n{flex:1;min-width:130px}
+  .lirow .li-p{width:76px;flex:none}
+  .lirow .li-d{flex-basis:100%}
+  .cbox textarea{width:100%;min-height:84px;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:15px;color:var(--ink);background:var(--bg);resize:vertical}
+  .cbox textarea:focus{outline:none;border-color:var(--accent)}
   input[type=date]{border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
   .counter{font-size:12px;color:var(--ink-faint);text-align:right;margin-top:4px}
   input::placeholder,textarea::placeholder{color:var(--ink-faint);opacity:.65}
@@ -131,7 +157,7 @@
 
   <section>
     <h2>Owner promo</h2>
-    <div class="hint">Shows on your app's landing screen (the first screen diners see) until the end date, or until you clear it. Events, notices, one-off announcements. For specials that repeat every week, use Daily specials below instead. The header is optional: it appears as a small title above your promo.</div>
+    <div class="hint">Shows on your app's landing screen (the first screen diners see) until the end date, or until you clear it. Events, notices, one-off announcements. For things that repeat every week, add a weekly schedule card in Home screen cards below instead. The header is optional: it appears as a small title above your promo.</div>
     <input type="text" class="promo-head" id="promoHead" maxlength="26" placeholder="Header (optional)">
     <div class="counter"><span id="promoHeadCount">0</span>/26</div>
     <textarea id="promoText" maxlength="240" placeholder="Type your promo here. Diners see it on your app's landing screen. Example: Live music this Friday 7pm, no cover."></textarea>
@@ -148,25 +174,17 @@
   </section>
 
   <section>
-    <h2 style="display:flex;align-items:center;gap:8px"><span id="spTitleTxt">Daily specials</span>
-      <button class="iconbtn" id="spEditT" title="Rename this section" aria-label="Rename this section"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></svg></button>
-      <button class="iconbtn" id="spTagBtn" aria-label="Show or hide the label in the app"></button>
-    </h2>
-    <div id="spTitleRow" style="display:none;margin:6px 0 12px">
-      <input type="text" class="promo-head" id="spTitleIn" maxlength="40" placeholder="Daily specials">
-      <div class="counter"><span id="spTitleCount">0</span>/40</div>
-      <div class="promo-row" style="margin-top:2px">
-        <button class="btn" id="spTitleSave">Save name</button>
-        <button class="btn ghost" id="spTitleCancel">Cancel</button>
-        <span class="savemsg" id="spTitleMsg"></span>
-      </div>
+    <h2>Home screen cards</h2>
+    <div class="hint">Extra cards on your app's home screen, under Play a game and Share feedback. Three kinds: a weekly schedule (daily specials, live music nights), a menu or list (tap list, happy hour menu), and an announcement. Diners see them in the order below; use the arrows to reorder, the eye to hide one without deleting it. Tap a card to edit it. You can have up to <span id="cardCapN">4</span>.</div>
+    <div id="cardList"></div>
+    <div class="promo-row" id="cardAddRow" style="flex-wrap:wrap">
+      <button class="btn ghost" data-add="schedule">+ Weekly schedule</button>
+      <button class="btn ghost" data-add="list">+ Menu or list</button>
+      <button class="btn ghost" data-add="notice">+ Announcement</button>
     </div>
-    <div class="hint">Repeat weekly specials, set once. Diners see only the current day's entry, as its own card on the landing screen. Leave a day blank and no card shows that day. Today's row is highlighted. The pencil renames this section, and the app's weekly screen shows the same name as its label; the eye shows or hides that label in the app.</div>
-    <div id="spRows"></div>
     <div class="promo-row">
-      <button class="btn" id="spSave">Save specials</button>
-      <button class="btn ghost" id="spClear">Clear all</button>
-      <span class="savemsg" id="spMsg"></span>
+      <button class="btn" id="cardsSave">Save cards</button>
+      <span class="savemsg" id="cardsMsg"></span>
     </div>
   </section>
 
@@ -322,7 +340,8 @@ function render(s){
   $('games').innerHTML =
     (gp.length ? gp.map(g => `<div class="bar"><span class="lbl">${esc(gameName(g.game))}</span><span class="track"><span class="fill" style="width:${Math.round(g.plays/gmax*100)}%"></span></span><span class="n">${g.plays}</span></div>`).join('') : '<div class="empty">No game plays recorded yet.</div>')
     + `<div class="mini" style="margin-top:10px">Last 30 days: ${ev.opens ?? 0} app opens · ${ev.review_clicks ?? 0} Google review clicks${
-        (ev.promo_clicks || (s.promo && s.promo.url)) ? ` · ${ev.promo_clicks ?? 0} promo taps` : ''}</div>`;
+        (ev.promo_clicks || (s.promo && s.promo.url)) ? ` · ${ev.promo_clicks ?? 0} promo taps` : ''}${
+        (ev.card_opens || (Array.isArray(s.cards) && s.cards.length)) ? ` · ${ev.card_opens ?? 0} card taps` : ''}</div>`;
 
   // game toggles. s.games is the enabled list; null (pre-migration or never
   // saved) means everything on. When a new game ships it gets added to
@@ -339,7 +358,14 @@ function render(s){
   $('promoCount').textContent = ($('promoText').value).length;
   $('promoUrl').value = p.url || '';
   $('promoExp').value = p.expires || '';
-  renderSpecials(s.specials || {});
+  // home screen cards (schema 2): a deep copy, so edits stay local until
+  // Save; an unsaved draft from an evicted tab wins over the server copy
+  const cardDraft = cardLoadDraft();
+  CARDS = cardDraft || (Array.isArray(s.cards) ? JSON.parse(JSON.stringify(s.cards)) : []);
+  CARD_CAP = (typeof s.card_cap === 'number') ? s.card_cap : 4;
+  renderCards();
+  // games-off venues (operator-set): the game toggles have nothing to toggle
+  if (s.games_enabled === false) $('gameToggles').closest('section').style.display = 'none';
   refreshLiveHint();
 }
 
@@ -495,84 +521,192 @@ $('formSave').onclick = async ()=>{
   setTimeout(()=>{ msg.textContent=''; }, 4000);
 };
 
-/* ---- daily specials (32_daily_specials.sql) ---- */
+/* ---- home screen cards (schema 2): one local working copy of the cards
+   array, edited in place, pushed whole through set_venue_cards on Save.
+   Inputs write straight into CARDS on every keystroke, so a full re-render
+   (add / delete / reorder / mode change) never loses typing. ---- */
+const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const CARD_ICONS = {
+  calendar: CI('<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'),
+  clock: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 1.9"/>'),
+  beer: CI('<path d="M7 4.5h8.5v14.5a1.8 1.8 0 0 1-1.8 1.8H8.8A1.8 1.8 0 0 1 7 19z"/><path d="M15.5 8.5h1.9a1.9 1.9 0 0 1 1.9 1.9v2.7a1.9 1.9 0 0 1-1.9 1.9h-1.9M10 8.5V17M12.5 8.5V17"/>'),
+  wine: CI('<path d="M8 3.5h8c0 5.2-1.7 7.8-4 7.8s-4-2.6-4-7.8z"/><path d="M12 11.3v8.2M8.5 20.5h7"/>'),
+  cocktail: CI('<path d="M4.5 4.5h15L12 13.2z"/><path d="M12 13.2v6.3M8.5 20.5h7M8 8h8"/>'),
+  coffee: CI('<path d="M4.5 9.5h12v6.5a3.5 3.5 0 0 1-3.5 3.5H8a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M16.5 11.5h1.3a2.4 2.4 0 0 1 0 4.8h-1.4M8.2 3.5c0 1.3 1 1.4 1 2.7M12.2 3.5c0 1.3 1 1.4 1 2.7"/>'),
+  plate: CI('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/>'),
+  pizza: CI('<path d="M4 6a18.5 18.5 0 0 1 16 0L12 21z"/><circle cx="9.6" cy="8.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.4" cy="8.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="12.6" r="1.05" fill="currentColor" stroke="none"/>'),
+  burger: CI('<path d="M4 10a8 8 0 0 1 16 0z"/><path d="M4 13.5h16"/><path d="M4.5 17h15v.8a2.7 2.7 0 0 1-2.7 2.7H7.2a2.7 2.7 0 0 1-2.7-2.7z"/>'),
+  dessert: CI('<path d="M7.5 10.5a4.5 4.5 0 1 1 9 0"/><path d="M7.5 10.5h9L12 21z"/>'),
+  music: CI('<path d="M9 18.5V6.2l10-2.2v12.3"/><circle cx="6.6" cy="18.6" r="2.4"/><circle cx="16.6" cy="16.4" r="2.4"/>'),
+  mic: CI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>'),
+  trophy: CI('<path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3.2 4M17 6h3a3 3 0 0 1-3.2 4M12 15v3.5M8 21h8l-.9-2.5H8.9z"/>'),
+  star: CI('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
+  tag: CI('<path d="M3.5 12.5v-9h9L21 12l-8.5 8.5z"/><circle cx="8" cy="8" r="1.4"/>'),
+  gift: CI('<rect x="4" y="9.5" width="16" height="11" rx="2"/><path d="M12 9.5v11M4 13.5h16M7.5 6.7A2.1 2.1 0 0 1 11.3 5c.7 1 .7 4.5.7 4.5S8 9.7 7.5 6.7zM16.5 6.7A2.1 2.1 0 0 0 12.7 5c-.7 1-.7 4.5-.7 4.5s4 .2 4.5-2.8z"/>'),
+  dice: CI('<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/>'),
+  megaphone: CI('<path d="M3.5 10.2v3.6l3.2.6L18.5 19V5L6.7 9.6z"/><path d="M18.5 9.2a3.1 3.1 0 0 1 0 5.6M7.8 14.8l1 5.2h2.9l-.8-4.6"/>'),
+  info: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 11.2v5.3"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/>'),
+  pin: CI('<path d="M12 21s-7-6.4-7-11.4a7 7 0 0 1 14 0C19 14.6 12 21 12 21z"/><circle cx="12" cy="9.6" r="2.5"/>'),
+  book: CI('<path d="M12 6.2C10.5 4.5 7.5 4.1 4 4.6V19c3.5-.5 6.5-.1 8 1.6 1.5-1.7 4.5-2.1 8-1.6V4.6c-3.5-.5-6.5-.1-8 1.6z"/><path d="M12 6.2v14.4"/>'),
+  flame: CI('<path d="M12 3.5c.8 2.9-4.7 5.3-4.7 9.9a4.7 4.7 0 0 0 9.4 0c0-1.9-.9-3.4-1.9-4.5-.1 1.4-.7 2.2-1.5 2.5.9-2.4-.6-5.7-1.3-7.9z"/>'),
+  leaf: CI('<path d="M5 19C5 9.5 12 4.5 20 4.5c0 8-5 14.5-15 14.5z"/><path d="M5 19c3-6 7-9 11-11"/>'),
+  heart: CI('<path d="M12 20.5S3.5 15 3.5 8.9A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 8.5 1.6C20.5 15 12 20.5 12 20.5z"/>'),
+  sun: CI('<circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/>'),
+  moon: CI('<path d="M20 13.6A8.5 8.5 0 1 1 10.4 4 7 7 0 0 0 20 13.6z"/>'),
+  sparkle: CI('<path d="M11 3.5l1.6 4.9 4.9 1.6-4.9 1.6L11 16.5l-1.6-4.9-4.9-1.6 4.9-1.6z"/><path d="M18 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>')
+};
+const CARD_TYPES = { schedule:'Weekly schedule', list:'Menu or list', notice:'Announcement' };
 const SP_DAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
 const SP_TODAY = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
-function renderSpecials(sp){
-  $('spRows').innerHTML = SP_DAYS.map(([k, label]) => `
-    <div class="sprow${k === SP_TODAY ? ' today' : ''}">
-      <label for="sp_${k}">${label}</label>
-      <input type="text" id="sp_${k}" data-day="${k}" maxlength="200"
-        placeholder="${k === 'mon' ? 'Half price specialty cocktails, $2 off Modelo drafts' : ''}">
-      <span class="spcount" id="spc_${k}">0/200</span>
-    </div>`).join('');
-  SP_DAYS.forEach(([k]) => {
-    const i = $('sp_' + k), c = $('spc_' + k);
-    i.value = (sp && sp[k]) || '';
-    const upd = ()=>{ c.textContent = i.value.length + '/200'; };
-    i.addEventListener('input', upd);
-    upd();
-  });
+const EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
+const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const ARR_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+
+let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1;
+
+// a localStorage draft survives tab eviction (phones especially); it clears
+// on a successful save and wins over the server copy until then
+const cardDraftK = ()=> 'st_owner_cards_' + (V || '');
+const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK(), JSON.stringify(CARDS)); } catch(e){} };
+const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK()); } catch(e){} };
+const cardLoadDraft = ()=>{ try { const d = localStorage.getItem(cardDraftK()); return d ? JSON.parse(d) : null; } catch(e){ return null; } };
+
+function defaultCard(t){
+  return t === 'schedule' ? { t, title:'Daily specials', icon:'calendar', days:{} }
+       : t === 'list'     ? { t, title:'', icon:'beer', items:[{n:'',d:'',p:''}] }
+       :                    { t, title:'', icon:'megaphone', mode:'inline', body:'' };
 }
 
-/* ---- specials title + tag (43_specials_meta.sql): the pencil renames the
-   section (and the app's specials-screen label), the eye hides that label
-   in the app. State prefills from the public_venues branding fetch. ---- */
-const SP_EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
-const SP_EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
-let spMeta = { title: null, show: true };
-function spPaintMeta(){
-  $('spTitleTxt').textContent = spMeta.title || 'Daily specials';
-  $('spTagBtn').innerHTML = spMeta.show ? SP_EYE_ON : SP_EYE_OFF;
-  $('spTagBtn').classList.toggle('off', !spMeta.show);
-  $('spTagBtn').title = spMeta.show ? 'The label shows in the app. Tap to hide it.' : 'The label is hidden in the app. Tap to show it.';
+function cardBody(c, ix){
+  const common = `
+    <label class="cfl">Card name</label>
+    <input type="text" class="promo-head" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'On tap this week' : c.t === 'notice' ? 'Trivia night is back' : 'Daily specials'}">
+    <label class="cfl">Icon</label>
+    <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}">${CARD_ICONS[k]}</button>`).join('')}</div>`;
+  if (c.t === 'schedule') return common + `
+    <label class="cfl">The week</label>
+    <div class="hint" style="margin-bottom:2px">One line per day. Diners see today's line on the home screen and can tap in for the whole week. Blank days show no card that day.</div>
+    ${SP_DAYS.map(([k, label]) => `
+      <div class="sprow${k === SP_TODAY ? ' today' : ''}">
+        <label>${label}</label>
+        <input type="text" maxlength="200" data-day="${k}" data-ix="${ix}" value="${esc((c.days || {})[k] || '')}" placeholder="${k === 'mon' ? 'Half price specialty cocktails, $2 off Modelo drafts' : ''}">
+      </div>`).join('')}
+    <label class="ck"><input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''}> Keep the card on the home screen even on blank days, so diners can still open the week</label>`;
+  if (c.t === 'list') return common + `
+    <label class="cfl">Short line under the name (optional)</label>
+    <input type="text" class="promo-head" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="Rotating drafts, updated often">
+    <label class="cfl">The list</label>
+    ${(c.items || []).map((i, j) => `
+      <div class="lirow">
+        <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Name">
+        <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="$" inputmode="decimal">
+        <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
+        <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Details (optional)">
+      </div>`).join('')}
+    <div class="promo-row" style="margin-top:10px"><button type="button" class="btn ghost" data-additem="${ix}">+ Add a row</button></div>`;
+  // notice
+  const mode = c.mode || 'inline';
+  return common + `
+    <label class="cfl">What it does</label>
+    <label class="ck"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''}> The message sits right on the home screen</label>
+    <label class="ck"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''}> Tapping it opens a link</label>
+    <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page with more details</label>
+    ${mode === 'inline' ? `
+      <label class="cfl">Message</label>
+      <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Kitchen closes at 10 tonight. The bar stays open late.">${esc(c.body || '')}</textarea>` : `
+      <label class="cfl">Short line under the name (optional)</label>
+      <input type="text" class="promo-head" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}">`}
+    ${mode === 'page' ? `
+      <label class="cfl">The details page</label>
+      <textarea data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Everything diners should know, in your words.">${esc(c.body || '')}</textarea>` : ''}
+    ${mode !== 'inline' ? `
+      <label class="cfl">Link${mode === 'page' ? ' (optional, shown as a button on the page)' : ''}</label>
+      <input type="url" class="promo-head" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">` : ''}`;
 }
-async function spSaveMeta(title, show, msgEl){
-  msgEl.className = 'savemsg'; msgEl.textContent = 'Saving…';
+
+function renderCards(){
+  $('cardCapN').textContent = CARD_CAP;
+  $('cardAddRow').style.display = CARDS.length < CARD_CAP ? '' : 'none';
+  $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
+    <div class="cbox${c.off ? ' isoff' : ''}">
+      <div class="cbox__head">
+        <button type="button" class="cbox__main" data-open="${ix}">
+          <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
+          <span class="cbox__t">${esc(c.title || 'Untitled card')}</span>
+          <span class="cbox__type">${CARD_TYPES[c.t]}</span>
+        </button>
+        <button type="button" class="iconbtn" data-up="${ix}" title="Move up" aria-label="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
+        <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
+        <button type="button" class="iconbtn" data-eye="${ix}" title="${c.off ? 'Hidden in the app. Tap to show it.' : 'Shows in the app. Tap to hide it.'}" aria-label="Show or hide in the app">${c.off ? EYE_OFF : EYE_ON}</button>
+        <button type="button" class="iconbtn" data-del="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button>
+      </div>
+      ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}</div>` : ''}
+    </div>`).join('') : '<div class="empty">No cards yet. Add one below.</div>';
+  wireCards();
+}
+
+function wireCards(){
+  const L = $('cardList');
+  L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; renderCards(); });
+  L.querySelectorAll('[data-up]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.up; [CARDS[ix-1], CARDS[ix]] = [CARDS[ix], CARDS[ix-1]]; if(CARD_OPEN === ix) CARD_OPEN = ix - 1; else if(CARD_OPEN === ix - 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
+  L.querySelectorAll('[data-down]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.down; [CARDS[ix], CARDS[ix+1]] = [CARDS[ix+1], CARDS[ix]]; if(CARD_OPEN === ix) CARD_OPEN = ix + 1; else if(CARD_OPEN === ix + 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
+  L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; cardSaveDraft(); renderCards(); });
+  L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; if(!confirm('Delete "' + (CARDS[ix].title || 'this card') + '"? This takes effect when you save.')) return; CARDS.splice(ix, 1); if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
+  L.querySelectorAll('[data-icon]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.ix].icon = b.dataset.icon; cardSaveDraft(); renderCards(); });
+  L.querySelectorAll('input[data-f], textarea[data-f]').forEach(i => i.addEventListener('input', ()=>{
+    const c = CARDS[+i.dataset.ix];
+    if(i.type === 'checkbox') c[i.dataset.f] = i.checked;
+    else c[i.dataset.f] = i.value;
+    if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
+    cardSaveDraft();
+  }));
+  L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{
+    const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft();
+  }));
+  L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{
+    CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards();
+  }));
+  L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{
+    CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft();
+  }));
+  L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
+  L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
+}
+
+document.querySelectorAll('#cardAddRow [data-add]').forEach(b => b.onclick = ()=>{
+  if(CARDS.length >= CARD_CAP) return;
+  CARDS.push(defaultCard(b.dataset.add));
+  CARD_OPEN = CARDS.length - 1;
+  cardSaveDraft(); renderCards();
+});
+
+$('cardsSave').onclick = async ()=>{
+  const msg = $('cardsMsg');
+  if(CARDS.some(c => !(c.title || '').trim())){ msg.className = 'savemsg err'; msg.textContent = 'Every card needs a name.'; return; }
+  const out = CARDS.map(c => {
+    const d = { ...c };
+    d.title = d.title.trim();
+    if(d.url) d.url = normalizeUrl(d.url);
+    if(d.t === 'list') d.items = (d.items || []).filter(i => i.n && i.n.trim());
+    if(d.t === 'schedule'){ const days = {}; SP_DAYS.forEach(([k]) => { const t = ((d.days || {})[k] || '').trim(); if(t) days[k] = t; }); d.days = days; }
+    return d;
+  });
+  msg.className = 'savemsg'; msg.textContent = 'Saving…';
   try {
-    const { data, error } = await db.rpc('set_venue_specials_meta', { p_venue_id: V, p_key: K, p_title: title || null, p_show: show, p_pass: P });
+    const { data, error } = await db.rpc('set_venue_cards', { p_venue_id: V, p_key: K, p_cards: out.length ? out : null, p_pass: P });
     if (error || data !== true) throw new Error();
-    spMeta = { title: (title || '').trim().slice(0, 40) || null, show };
-    spPaintMeta();
-    msgEl.className = 'savemsg ok'; msgEl.textContent = 'Saved.';
-    setTimeout(()=>{ msgEl.textContent = ''; }, 3000);
-    return true;
+    CARDS = out;
+    cardClearDraft();
+    renderCards();
+    msg.className = 'savemsg ok'; msg.textContent = 'Saved. Live on your tables now.';
   } catch(e){
-    msgEl.className = 'savemsg err'; msgEl.textContent = 'Could not save. Try again.';
-    setTimeout(()=>{ msgEl.textContent = ''; }, 4000);
-    return false;
+    msg.className = 'savemsg err'; msg.textContent = 'Could not save. Try again.';
   }
-}
-$('spEditT').onclick = ()=>{
-  $('spTitleRow').style.display = '';
-  $('spTitleIn').value = spMeta.title || '';
-  $('spTitleCount').textContent = $('spTitleIn').value.length;
-  $('spTitleIn').focus();
+  setTimeout(()=>{ msg.textContent = ''; }, 4000);
 };
-$('spTitleIn').addEventListener('input', ()=>{ $('spTitleCount').textContent = $('spTitleIn').value.length; });
-$('spTitleSave').onclick = async ()=>{
-  if (await spSaveMeta($('spTitleIn').value, spMeta.show, $('spTitleMsg'))) $('spTitleRow').style.display = 'none';
-};
-$('spTitleCancel').onclick = ()=>{ $('spTitleRow').style.display = 'none'; };
-$('spTagBtn').onclick = ()=> spSaveMeta(spMeta.title || '', !spMeta.show, $('spMsg'));
-spPaintMeta();
-async function saveSpecials(){
-  const msg = $('spMsg');
-  const sp = {};
-  SP_DAYS.forEach(([k]) => { const t = $('sp_' + k).value.trim(); if (t) sp[k] = t; });
-  msg.className='savemsg'; msg.textContent='Saving…';
-  try {
-    const { data, error } = await db.rpc('set_venue_specials', { p_venue_id: V, p_key: K, p_specials: Object.keys(sp).length ? sp : null, p_pass: P });
-    if (error || data !== true) throw new Error();
-    msg.className='savemsg ok'; msg.textContent='Saved. Live on your tables now.';
-  } catch(e){
-    msg.className='savemsg err'; msg.textContent='Could not save. Try again.';
-  }
-  setTimeout(()=>{ msg.textContent=''; }, 4000);
-}
-$('spSave').onclick  = saveSpecials;
-$('spClear').onclick = () => { SP_DAYS.forEach(([k]) => { $('sp_' + k).value = ''; }); saveSpecials(); };
-renderSpecials({});  // real values land when the stats call resolves
+renderCards();  // real values land when the stats call resolves
 
 // Two different jobs here. The scheme allowlist (http, https, mailto, tel) is
 // the safety measure: this link is tapped by every diner at the venue, so
@@ -1211,8 +1345,6 @@ async function loadBrand(){
       BRAND = data;
       applyVenueTheme(data);
       initCardSection(data);
-      spMeta = { title: data.specials_title || null, show: data.specials_tag !== false };
-      spPaintMeta();
     }
   } catch(e){}
 }
