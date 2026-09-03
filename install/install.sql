@@ -54,10 +54,6 @@ create table venues (
   created_at         timestamptz not null default now(),
   owner_key          text        not null
     default replace(gen_random_uuid()::text || gen_random_uuid()::text, '-', ''),
-  promo_text         text check (promo_text is null or char_length(promo_text) <= 240),
-  promo_expires      date,
-  promo_header       text check (promo_header is null or char_length(promo_header) <= 26),
-  promo_url          text check (promo_url is null or char_length(promo_url) <= 500),
   games              text[]      not null default
     array['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour'],
   custom_questions   boolean     not null default false,
@@ -235,7 +231,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2);
+insert into schema_migrations (version) values (1), (2), (3);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -310,30 +306,6 @@ create policy feedback_forms_read on feedback_forms
 create or replace view public.public_venues
 with (security_invoker = off) as
   select id, name, logo, accent, google_review_link,
-         case
-           when promo_text is not null
-            and btrim(promo_text) <> ''
-            and (promo_expires is null
-                 or promo_expires >= (now() at time zone 'America/New_York')::date)
-           then promo_text
-           else null
-         end as promo,
-         case
-           when promo_text is not null
-            and btrim(promo_text) <> ''
-            and (promo_expires is null
-                 or promo_expires >= (now() at time zone 'America/New_York')::date)
-           then nullif(btrim(coalesce(promo_header, '')), '')
-           else null
-         end as promo_header,
-         case
-           when promo_text is not null
-            and btrim(promo_text) <> ''
-            and (promo_expires is null
-                 or promo_expires >= (now() at time zone 'America/New_York')::date)
-           then nullif(btrim(coalesce(promo_url, '')), '')
-           else null
-         end as promo_url,
          games,
          custom_questions,
          header_bg,
@@ -654,7 +626,6 @@ begin
     'logo',   v_row.logo,
     'status', v_row.status,
     'games',  v_row.games,
-    'promo',  json_build_object('text', v_row.promo_text, 'header', v_row.promo_header, 'url', v_row.promo_url, 'expires', v_row.promo_expires),
     'cards', v_row.cards,
     'card_cap', v_row.card_cap,
     'games_enabled', v_row.games_enabled,
@@ -718,67 +689,38 @@ $$;
 revoke all on function public.get_owner_stats(text, text, text) from public;
 grant execute on function public.get_owner_stats(text, text, text) to anon, authenticated;
 
-create or replace function public.set_venue_promo(p_venue_id text, p_key text, p_text text, p_expires date default null, p_header text default null, p_url text default null, p_pass text default null)
-returns boolean
+-- Card links get the same server-side treatment owner promo links used to:
+-- scheme allowlist (http/https/mailto/tel), scheme filled in for bare
+-- domains, and everything else dies here so javascript: and data: never
+-- reach a diner's phone. The app's safeUrl() is the second door.
+create or replace function public.clean_card_url(p text)
+returns text
 language plpgsql
-security definer
+immutable
 set search_path = ''
 as $$
 declare
-  v_row   public.venues%rowtype;
-  v_clean text;
-  v_head  text;
-  v_url   text;
+  v_url text;
 begin
-  select * into v_row from public.venues where id = p_venue_id;
-  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
-    return false;
-  end if;
-  if not public.owner_pass_ok(v_row.owner_pass, p_pass) then
-    return false;
-  end if;
-
-  v_clean := nullif(btrim(coalesce(p_text, '')), '');
-  if v_clean is not null and char_length(v_clean) > 240 then
-    v_clean := left(v_clean, 240);
-  end if;
-
-  v_head := nullif(btrim(coalesce(p_header, '')), '');
-  if v_head is not null and char_length(v_head) > 26 then
-    v_head := left(v_head, 26);
-  end if;
-
-  v_url := nullif(btrim(coalesce(p_url, '')), '');
-  if v_url is not null then
-    if v_url ~* '^mailto:' then
-      -- kept exactly as typed; must still look like an address
-      if v_url !~* '^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$' then v_url := null; end if;
-    elsif v_url ~* '^tel:' then
-      if v_url !~* '^tel:[+0-9().-]{5,}$' then v_url := null; end if;
-    else
-      -- owners type "mysite.com/menu", so fill in the scheme for them
-      if v_url !~* '^[a-z][a-z0-9+.-]*://' then
-        v_url := 'https://' || v_url;
-      end if;
-      -- host must contain a dot. Anything not http/https lands here and dies,
-      -- which is the point: javascript: and data: never reach a diner's phone.
-      if v_url !~* '^https?://[^/\s]+\.[^/\s]+' then v_url := null; end if;
+  v_url := nullif(btrim(coalesce(p, '')), '');
+  if v_url is null then return null; end if;
+  if v_url ~* '^mailto:' then
+    -- kept exactly as typed; must still look like an address
+    if v_url !~* '^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$' then return null; end if;
+  elsif v_url ~* '^tel:' then
+    if v_url !~* '^tel:[+0-9().-]{5,}$' then return null; end if;
+  else
+    -- owners type "mysite.com/menu", so fill in the scheme for them
+    if v_url !~* '^[a-z][a-z0-9+.-]*://' then
+      v_url := 'https://' || v_url;
     end if;
-    if v_url is not null and char_length(v_url) > 500 then v_url := null; end if;
+    -- host must contain a dot. Anything not http/https lands here and dies.
+    if v_url !~* '^https?://[^/\s]+\.[^/\s]+' then return null; end if;
   end if;
-
-  update public.venues
-     set promo_text    = v_clean,
-         promo_header  = case when v_clean is null then null else v_head end,
-         promo_url     = case when v_clean is null then null else v_url end,
-         promo_expires = case when v_clean is null then null else p_expires end
-   where id = p_venue_id;
-  return true;
+  if char_length(v_url) > 500 then return null; end if;
+  return v_url;
 end;
 $$;
-
-revoke all on function public.set_venue_promo(text, text, text, date, text, text, text) from public;
-grant execute on function public.set_venue_promo(text, text, text, date, text, text, text) to anon, authenticated;
 
 create or replace function public.set_venue_games(p_venue_id text, p_key text, p_games text[], p_pass text default null)
 returns boolean
@@ -883,7 +825,9 @@ begin
       v_c := v_c || jsonb_build_object(
         'mode', v_mode,
         'body', nullif(left(btrim(coalesce(v_el->>'body', '')), 1500), ''),
-        'url',  nullif(left(btrim(coalesce(v_el->>'url', '')), 500), ''));
+        'url',  public.clean_card_url(v_el->>'url'),
+        'hot',  v_el->'hot' = 'true'::jsonb,
+        'until', case when coalesce(v_el->>'until', '') ~ '^\d{4}-\d{2}-\d{2}$' then v_el->>'until' end);
     end if;
 
     v_out := v_out || jsonb_build_array(jsonb_strip_nulls(v_c));
@@ -1111,7 +1055,8 @@ begin
       select json_build_object(
         'opens',         count(*) filter (where event = 'app_open'),
         'review_clicks', count(*) filter (where event = 'review_click'),
-        'promo_clicks',  count(*) filter (where event = 'promo_click'))
+        'promo_clicks',  count(*) filter (where event = 'promo_click'),
+        'card_opens',    count(*) filter (where event = 'card_open'))
       from public.events
       where venue_id = v_row.id
         and (p_from is null or (created_at at time zone v_tz)::date >= p_from)
@@ -1120,7 +1065,8 @@ begin
       select json_build_object(
         'opens',         count(*) filter (where event = 'app_open'),
         'review_clicks', count(*) filter (where event = 'review_click'),
-        'promo_clicks',  count(*) filter (where event = 'promo_click'))
+        'promo_clicks',  count(*) filter (where event = 'promo_click'),
+        'card_opens',    count(*) filter (where event = 'card_open'))
       from public.events
       where venue_id = v_row.id
         and (created_at at time zone v_tz)::date >= p_pf
@@ -1224,8 +1170,6 @@ begin
       'custom_only', custom_only, 'has_pass', owner_pass is not null,
       'dark_mode', dark_mode, 'cards', cards,
       'card_cap', card_cap, 'games_enabled', games_enabled,
-      'promo_text', promo_text, 'promo_header', promo_header,
-      'promo_url', promo_url, 'promo_expires', promo_expires,
       'form_custom', form_custom, 'report_county', report_county,
       'pause_submissions', pause_submissions, 'created_at', created_at
     ) order by created_at desc), '[]'::json)
@@ -2005,61 +1949,6 @@ $$;
 revoke all on function public.admin_set_dark_mode(text, boolean) from public;
 revoke execute on function public.admin_set_dark_mode(text, boolean) from anon;
 grant execute on function public.admin_set_dark_mode(text, boolean) to authenticated;
-
-create or replace function public.admin_set_promo(p_id text, p_text text, p_expires date default null, p_header text default null, p_url text default null)
-returns json
-language plpgsql
-security definer
-set search_path = ''
-as $$
-declare
-  v_clean text;
-  v_head  text;
-  v_url   text;
-begin
-  if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
-  if not exists (select 1 from public.venues where id = p_id) then
-    return json_build_object('ok', false, 'error', 'no_such_venue');
-  end if;
-
-  v_clean := nullif(btrim(coalesce(p_text, '')), '');
-  if v_clean is not null and char_length(v_clean) > 240 then
-    v_clean := left(v_clean, 240);
-  end if;
-
-  v_head := nullif(btrim(coalesce(p_header, '')), '');
-  if v_head is not null and char_length(v_head) > 26 then
-    v_head := left(v_head, 26);
-  end if;
-
-  v_url := nullif(btrim(coalesce(p_url, '')), '');
-  if v_url is not null then
-    if v_url ~* '^mailto:' then
-      if v_url !~* '^mailto:[^\s@]+@[^\s@]+\.[^\s@]+$' then v_url := null; end if;
-    elsif v_url ~* '^tel:' then
-      if v_url !~* '^tel:[+0-9().-]{5,}$' then v_url := null; end if;
-    else
-      if v_url !~* '^[a-z][a-z0-9+.-]*://' then
-        v_url := 'https://' || v_url;
-      end if;
-      if v_url !~* '^https?://[^/\s]+\.[^/\s]+' then v_url := null; end if;
-    end if;
-    if v_url is not null and char_length(v_url) > 500 then v_url := null; end if;
-  end if;
-
-  update public.venues
-     set promo_text    = v_clean,
-         promo_header  = case when v_clean is null then null else v_head end,
-         promo_url     = case when v_clean is null then null else v_url end,
-         promo_expires = case when v_clean is null then null else p_expires end
-   where id = p_id;
-  return json_build_object('ok', true);
-end;
-$$;
-
-revoke all on function public.admin_set_promo(text, text, date, text, text) from public;
-revoke execute on function public.admin_set_promo(text, text, date, text, text) from anon;
-grant execute on function public.admin_set_promo(text, text, date, text, text) to authenticated;
 
 create or replace function public.admin_set_cards(p_id text, p_cards jsonb)
 returns json

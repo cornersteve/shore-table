@@ -100,7 +100,7 @@
   .btn:focus-visible,.choice:focus-visible,.rate__dot:focus-visible,.opt:focus-visible,.pill:focus-visible,.namechip button:focus-visible,.gamecard:focus-visible,.landing-opt:focus-visible,.privacy-link:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
   /* ---------- games hub cards ---------- */
-  /* 2% accent wash, deliberately faint so it never competes with the promo
+  /* 2% accent wash, deliberately faint so it never competes with a hot notice
      card's 7%. Solid fallback first for browsers without color-mix. */
   .gamecard{flex-shrink:0;text-align:left;width:100%;cursor:pointer;background:var(--bg);background:color-mix(in srgb, var(--accent) 2%, white);color:var(--ink);border:1.5px solid var(--accent);border-radius:var(--radius);padding:15px 17px;margin-top:11px;box-shadow:var(--shadow);transition:transform .14s var(--ease),border-color .2s var(--ease),box-shadow .2s var(--ease);position:relative;overflow:hidden}
   .gamecard:active{transform:scale(.99)}
@@ -110,7 +110,7 @@
   .gamecard__d{color:var(--ink-dim);font-size:14px;line-height:1.4;margin-top:4px}
   .gamecard__arrow{position:absolute;right:16px;top:15px;color:var(--ink-faint);font-size:20px}
 
-  /* ---------- owner promo (landing) ---------- */
+  /* ---------- hot notice card (the saturated accent banner) ---------- */
   .promo{position:relative;margin-top:16px;background:var(--panel);background:color-mix(in srgb, var(--accent) 7%, white);border:1.5px solid var(--accent);border-radius:var(--radius);padding:14px 16px}
   .promo__k{font-family:var(--font-d);font-weight:700;text-transform:uppercase;letter-spacing:.13em;font-size:16px;color:var(--accent);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .promo__t{font-size:15px;line-height:1.45;white-space:pre-line}
@@ -182,6 +182,11 @@
   .ncard{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow)}
   .ncard__k{font-family:var(--font-d);font-weight:700;text-transform:uppercase;letter-spacing:.13em;font-size:13px;color:var(--accent-deep);margin-bottom:5px}
   .ncard__t{font-size:15px;line-height:1.5;white-space:pre-line}
+  .ncard{position:relative}
+  a.ncard{display:block;text-decoration:none;color:var(--ink);cursor:pointer;padding-right:42px}
+  a.ncard:active{transform:scale(.99)}
+  .ncard__arrow{position:absolute;right:15px;top:50%;transform:translateY(-50%);color:var(--accent-deep);font-size:22px;line-height:1}
+  .stack .promo{margin-top:0}
   .lr{display:flex;gap:12px;align-items:baseline;padding:13px 2px;border-bottom:1px solid var(--line)}
   .lr__l{flex:1;min-width:0}
   .lr__n{font-family:var(--font-d);font-weight:700;font-size:16px}
@@ -552,7 +557,7 @@
   .screen.is-active .promo{animation:rise .5s var(--ease) .14s both}
   @keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 
-  /* the owner promo is the ONE fully saturated moment on the landing:
+  /* a hot notice is the fully saturated moment on the landing:
      their message, in their color, impossible to miss */
   .promo, a.promo{background:var(--accent);border:0;color:var(--on-accent);padding:16px 18px}
   @supports (color: color-mix(in srgb, red 50%, white)){
@@ -680,7 +685,7 @@
   html.dark .handoff__role{color:var(--ink-dim)}
   html.dark .namehint{color:#e0655a}
 
-  /* the promo stays the one saturated moment; deeper NEUTRAL shadows
+  /* hot notices stay the saturated moment; deeper NEUTRAL shadows
      carry the dark elevation (no colored glows on dark — the accent
      lives in the surfaces, not in halos) */
   html.dark .promo, html.dark a.promo{box-shadow:0 4px 14px rgba(0,0,0,.5), 0 14px 34px rgba(0,0,0,.35)}
@@ -861,10 +866,10 @@ exitBtn.onclick = ()=> go('hub');   // "Quit" always returns to the games hub
 // those leave `current` null, and the chooser needs a resolved venue.
 brandLogo.onclick = ()=> { if (current && current !== 'landing' && VENUES[state.venue]) go('landing'); };
 function h(html){ const t=document.createElement('template'); t.innerHTML=html.trim(); return t.content.firstElementChild; }
-// For owner-typed text (the promo) injected into templates. Venue names come
+// For owner-typed text (card content) injected into templates. Venue names come
 // from the operator's own rows, but escape them too when they share a template.
 function escHtml(s){ return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
-// Owner-typed promo link. The DB already enforces the same allowlist, but the
+// Owner-typed card link. The DB already enforces the same allowlist, but the
 // page never renders a href it has not checked itself. http/https/mailto/tel
 // only: javascript: or data: here would run on every diner's phone.
 function safeUrl(u){ return /^(https?:\/\/|mailto:|tel:)/i.test(String(u || '')) ? String(u) : null; }
@@ -1007,14 +1012,26 @@ reg('landing', (el)=>{
   // Landing cards (schema 2): preset types only, owner-ordered, capped by the
   // sanitizer server-side. Each card renders in place, so the order the owner
   // sets is the order diners see below the two pinned rows.
+  // "Last day shown" on notice cards, device-local like the day-of-week:
+  // an until in the past hides the card in every mode
+  const d0 = new Date();
+  const todayYmd = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
   const cardsHtml = (V.cards || []).map((c, ix) => {
     if (!c || c.off) return '';
+    if (c.t === 'notice' && c.until && c.until < todayYmd) return '';
     const ic = CARD_ICONS[c.icon] || CARD_ICONS.star;
-    if (c.t === 'notice' && (c.mode || 'inline') === 'inline') return `
-      <div class="ncard">
-        <div class="ncard__k">${escHtml(c.title)}</div>
-        ${c.body ? `<div class="ncard__t">${escHtml(c.body)}</div>` : ''}
-      </div>`;
+    if (c.t === 'notice' && (c.mode || 'inline') === 'inline'){
+      // hot = the saturated accent banner the owner promo used to be;
+      // an optional link makes the whole banner tappable, arrow and all
+      const u = safeUrl(c.url);
+      const cls = c.hot ? 'promo' : 'ncard';
+      const inner = c.hot
+        ? `<div class="promo__k">${escHtml(c.title)}</div>${c.body ? `<div class="promo__t">${escHtml(c.body)}</div>` : ''}`
+        : `<div class="ncard__k">${escHtml(c.title)}</div>${c.body ? `<div class="ncard__t">${escHtml(c.body)}</div>` : ''}`;
+      return u
+        ? `<a class="${cls}" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer"><span class="${c.hot ? 'promo__arrow' : 'ncard__arrow'}">›</span>${inner}</a>`
+        : `<div class="${cls}">${inner}</div>`;
+    }
     if (c.t === 'notice' && c.mode === 'link'){
       const u = safeUrl(c.url);
       if (!u) return '';
@@ -1047,14 +1064,6 @@ reg('landing', (el)=>{
         <span class="landing-opt__arrow">›</span>
       </button>`;
   }).join('');
-  // Owner promo: a plain card, or a tappable button when the owner set a link.
-  const pUrl = venue().promo ? safeUrl(venue().promoUrl) : null;
-  const pInner = venue().promo ? `
-      ${venue().promoHeader ? `<div class="promo__k">${escHtml(venue().promoHeader)}</div>` : ''}
-      <div class="promo__t">${escHtml(venue().promo)}</div>` : '';
-  const pCard = !venue().promo ? '' : pUrl
-    ? `<a class="promo" href="${escHtml(pUrl)}" target="_blank" rel="noopener noreferrer"><span class="promo__arrow">›</span>${pInner}</a>`
-    : `<div class="promo">${pInner}</div>`;
   el.innerHTML = `
     <div class="stack" style="margin-top:4px">
       ${V.gamesEnabled === false ? '' : `<button class="landing-opt" id="toGames">
@@ -1075,7 +1084,6 @@ reg('landing', (el)=>{
       </button>
       ${cardsHtml}
     </div>
-    ${pCard}
     <div class="spacer"></div>
     ${venue().demo ? `<div style="text-align:center;font-size:12px;color:var(--ink-faint,#a49d90);margin-bottom:6px">Preview. Built for ${escHtml(venue().name)} by ${escHtml(CFG.brandName)}. Not live yet.</div>` : ''}
     <div style="text-align:center"><button class="privacy-link" id="privacyLink">Privacy</button></div>`;
@@ -1091,9 +1099,6 @@ reg('landing', (el)=>{
       if (n.tagName !== 'A'){ state.cardIx = ix; go('card'); }
     });
   });
-  // Promo taps are worth counting: it is how the owner knows the card works.
-  // The link opens in a new tab, so this page stays put and the call completes.
-  el.querySelector('a.promo')?.addEventListener('click', ()=> logEvent('promo_click'));
 });
 
 /* ---------- CARD DETAIL (schedule week / list / notice page) ---------- */
@@ -4718,11 +4723,11 @@ reg('tv_final', (el)=>{
 /* ---------- DATA LOADING (live from Supabase) ---------- */
 async function loadVenues(){
   // select * so this works both before and after 14_owner_dashboard.sql adds
-  // the expiry-filtered promo column to the view.
+  // later installs added columns to the view.
   const { data, error } = await db.from('public_venues').select('*');
   if(error) throw error;
   const map={};
-  data.forEach(v=>{ map[v.id]={ name:v.name, logo:v.logo, accent:v.accent, review:v.google_review_link, promo:v.promo || null, promoHeader:v.promo_header || null, promoUrl:v.promo_url || null, games:v.games || null, customQuestions:!!v.custom_questions, headerBg:v.header_bg || null, customOnly:v.custom_only || [], darkMode:!!v.dark_mode, cards:Array.isArray(v.cards) ? v.cards : [], gamesEnabled:v.games_enabled !== false, formCustom:!!v.form_custom, demo:v.demo === true }; });
+  data.forEach(v=>{ map[v.id]={ name:v.name, logo:v.logo, accent:v.accent, review:v.google_review_link, games:v.games || null, customQuestions:!!v.custom_questions, headerBg:v.header_bg || null, customOnly:v.custom_only || [], darkMode:!!v.dark_mode, cards:Array.isArray(v.cards) ? v.cards : [], gamesEnabled:v.games_enabled !== false, formCustom:!!v.form_custom, demo:v.demo === true }; });
   return map;
 }
 async function loadContent(){

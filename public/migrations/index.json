@@ -3,6 +3,10 @@
   {
    "version": 2,
    "file": "001.json"
+  },
+  {
+   "version": 3,
+   "file": "002.json"
   }
  ]
 }

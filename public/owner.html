@@ -156,26 +156,8 @@
   </section>
 
   <section>
-    <h2>Owner promo</h2>
-    <div class="hint">Shows on your app's landing screen (the first screen diners see) until the end date, or until you clear it. Events, notices, one-off announcements. For things that repeat every week, add a weekly schedule card in Home screen cards below instead. The header is optional: it appears as a small title above your promo.</div>
-    <input type="text" class="promo-head" id="promoHead" maxlength="26" placeholder="Header (optional)">
-    <div class="counter"><span id="promoHeadCount">0</span>/26</div>
-    <textarea id="promoText" maxlength="240" placeholder="Type your promo here. Diners see it on your app's landing screen. Example: Live music this Friday 7pm, no cover."></textarea>
-    <div class="counter"><span id="promoCount">0</span>/240</div>
-    <input type="url" class="promo-head" id="promoUrl" style="margin-top:10px" maxlength="500" placeholder="Link (optional), https://yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <div class="promo-row">
-      <label for="promoExp">Last day shown (optional)</label>
-      <input type="date" id="promoExp">
-      <button class="btn" id="promoSave">Save promo</button>
-      <button class="btn ghost" id="promoClear">Clear</button>
-      <span class="savemsg" id="saveMsg"></span>
-    </div>
-    <div class="livehint" id="liveHint"></div>
-  </section>
-
-  <section>
     <h2>Home screen cards</h2>
-    <div class="hint">Extra cards on your app's home screen, under Play a game and Share feedback. Three kinds: a weekly schedule (daily specials, live music nights), a menu or list (tap list, happy hour menu), and an announcement. Diners see them in the order below; use the arrows to reorder, the eye to hide one without deleting it. Tap a card to edit it. You can have up to <span id="cardCapN">4</span>.</div>
+    <div class="hint">The cards on your app's home screen, under Play a game and Share feedback. Three kinds: a weekly schedule (daily specials, live music nights), a menu or list (tap list, happy hour menu), and an announcement (events, notices, one-off promos; it can stand out in your accent color, open a link, and hide itself after a last day). Diners see them in the order below; use the arrows to reorder, the eye to hide one without deleting it. Tap a card to edit it. You can have up to <span id="cardCapN">4</span>.</div>
     <div id="cardList"></div>
     <div class="promo-row" id="cardAddRow" style="flex-wrap:wrap">
       <button class="btn ghost" data-add="schedule">+ Weekly schedule</button>
@@ -340,7 +322,6 @@ function render(s){
   $('games').innerHTML =
     (gp.length ? gp.map(g => `<div class="bar"><span class="lbl">${esc(gameName(g.game))}</span><span class="track"><span class="fill" style="width:${Math.round(g.plays/gmax*100)}%"></span></span><span class="n">${g.plays}</span></div>`).join('') : '<div class="empty">No game plays recorded yet.</div>')
     + `<div class="mini" style="margin-top:10px">Last 30 days: ${ev.opens ?? 0} app opens · ${ev.review_clicks ?? 0} Google review clicks${
-        (ev.promo_clicks || (s.promo && s.promo.url)) ? ` · ${ev.promo_clicks ?? 0} promo taps` : ''}${
         (ev.card_opens || (Array.isArray(s.cards) && s.cards.length)) ? ` · ${ev.card_opens ?? 0} card taps` : ''}</div>`;
 
   // game toggles. s.games is the enabled list; null (pre-migration or never
@@ -350,14 +331,6 @@ function render(s){
   // monthly report).
   renderGameToggles(s.games || null);
 
-  // promo editor state
-  const p = s.promo || {};
-  $('promoHead').value = p.header || '';
-  $('promoHeadCount').textContent = ($('promoHead').value).length;
-  $('promoText').value = p.text || '';
-  $('promoCount').textContent = ($('promoText').value).length;
-  $('promoUrl').value = p.url || '';
-  $('promoExp').value = p.expires || '';
   // home screen cards (schema 2): a deep copy, so edits stay local until
   // Save; an unsaved draft from an evicted tab wins over the server copy
   const cardDraft = cardLoadDraft();
@@ -366,7 +339,6 @@ function render(s){
   renderCards();
   // games-off venues (operator-set): the game toggles have nothing to toggle
   if (s.games_enabled === false) $('gameToggles').closest('section').style.display = 'none';
-  refreshLiveHint();
 }
 
 /* ---- custom feedback questions (35_feedback_forms.sql): aggregate this
@@ -615,15 +587,18 @@ function cardBody(c, ix){
     <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page with more details</label>
     ${mode === 'inline' ? `
       <label class="cfl">Message</label>
-      <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Kitchen closes at 10 tonight. The bar stays open late.">${esc(c.body || '')}</textarea>` : `
+      <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>
+      <label class="ck"><input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''}> Make it stand out: a banner in your accent color</label>` : `
       <label class="cfl">Short line under the name (optional)</label>
       <input type="text" class="promo-head" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}">`}
     ${mode === 'page' ? `
       <label class="cfl">The details page</label>
       <textarea data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Everything diners should know, in your words.">${esc(c.body || '')}</textarea>` : ''}
-    ${mode !== 'inline' ? `
-      <label class="cfl">Link${mode === 'page' ? ' (optional, shown as a button on the page)' : ''}</label>
-      <input type="url" class="promo-head" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">` : ''}`;
+    <label class="cfl">Link${mode === 'link' ? '' : mode === 'page' ? ' (optional, shown as a button on the page)' : ' (optional, tapping the card opens it)'}</label>
+    <input type="url" class="promo-head" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <label class="cfl">Last day shown (optional)</label>
+    <input type="date" class="promo-head" style="max-width:200px" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}">
+    <div class="hint" style="margin-top:4px">After this day the card hides itself. Blank = shows until you hide or delete it.</div>`;
 }
 
 function renderCards(){
@@ -685,6 +660,7 @@ document.querySelectorAll('#cardAddRow [data-add]').forEach(b => b.onclick = ()=
 $('cardsSave').onclick = async ()=>{
   const msg = $('cardsMsg');
   if(CARDS.some(c => !(c.title || '').trim())){ msg.className = 'savemsg err'; msg.textContent = 'Every card needs a name.'; return; }
+  if(CARDS.some(c => c.url && c.url.trim() && !urlOk(normalizeUrl(c.url)))){ msg.className = 'savemsg err'; msg.textContent = 'One of the links does not look right. Nothing was saved.'; return; }
   const out = CARDS.map(c => {
     const d = { ...c };
     d.title = d.title.trim();
@@ -784,19 +760,6 @@ $('gamesSave').onclick = async () => {
   setTimeout(()=>{ msg.textContent=''; }, 4000);
 };
 
-function refreshLiveHint(){
-  const t = $('promoText').value.trim();
-  const head = $('promoHead').value.trim();
-  const url = $('promoUrl').value.trim();
-  const exp = $('promoExp').value;
-  const hint = $('liveHint');
-  if (!t){ hint.style.display = 'none'; return; }
-  hint.style.display = 'block';
-  hint.textContent = 'Diners currently see: "' + (head ? head + ' · ' : '') + t + '"'
-    + (exp ? ' (through ' + exp + ')' : ' (until cleared)')
-    + (url ? ' Tapping it opens ' + url + ' in a new tab.' : '');
-}
-
 /* Optional passphrase (29_owner_passphrase.sql). Most venues have none and
    never see any of this. When one is set, the server answers
    {"need_pass": true} until the right passphrase arrives; we remember it
@@ -837,35 +800,6 @@ async function load(tryPass){
   $('page').style.display = '';
   render(res.data);
 }
-
-$('promoText').addEventListener('input', () => { $('promoCount').textContent = $('promoText').value.length; });
-$('promoHead').addEventListener('input', () => { $('promoHeadCount').textContent = $('promoHead').value.length; });
-
-async function savePromo(text, expires, header, url){
-  const msg = $('saveMsg');
-  const link = normalizeUrl(url);
-  if (link && !urlOk(link)){
-    msg.className = 'savemsg err'; msg.textContent = 'That link does not look right. Nothing was saved.';
-    setTimeout(() => { msg.textContent = ''; }, 5000);
-    return;
-  }
-  $('promoUrl').value = link;   // show the owner exactly what gets saved
-  msg.className = 'savemsg'; msg.textContent = 'Saving…';
-  try {
-    const { data, error } = await db.rpc('set_venue_promo', { p_venue_id: V, p_key: K, p_text: text, p_expires: expires || null, p_header: header || null, p_url: link || null, p_pass: P });
-    if (error || data !== true) throw new Error();
-    msg.className = 'savemsg ok'; msg.textContent = text.trim() ? 'Saved. It is live now.' : 'Cleared.';
-    refreshLiveHint();
-  } catch(e){
-    msg.className = 'savemsg err'; msg.textContent = 'Could not save. Try again.';
-  }
-  setTimeout(() => { msg.textContent = ''; }, 4000);
-}
-
-$('promoSave').onclick  = () => savePromo($('promoText').value, $('promoExp').value, $('promoHead').value, $('promoUrl').value);
-$('promoClear').onclick = () => { $('promoText').value = ''; $('promoCount').textContent = '0'; $('promoHead').value = ''; $('promoHeadCount').textContent = '0'; $('promoUrl').value = ''; $('promoExp').value = ''; savePromo('', null, null, null); };
-$('promoExp').addEventListener('change', refreshLiveHint);
-$('promoUrl').addEventListener('change', refreshLiveHint);
 
 /* ============================================================
    VENUE BRANDING + TABLE CARD (self-serve since Aug 2026:

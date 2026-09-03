@@ -187,7 +187,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 6;
+const BUILD = 7;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 async function platformView(){
@@ -1489,23 +1489,8 @@ function detail(id){
     </section>
 
     <section>
-      <h2>Owner promo</h2>
-      <div class="hint">The one-off promo card on the venue's landing screen (events, notices). Same rules as the owner's editor: text up to 240, optional header up to 26, optional link and last-day. The owner can also edit this from their dashboard.</div>
-      <input type="text" id="apHead" maxlength="26" placeholder="Header (optional)" style="margin-top:8px" value="${esc(v.promo_header || '')}" />
-      <textarea id="apText" maxlength="240" placeholder="Type the promo here. Diners see it on the app landing screen. Example: Live music this Friday 7pm, no cover." rows="3">${esc(v.promo_text || '')}</textarea>
-      <input type="text" id="apUrl" maxlength="500" placeholder="Link (optional), venue.com/events" value="${esc(v.promo_url || '')}" autocapitalize="off" autocorrect="off" spellcheck="false" />
-      <div class="frow" style="margin-top:8px;align-items:center">
-        <label class="f" style="margin:0">Last day</label>
-        <input type="date" id="apExp" value="${esc(v.promo_expires || '')}" style="flex:none" />
-        <button class="btn sm" id="apSave">Save promo</button>
-        <button class="btn sm ghost" id="apClear">Clear</button>
-      </div>
-      <div class="msg" id="apMsg"></div>
-    </section>
-
-    <section>
       <h2>Home screen cards</h2>
-      <div class="hint">Extra cards on the app's home screen, under the two pinned rows: weekly schedule (daily specials, live music nights), menu or list (tap list), announcement. The owner edits these from their dashboard too; this is the same editor. Tap a card to open it; arrows reorder, the eye hides one without deleting it.</div>
+      <div class="hint">The cards on the app's home screen, under the two pinned rows: weekly schedule (daily specials, live music nights), menu or list (tap list), announcement (events, notices, one-off promos; can stand out in the accent color, open a link, and hide itself after a last day). The owner edits these from their dashboard too; this is the same editor. Tap a card to open it; arrows reorder, the eye hides one without deleting it.</div>
       <div id="cardList"></div>
       <div class="frow" id="cardAddRow" style="margin-top:10px">
         <button class="btn sm ghost" data-add="schedule">+ Weekly schedule</button>
@@ -1641,7 +1626,7 @@ ${SIG}`);
   mail('mOwner', `Your private ${v.name} dashboard`,
 `Hi,
 
-Here is your private ${v.name} dashboard. Live ratings, comments from your guests, game activity, and the promo card you can update any time:
+Here is your private ${v.name} dashboard. Live ratings, comments from your guests, game activity, and the home screen cards you can update any time:
 
 ${ownerLink(v)}
 
@@ -1712,27 +1697,6 @@ ${SIG}`);
     if (b.dataset.mv === '-1' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
     if (b.dataset.mv === '1'  && row.nextElementSibling)     row.parentNode.insertBefore(row.nextElementSibling, row);
   });
-
-  // ---- owner promo, operator-side (33_game_order_admin_promo.sql) ----
-  const savePromo = async ()=>{
-    const m = $('apMsg');
-    m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await rpc('admin_set_promo', {
-      p_id: v.id,
-      p_text: $('apText').value.trim() || null,
-      p_expires: $('apExp').value || null,
-      p_header: $('apHead').value.trim() || null,
-      p_url: $('apUrl').value.trim() || null,
-    });
-    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 33_game_order_admin_promo.sql been run?).'; return; }
-    v.promo_text = $('apText').value.trim() || null;
-    v.promo_header = $('apHead').value.trim() || null;
-    v.promo_url = $('apUrl').value.trim() || null;
-    v.promo_expires = $('apExp').value || null;
-    m.className='msg ok'; m.textContent='Saved. Live on the landing screen now.';
-  };
-  $('apSave').onclick = savePromo;
-  $('apClear').onclick = ()=>{ $('apText').value=''; $('apHead').value=''; $('apUrl').value=''; $('apExp').value=''; savePromo(); };
 
   // ---- home screen cards (schema 2): the same working-copy editor the
   // owner dashboard has; Save pushes the whole array through admin_set_cards.
@@ -1824,15 +1788,20 @@ ${SIG}`);
       <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''} /> Tapping it opens a page with more details</label>
       ${mode === 'inline' ? `
         <label class="f">Message</label>
-        <textarea data-f="body" data-ix="${ix}" maxlength="240" rows="3">${esc(c.body || '')}</textarea>` : `
+        <textarea data-f="body" data-ix="${ix}" maxlength="240" rows="3">${esc(c.body || '')}</textarea>
+        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer">
+          <input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''} /> Make it stand out: a banner in the accent color
+        </label>` : `
         <label class="f">Short line under the name (optional)</label>
         <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" />`}
       ${mode === 'page' ? `
         <label class="f">The details page</label>
         <textarea data-f="body" data-ix="${ix}" maxlength="1500" rows="5">${esc(c.body || '')}</textarea>` : ''}
-      ${mode !== 'inline' ? `
-        <label class="f">Link${mode === 'page' ? ' (optional, shown as a button on the page)' : ''}</label>
-        <input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="https://theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />` : ''}`;
+      <label class="f">Link${mode === 'link' ? '' : mode === 'page' ? ' (optional, shown as a button on the page)' : ' (optional, tapping the card opens it)'}</label>
+      <input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="https://theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />
+      <label class="f">Last day shown (optional)</label>
+      <input type="date" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}" style="max-width:190px" />
+      <div class="hint" style="margin-top:4px">After this day the card hides itself in the app.</div>`;
   };
 
   const renderCards = ()=>{

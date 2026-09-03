@@ -290,7 +290,7 @@ function render(d, r){
       <div class="grid3">
         <div class="card"><div class="k">App opens</div><div class="n">${ev.opens||0}</div>${evp ? chip(ev.opens||0, evp.opens||0) : ''}</div>
         <div class="card"><div class="k">Sent to Google</div><div class="n">${ev.review_clicks||0}</div>${evp ? chip(ev.review_clicks||0, evp.review_clicks||0) : ''}</div>
-        <div class="card"><div class="k">Promo taps</div><div class="n">${ev.promo_clicks||0}</div>${evp ? chip(ev.promo_clicks||0, evp.promo_clicks||0) : ''}</div>
+        <div class="card"><div class="k">Card taps</div><div class="n">${(ev.card_opens||0)+(ev.promo_clicks||0)}</div>${evp ? chip((ev.card_opens||0)+(ev.promo_clicks||0), (evp.card_opens||0)+(evp.promo_clicks||0)) : ''}</div>
       </div>
     </div>
 
