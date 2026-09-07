@@ -190,7 +190,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 10;
+const BUILD = 11;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 async function platformView(){
@@ -380,7 +380,7 @@ async function settingsView(opts){
       <div class="frow" style="align-items:center">
         <input type="color" id="sbAccent" value="${esc(acc)}" style="width:52px;height:38px;padding:2px;flex:none" />
         <input type="text" id="sbAccentHex" maxlength="7" value="${esc(acc)}" style="width:110px;flex:none" autocapitalize="off" spellcheck="false" />
-        <span class="hint" style="margin:0">Homepage accents, generated marks, the default venue accent.</span>
+        <span class="hint" style="margin:0">Homepage accents and the generated mark when there is no icon. Each venue keeps its own accent.</span>
       </div>
     </section>
     <section>
