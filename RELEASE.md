@@ -54,6 +54,13 @@ protects that button.
   after painting and draftClear(key) on successful save: backgrounded
   tabs get evicted and reload, and unsaved fields must survive it.
 
+- **Never edit `public/brand.js` or anything under `public/brand/`
+  upstream.** The dashboard Settings commits those into each fork; the
+  upstream placeholder must stay byte-identical forever so the sync
+  merge never conflicts with an operator's generated brand. New brand
+  keys: add them to BRAND_KEYS + the Settings form in admin.html and
+  read them from CFG (config.js stays the fallback).
+
 ## Shipping a new game
 
 Same release, all together (missing one of these has bitten before):

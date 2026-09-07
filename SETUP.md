@@ -63,18 +63,24 @@ Supabase account itself.
 
 - In your fork on GitHub: `public/` > Add file > Create new file >
   name it `config.js` > paste the contents of `public/config.example.js`
-  and fill in your values (Supabase URL + key from step 2.8, your brand
-  name, domain, contact email, region wording).
+  and fill in the two values (Supabase URL + key from step 2.8).
 - Commit. Pages redeploys automatically. This file exists only in your
   fork, so platform updates never touch it.
+- Everything else about your brand is set from the dashboard in step 6;
+  you never edit another file.
 
 ## 6. First login + first venue
 
 1. Open `https://<your-domain>/admin.html`, sign in with your operator
    email + password.
-2. Add your first venue (or rebrand the built-in `demo` venue): name,
+2. The first screen is the brand setup: your name, site address, brand
+   color, icon and logo, region wording, contact details. Connect GitHub
+   first (step 7) so **Save and publish** can write `public/brand.js`
+   into your fork; your pages then carry the brand from their first
+   paint. You can change any of it later under Tools > Settings.
+3. Add your first venue (or rebrand the built-in `demo` venue): name,
    logo upload, accent color, Google review link.
-3. Open the venue, download its table card PNG, print, scan, play.
+4. Open the venue, download its table card PNG, print, scan, play.
 
 ## 7. Staying updated
 
@@ -97,8 +103,8 @@ Dashboard > Tools > **Platform updates**:
 `worker/autofill-worker.js` speeds up venue onboarding (fetches a
 restaurant site's name/logo/colors). Setup steps are in that file's
 header: create a Cloudflare Worker, paste the file, set its three
-environment variables, then put the Worker URL in your `config.js`
-(`workerUrl`). Skip it entirely and the Add-venue form is simply
+environment variables, then paste the Worker URL under Tools >
+Settings > Advanced. Skip it entirely and the Add-venue form is simply
 fully manual.
 
 ## Rules that keep you safe

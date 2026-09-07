@@ -67,6 +67,8 @@ const DASHBOARD_IMAGE_URL = "";
   header{border-bottom:1px solid var(--line);background:rgba(255,255,255,.92);backdrop-filter:blur(8px);position:sticky;top:0;z-index:10}
   .header-inner{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:16px 22px}
   .wordmark{font-family:var(--font-d);font-weight:800;letter-spacing:.03em;font-size:20px;text-transform:uppercase;display:inline-flex;align-items:center;gap:10px;color:var(--ink);text-decoration:none}
+  .wm-img{height:26px;width:auto;display:block}
+  .wm-mark img{width:100%;height:100%;display:block;object-fit:contain}
   .wm-mark svg{width:100%;height:100%;display:block}
   .wm-mark{width:26px;height:26px;border-radius:7px;background:#3a6ea5;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none}
   .wordmark svg{width:28px;height:28px;flex:none}
@@ -268,6 +270,7 @@ const DASHBOARD_IMAGE_URL = "";
   @media (prefers-reduced-motion: reduce){ .hero > *{animation:none} }
 </style>
 <script src="config.js"></script>
+<script src="brand.js"></script>
 </head>
 <body>
 
@@ -507,7 +510,7 @@ document.querySelectorAll("[data-img]").forEach(el => {
 
 /* ---- operator config fill (config.js) ---- */
 (function(){
-  const C = window.OPERATOR_CONFIG || {};
+  const C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {});
   const brand = C.brandName || 'This platform';
   const email = C.contactEmail || '';
   const region = C.regionName || 'your area';
@@ -516,11 +519,19 @@ document.querySelectorAll("[data-img]").forEach(el => {
   document.title = brand + ': a better night at the table, and the truth about it';
   const initial = brand.trim().charAt(0).toUpperCase();
   const logoSvg = (typeof C.logoSvg === 'string' && C.logoSvg.trim().startsWith('<svg')) ? C.logoSvg : '';
-  document.querySelectorAll('.wm-mark').forEach(m => {
-    if (logoSvg) { m.innerHTML = logoSvg; m.style.background = 'transparent'; }
-    else { m.textContent = initial; m.style.background = acc; }
-  });
-  document.querySelectorAll('.wm-name').forEach(m => { m.textContent = brand; });
+  const iconUrl = (typeof C.iconUrl === 'string' && C.iconUrl) ? C.iconUrl : '';
+  const logoUrl = (typeof C.logoUrl === 'string' && C.logoUrl) ? C.logoUrl : '';
+  if (logoUrl) {
+    // a full logo image replaces the mark+name pair everywhere it appears
+    document.querySelectorAll('.wordmark').forEach(w => { w.innerHTML = '<img class="wm-img" src="' + logoUrl.replace(/"/g, '&quot;') + '" alt="' + brand.replace(/"/g, '&quot;') + '">'; });
+  } else {
+    document.querySelectorAll('.wm-mark').forEach(m => {
+      if (logoSvg) { m.innerHTML = logoSvg; m.style.background = 'transparent'; }
+      else if (iconUrl) { m.innerHTML = '<img src="' + iconUrl.replace(/"/g, '&quot;') + '" alt="">'; m.style.background = 'transparent'; }
+      else { m.textContent = initial; m.style.background = acc; }
+    });
+    document.querySelectorAll('.wm-name').forEach(m => { m.textContent = brand; });
+  }
   document.querySelectorAll('.cfg-region').forEach(m => { m.textContent = region; });
   document.querySelectorAll('.cfg-regionshort').forEach(m => { m.textContent = regionShort; });
   document.querySelectorAll('.cfg-brand').forEach(m => { m.textContent = brand; });
@@ -535,7 +546,9 @@ document.querySelectorAll("[data-img]").forEach(el => {
     a.href = 'mailto:' + email + (a.dataset.mailto === 'game-idea' ? '?subject=' + encodeURIComponent('Game idea for ' + brand) : '');
   });
   const fav = document.querySelector('link[rel="icon"]');
-  if (fav) fav.href = 'data:image/svg+xml,' + encodeURIComponent(logoSvg || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + initial + '</text></svg>');
+  if (fav) fav.href = iconUrl || 'data:image/svg+xml,' + encodeURIComponent(logoSvg || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + initial + '</text></svg>');
+  const ati = document.querySelector('link[rel="apple-touch-icon"]');
+  if (ati && iconUrl) ati.href = iconUrl;
 })();
 </script>
 </body>

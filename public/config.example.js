@@ -1,45 +1,20 @@
 /* ============================================================================
-   OPERATOR CONFIG  ·  copy this file to config.js and fill in your values
+   OPERATOR CONFIG  ·  copy this file to config.js and fill in the two values
    ============================================================================
    config.js lives ONLY in your fork (the upstream repo never ships one, so
    syncing updates never touches yours). Create it once:
      GitHub > your fork > public/ > Add file > name it config.js >
-     paste this file's contents > edit the values > commit.
-   Every value here is safe to be public. The publishable Supabase key is
+     paste this file's contents > edit the two values > commit.
+   Everything else about your brand (name, colors, logo, region wording,
+   contact details, plans) is set from the dashboard: Tools > Settings.
+   The dashboard writes those into public/brand.js in your fork, so your
+   pages carry the brand from their very first paint.
+   Both values here are safe to be public. The publishable Supabase key is
    DESIGNED to ship in web pages; the security model lives in the database.
    Never put your service_role key, passwords, or tokens in this file.
    ============================================================================ */
 window.OPERATOR_CONFIG = {
-
   /* --- your Supabase project (dashboard > Settings > API) --- */
   supabaseUrl: "https://YOURPROJECT.supabase.co",
   supabaseKey: "sb_publishable_YOURKEY",
-
-  /* --- your brand --- */
-  brandName: "Table Time",              // your product name: wordmark, page titles, card footer
-  domain: "https://example.com",        // your live domain, no trailing slash: QR payloads + dashboard links
-  contactEmail: "hello@example.com",    // homepage contact button + privacy page
-  accent: "#3a6ea5",                    // your brand color (hex): homepage accents + favicon
-
-  /* --- your region (homepage + report copy) --- */
-  regionName: "Ocean County",           // the area your venues share, as it reads in a sentence
-  regionShort: "the county",            // how copy refers to the pooled network ("the county pulse");
-                                        // use "the area" or "the neighborhood" if county reads wrong
-  operatorStory: "",                    // optional: 1-2 first-person sentences for the homepage's
-                                        // "local on purpose" section; empty = a generic line
-
-  /* --- operator identity (dashboard email templates) --- */
-  operatorName: "Your Name",
-  operatorPhone: "",                    // optional, shown in your email signatures
-
-  /* --- optional --- */
-  stripePlans: [
-    // { label: "Standard monthly", url: "https://buy.stripe.com/..." },
-  ],
-  workerUrl: "",                        // your deployed autofill Worker URL; empty hides the autofill UI
-  gameNames: {},                        // diner-facing display-name overrides, e.g. { quick_pour: "Perfect Pour" }
-  logoSvg: "",                          // optional: your mark as one inline <svg>...</svg> string
-                                        // (include xmlns="http://www.w3.org/2000/svg"; square viewBox
-                                        // works best). Used for wordmarks + favicons; empty = a
-                                        // generated square with your brand initial.
 };
