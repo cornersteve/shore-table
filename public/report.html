@@ -147,7 +147,7 @@ let P = null;
 try { P = localStorage.getItem('st_opass_' + V) || null; } catch(e){}   // shared with owner.html
 
 const ACC = /^#[0-9a-f]{6}$/i.test(CFG.accent || '') ? CFG.accent : '#3a6ea5';
-const HOST = String(CFG.domain || '').replace(/^https?:\/\//, '');
+const HOST = location.host;
 const REGION = CFG.regionShort || 'the county';
 const LOGOSVG = (typeof CFG.logoSvg === 'string' && CFG.logoSvg.trim().startsWith('<svg')) ? CFG.logoSvg : '';
 const ICONURL = (typeof CFG.iconUrl === 'string' && CFG.iconUrl) ? CFG.iconUrl : '';

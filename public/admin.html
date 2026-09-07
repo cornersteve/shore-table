@@ -190,7 +190,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 11;
+const BUILD = 12;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 async function platformView(){
@@ -318,7 +318,7 @@ async function platformView(){
    committed into the fork as files under public/brand/ and referenced
    by path with a cache-busting stamp.
    ================================================================ */
-const BRAND_KEYS = ['brandName','domain','contactEmail','accent','regionName','regionShort','operatorStory','operatorName','operatorPhone','stripePlans','workerUrl','gameNames','logoSvg','iconUrl','logoUrl'];
+const BRAND_KEYS = ['brandName','contactEmail','accent','regionName','regionShort','operatorStory','operatorName','operatorPhone','stripePlans','workerUrl','logoSvg','iconUrl','logoUrl'];
 
 // DB copy wins, then the deployed brand.js, then a legacy config.js:
 // a fresh instance sees its config.js values prefilled on first run
@@ -357,7 +357,6 @@ async function settingsView(opts){
   const b = brandNow(settings);
   const plans = (Array.isArray(b.stripePlans) ? b.stripePlans : []).slice(0, 4).map(p => ({ label: p.label || p.name || '', url: p.url || '' }));
   while(plans.length < 4) plans.push({ label: '', url: '' });
-  const gn = b.gameNames || {};
   const connected = !!(settings.gh_repo && settings.gh_token);
   const acc = /^#[0-9a-f]{6}$/i.test(b.accent || '') ? b.accent : '#3a6ea5';
   const imgPreview = (u, alt) => u ? `<img src="${esc(u)}" alt="${esc(alt)}" style="height:44px;width:auto;max-width:200px;display:block;object-fit:contain;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px" />` : `<span class="hint" style="margin:0">None yet</span>`;
@@ -371,9 +370,8 @@ async function settingsView(opts){
       <h2>Your brand</h2>
       <label class="f">Brand name</label>
       <input type="text" id="sbName" maxlength="40" value="${esc(b.brandName || '')}" placeholder="Table Time" />
-      <label class="f">Your live site address</label>
-      <input type="url" id="sbDomain" maxlength="200" value="${esc(b.domain || '')}" placeholder="https://yourdomain.com" autocapitalize="off" spellcheck="false" />
-      <div class="hint">Printed into every QR code. Must start with https:// and match where this dashboard is served from.</div>
+      <label class="f">Your site address</label>
+      <div class="hint" style="margin-top:2px">${esc(location.origin)} (detected from where this dashboard is running; it is what every QR code and owner link points to).</div>
       <label class="f">Contact email</label>
       <input type="email" id="sbEmail" maxlength="120" value="${esc(b.contactEmail || '')}" placeholder="hello@yourdomain.com" autocapitalize="off" spellcheck="false" />
       <label class="f">Brand color</label>
@@ -421,15 +419,6 @@ async function settingsView(opts){
       <input type="text" id="sbOpPhone" maxlength="40" value="${esc(b.operatorPhone || '')}" />
     </section>
     <section>
-      <h2>Game names</h2>
-      <div class="hint">What diners see. Leave blank for the standard names.</div>
-      <div class="frow">
-        <div style="flex:1;min-width:160px"><label class="f">Who Knows Who</label><input type="text" id="sbGn1" maxlength="30" value="${esc(gn.who_knows_who || '')}" placeholder="Who Knows Who" /></div>
-        <div style="flex:1;min-width:160px"><label class="f">Guess the Split</label><input type="text" id="sbGn2" maxlength="30" value="${esc(gn.guess_the_split || '')}" placeholder="Guess the Split" /></div>
-        <div style="flex:1;min-width:160px"><label class="f">Quick Pour</label><input type="text" id="sbGn3" maxlength="30" value="${esc(gn.quick_pour || '')}" placeholder="Quick Pour" /></div>
-      </div>
-    </section>
-    <section>
       <h2>Plans</h2>
       <div class="hint">Stripe payment links (created in your Stripe dashboard). Empty rows simply do not appear in the plan dropdown.</div>
       ${plans.map((p, i) => `
@@ -448,7 +437,7 @@ async function settingsView(opts){
     <div class="msg" id="setMsg"></div>`;
 
   $('back').onclick = ()=> home();
-  const textIds = ['sbName','sbDomain','sbEmail','sbAccentHex','sbRegion','sbRegionShort','sbStory','sbOpName','sbOpPhone','sbGn1','sbGn2','sbGn3','sbWorker','sbSvg'].concat([0,1,2,3].flatMap(i => ['sbPlanL' + i, 'sbPlanU' + i]));
+  const textIds = ['sbName','sbEmail','sbAccentHex','sbRegion','sbRegionShort','sbStory','sbOpName','sbOpPhone','sbWorker','sbSvg'].concat([0,1,2,3].flatMap(i => ['sbPlanL' + i, 'sbPlanU' + i]));
   draftify('settings', textIds);
   $('sbAccent').oninput = ()=>{ $('sbAccentHex').value = $('sbAccent').value; };
   $('sbAccentHex').addEventListener('input', ()=>{ const v = $('sbAccentHex').value.trim(); if(/^#[0-9a-f]{6}$/i.test(v)) $('sbAccent').value = v; });
@@ -474,21 +463,17 @@ async function settingsView(opts){
     const m = $('setMsg');
     const v = id => $(id).value.trim();
     const out = {
-      brandName: v('sbName'), domain: v('sbDomain').replace(/\/+$/, ''), contactEmail: v('sbEmail'),
+      brandName: v('sbName'), contactEmail: v('sbEmail'),
       accent: v('sbAccentHex').toLowerCase(), regionName: v('sbRegion'), regionShort: v('sbRegionShort'),
       operatorStory: v('sbStory'), operatorName: v('sbOpName'), operatorPhone: v('sbOpPhone'),
       workerUrl: v('sbWorker'), logoSvg: v('sbSvg'),
-      gameNames: {}, stripePlans: [],
+      stripePlans: [],
       iconUrl: b.iconUrl || '', logoUrl: b.logoUrl || ''
     };
-    if(v('sbGn1')) out.gameNames.who_knows_who = v('sbGn1');
-    if(v('sbGn2')) out.gameNames.guess_the_split = v('sbGn2');
-    if(v('sbGn3')) out.gameNames.quick_pour = v('sbGn3');
     for(let i = 0; i < 4; i++){ const l = v('sbPlanL' + i), u = v('sbPlanU' + i); if(l && u) out.stripePlans.push({ label: l, url: u }); }
     // validation, in the order an operator would read the form
     const bad = t => { m.className = 'msg err'; m.textContent = t; };
     if(!out.brandName) return bad('Brand name is required.');
-    if(!/^https:\/\/[^\s/]+\.[^\s/]+/i.test(out.domain)) return bad('The site address must look like https://yourdomain.com');
     if(out.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(out.contactEmail)) return bad('That contact email does not look right.');
     if(!/^#[0-9a-f]{6}$/i.test(out.accent)) return bad('Brand color must be a 6-digit hex like #3a6ea5.');
     if(out.workerUrl && !/^https:\/\//i.test(out.workerUrl)) return bad('The Worker URL must start with https://');
@@ -557,7 +542,10 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
 const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
-const DOMAIN       = String(CFG.domain || "").replace(/\/+$/, "");
+// The site address is wherever these pages are served from, never typed:
+// QR payloads, owner links, and signatures all derive from it.
+const DOMAIN       = location.origin;
+const ON_PREVIEW   = /\.pages\.dev$/i.test(location.hostname);
 const LOGO_BUCKET  = "restaurant logos";
 // The autofill worker (worker/autofill-worker.js, deployed once in the
 // Cloudflare dashboard). Blank hides the whole autofill UI; the form works
@@ -604,7 +592,7 @@ async function rpc(fn, args){
   return r;
 }
 /* operator signature for the prefilled email templates */
-const SIG = (CFG.operatorName || 'The team') + '\n' + CFG.brandName + ' · ' + String(CFG.domain || '').replace(/^https?:\/\//, '') + (CFG.operatorPhone ? ' · ' + CFG.operatorPhone : '');
+const SIG = (CFG.operatorName || 'The team') + '\n' + CFG.brandName + ' · ' + location.host + (CFG.operatorPhone ? ' · ' + CFG.operatorPhone : '');
 /* platform branding from config: tab title, wordmark, favicon */
 addEventListener('DOMContentLoaded', ()=>{
   document.title = CFG.brandName + ' · Operator';
@@ -921,6 +909,14 @@ const venueById = id => (VENUES||[]).find(x=>x.id===id);
 async function start(){
   $('main').innerHTML = '<p style="color:var(--ink-dim)">Loading…</p>';
   await loadAll();
+  // the preview address serves this same dashboard; anything generated here
+  // (table cards, owner links) would point at it, so say so, every visit
+  if(ON_PREVIEW && !$('previewWarn')){
+    const w = document.createElement('div');
+    w.id = 'previewWarn'; w.className = 'msg err'; w.style.cssText = 'display:block;margin-bottom:14px';
+    w.textContent = 'You are on the preview address (' + location.host + '). Cards and links you generate here will point to it. Open the dashboard from your real domain before printing anything.';
+    $('page').insertBefore(w, $('page').firstChild);
+  }
   if(VENUES === null){
     $('main').innerHTML = `<section><h2>Not an operator</h2>
       <div class="hint">This login is not in operator_users, or 25_operator_admin.sql has not been run yet. Fix that, then reload.</div></section>`;

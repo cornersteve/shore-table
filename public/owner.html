@@ -1121,8 +1121,8 @@ async function renderCard(cnv, v, opts){
   }
 
   // QR cards
-  const games = QR.encode(`${CFG.domain}/app.html?v=${v.id}&go=games`);
-  const box   = QR.encode(`${CFG.domain}/app.html?v=${v.id}&go=box`);
+  const games = QR.encode(`${location.origin}/app.html?v=${v.id}&go=games`);
+  const box   = QR.encode(`${location.origin}/app.html?v=${v.id}&go=box`);
   drawQrCard(ctx, games, 710, 435, 380);
   drawQrCard(ctx, box,   710, 1095, 380);
 

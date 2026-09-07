@@ -73,8 +73,9 @@ Supabase account itself.
 
 1. Open `https://<your-domain>/admin.html`, sign in with your operator
    email + password.
-2. The first screen is the brand setup: your name, site address, brand
-   color, icon and logo, region wording, contact details. Connect GitHub
+2. The first screen is the brand setup: your name, brand color, icon and
+   logo, region wording, contact details. (Your site address is never
+   typed: the pages read it from wherever they are served.) Connect GitHub
    first (step 7) so **Save and publish** can write `public/brand.js`
    into your fork; your pages then carry the brand from their first
    paint. You can change any of it later under Tools > Settings.
