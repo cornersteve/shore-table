@@ -125,13 +125,12 @@
   .addbtn small{font-family:var(--font-b);font-weight:500;font-size:12px;color:var(--ink-dim)}
   .savemsg{font-size:13.5px;font-weight:600;margin-left:6px}
   /* the two halves of the dashboard */
-  .tabs{display:flex;gap:6px;background:var(--panel-2);border-radius:14px;padding:4px;margin:0 0 18px;position:sticky;top:8px;z-index:5}
-  .tab{flex:1;min-height:44px;border:0;border-radius:11px;background:transparent;font-family:var(--font-d);font-weight:700;font-size:14px;color:var(--ink-dim);cursor:pointer}
-  .tab.on{background:var(--bg);color:var(--ink);box-shadow:var(--shadow-sm)}
+  .tabs{display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--line-2);border-radius:14px;padding:4px;margin:0 0 18px;position:sticky;top:8px;z-index:5;box-shadow:var(--shadow-sm)}
+  .tab{flex:1;min-height:44px;border:0;border-radius:10px;background:transparent;font-family:var(--font-d);font-weight:700;font-size:14.5px;color:var(--ink);cursor:pointer;transition:background .15s,color .15s}
+  .tab:hover{background:var(--panel-2)}
+  .tab.on,.tab.on:hover{background:var(--accent);color:#fff}
   .pane{display:none}.pane.on{display:block}
-  body.vd .tabs{background:rgba(255,255,255,.16)}
-  body.vd .tab{color:rgba(255,255,255,.78)}
-  body.vd .tab.on{color:var(--ink)}
+  body.vd .tabs{border-color:transparent}
   details.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:44px;font-weight:600;font-size:14.5px;color:var(--ink)}
   details.fold>summary::-webkit-details-marker{display:none}
   details.fold>summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--ink-dim);border-bottom:2px solid var(--ink-dim);transform:rotate(-45deg);margin:0 6px 0 4px;transition:transform .15s}
