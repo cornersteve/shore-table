@@ -706,7 +706,7 @@ function renderCards(){
       <div class="cbox__head">
         <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
           <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
-          <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${CARD_TYPES[c.t]}${c.off ? ' · hidden' : ''}</span></span>
+          <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(c.desc || CARD_TYPES[c.t])}${c.off ? ' · hidden' : ''}</span></span>
           <span class="cbox__chev" aria-hidden="true">›</span>
         </button>
         <span class="cbox__ctl"><button type="button" class="iconbtn" data-up="${ix}" title="Move up" aria-label="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
@@ -738,6 +738,8 @@ function wireCards(){
     if(i.type === 'checkbox') c[i.dataset.f] = i.checked;
     else c[i.dataset.f] = i.value;
     if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
+    // the short line mirrors into the card row as it is typed, like the name
+    if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
     cardSaveDraft();
   }));
   L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{
