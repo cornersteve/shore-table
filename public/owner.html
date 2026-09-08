@@ -121,8 +121,18 @@
   .btn:active{transform:scale(.98)}
   /* a save button tells you whether there is anything to save */
   .btn.saved,.btn.saved:active{background:var(--panel-2);color:var(--ink-dim);box-shadow:none;cursor:default;transform:none}
-  .addbtn{flex-direction:column;align-items:flex-start;text-align:left;padding:10px 14px;line-height:1.25}
-  .addbtn small{font-family:var(--font-b);font-weight:500;font-size:12px;color:var(--ink-dim)}
+  .btn.sm{min-height:40px;padding:8px 16px;font-size:13.5px}
+  .btn.danger{background:var(--bad);color:#fff}
+  /* deleting asks inline, right where the card is; no browser dialogs */
+  .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);background:#fbeceb;font-size:14px;border-radius:0 0 14px 14px}
+  .confirm b{margin-right:auto}
+  /* Add a card opens the three kinds as plain rows */
+  .kind{border:1px solid var(--line-2);border-radius:14px;padding:12px;margin-top:10px;background:var(--panel)}
+  .kind h4{font-family:var(--font-d);font-weight:700;font-size:14.5px;margin:0 0 4px}
+  .kindopt{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;min-height:56px;padding:10px 14px;border:1px solid var(--line-2);border-radius:12px;background:#fff;margin-top:8px;font-family:var(--font-b);color:var(--ink);cursor:pointer;line-height:1.3}
+  .kindopt:hover{border-color:var(--accent)}
+  .kindopt b{font-weight:700;font-size:15px}
+  .kindopt span{font-size:13px;color:var(--ink-dim)}
   .savemsg{font-size:13.5px;font-weight:600;margin-left:6px}
   /* the two halves of the dashboard */
   .tabs{display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--line-2);border-radius:14px;padding:4px;margin:0 0 18px;position:sticky;top:8px;z-index:5;box-shadow:var(--shadow-sm)}
@@ -175,8 +185,8 @@
   <div class="sub">Live numbers from your table cards. Anonymous, seen only by you. The monthly report adds the bigger local picture.</div>
 
   <div class="tabs" role="tablist">
-    <button class="tab on" id="tabMonthBtn" role="tab" aria-selected="true" aria-controls="paneMonth">This month</button>
-    <button class="tab" id="tabAppBtn" role="tab" aria-selected="false" aria-controls="paneApp">Your app</button>
+    <button class="tab on" id="tabMonthBtn" role="tab" aria-selected="true" aria-controls="paneMonth">This Month</button>
+    <button class="tab" id="tabAppBtn" role="tab" aria-selected="false" aria-controls="paneApp">App Settings</button>
   </div>
 
   <div class="pane on" id="paneMonth" role="tabpanel">
@@ -214,11 +224,16 @@
     <h2>Home screen cards</h2>
     <div class="hint">What diners see on your app's home screen, under Play a game and Share feedback. Tap a card to edit it; arrows change the order.</div>
     <div id="cardList"></div>
-    <div class="mini" id="cardCapLine" style="margin-top:12px"></div>
-    <div class="promo-row" id="cardAddRow" style="flex-wrap:wrap;margin-top:8px">
-      <button class="btn ghost addbtn" data-add="schedule">+ Weekly schedule<small>Daily specials, live music nights</small></button>
-      <button class="btn ghost addbtn" data-add="list">+ Menu or list<small>Tap list, happy hour menu</small></button>
-      <button class="btn ghost addbtn" data-add="notice">+ Announcement<small>Events, notices, one-off promos</small></button>
+    <div class="promo-row" id="cardAddRow" style="margin-top:12px">
+      <button class="btn ghost" id="addCardBtn">+ Add a card</button>
+      <span class="mini" id="cardCapLine" style="margin:0"></span>
+    </div>
+    <div class="kind" id="cardKind" style="display:none">
+      <h4>What kind of card?</h4>
+      <button type="button" class="kindopt" data-add="schedule"><b>Weekly schedule</b><span>Something that repeats by day: daily specials, live music nights</span></button>
+      <button type="button" class="kindopt" data-add="list"><b>Menu or list</b><span>Rows of names and prices: a tap list, a happy hour menu</span></button>
+      <button type="button" class="kindopt" data-add="notice"><b>Announcement</b><span>One message: an event, a notice, a one-off promo</span></button>
+      <div class="promo-row" style="margin-top:10px"><button type="button" class="btn ghost sm" id="cardKindCancel">Cancel</button></div>
     </div>
     <div class="promo-row">
       <button class="btn" id="cardsSave">Save home screen</button>
@@ -614,7 +629,7 @@ const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ARR_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
 const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
 
-let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1;
+let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1, CARD_CONFIRM = -1;
 
 // a localStorage draft survives tab eviction (phones especially); it clears
 // on a successful save and wins over the server copy until then
@@ -682,7 +697,8 @@ function cardBody(c, ix){
 
 function renderCards(){
   $('cardCapLine').textContent = CARDS.length + ' of ' + CARD_CAP + ' cards' + (CARDS.length >= CARD_CAP ? '. Delete one to add another.' : '');
-  $('cardAddRow').style.display = CARDS.length < CARD_CAP ? '' : 'none';
+  $('addCardBtn').style.display = CARDS.length < CARD_CAP ? '' : 'none';
+  if(CARDS.length >= CARD_CAP) $('cardKind').style.display = 'none';
   setSaveState('cards', 'cardsSave', 'Save home screen');
   $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
     <div class="cbox${c.off ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
@@ -694,11 +710,13 @@ function renderCards(){
         </button>
         <button type="button" class="iconbtn" data-up="${ix}" title="Move up" aria-label="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
         <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
+        <button type="button" class="iconbtn" data-ask="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button>
       </div>
+      ${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
       ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
         <div class="promo-row" style="margin-top:16px">
-          <button type="button" class="btn ghost" data-eye="${ix}">${c.off ? EYE_ON + ' Show in the app' : EYE_OFF + ' Hide from the app'}</button>
-          <button type="button" class="btn ghost" data-del="${ix}">${TRASH} Delete card</button>
+          <button type="button" class="btn ghost sm" data-eye="${ix}">${c.off ? 'Show in the app' : 'Hide from the app'}</button>
+          <button type="button" class="btn ghost sm" data-ask="${ix}">Delete</button>
         </div></div>` : ''}
     </div>`).join('') : '<div class="empty">No cards yet. Add one below.</div>';
   wireCards();
@@ -706,11 +724,13 @@ function renderCards(){
 
 function wireCards(){
   const L = $('cardList');
-  L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; renderCards(); });
+  L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; CARD_CONFIRM = -1; renderCards(); });
   L.querySelectorAll('[data-up]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.up; [CARDS[ix-1], CARDS[ix]] = [CARDS[ix], CARDS[ix-1]]; if(CARD_OPEN === ix) CARD_OPEN = ix - 1; else if(CARD_OPEN === ix - 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
   L.querySelectorAll('[data-down]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.down; [CARDS[ix], CARDS[ix+1]] = [CARDS[ix+1], CARDS[ix]]; if(CARD_OPEN === ix) CARD_OPEN = ix + 1; else if(CARD_OPEN === ix + 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
   L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; cardSaveDraft(); renderCards(); });
-  L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; if(!confirm('Delete "' + (CARDS[ix].title || 'this card') + '"? This takes effect when you save.')) return; CARDS.splice(ix, 1); if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
+  L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; renderCards(); });
+  L.querySelectorAll('[data-keep]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = -1; renderCards(); });
+  L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; CARDS.splice(ix, 1); CARD_CONFIRM = -1; if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
   L.querySelectorAll('[data-icon]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.ix].icon = b.dataset.icon; cardSaveDraft(); renderCards(); });
   L.querySelectorAll('input[data-f], textarea[data-f]').forEach(i => i.addEventListener('input', ()=>{
     const c = CARDS[+i.dataset.ix];
@@ -732,11 +752,16 @@ function wireCards(){
   L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
 }
 
-document.querySelectorAll('#cardAddRow [data-add]').forEach(b => b.onclick = ()=>{
+$('addCardBtn').onclick = ()=>{ $('cardKind').style.display = ''; $('cardKind').querySelector('.kindopt').focus(); };
+$('cardKindCancel').onclick = ()=>{ $('cardKind').style.display = 'none'; };
+document.querySelectorAll('#cardKind [data-add]').forEach(b => b.onclick = ()=>{
   if(CARDS.length >= CARD_CAP) return;
+  $('cardKind').style.display = 'none';
   CARDS.push(defaultCard(b.dataset.add));
-  CARD_OPEN = CARDS.length - 1;
+  CARD_OPEN = CARDS.length - 1; CARD_CONFIRM = -1;
   cardSaveDraft(); renderCards();
+  const opened = document.querelector ? null : document.querySelectorAll('.cbox')[CARD_OPEN];
+  if(opened) opened.scrollIntoView({ block: 'start', behavior: 'smooth' });
 });
 
 $('cardsSave').onclick = async ()=>{
