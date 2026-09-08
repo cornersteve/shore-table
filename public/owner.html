@@ -715,9 +715,9 @@ function renderCards(){
       </div>
       ${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
       ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
-        <div class="promo-row" style="margin-top:16px">
-          <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
-          <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
+        <div class="promo-row" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
+          <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:120px">${c.off ? 'Show card' : 'Hide card'}</button>
+          <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:120px">Delete card</button>
         </div></div>` : ''}
     </div>`).join('') : '<div class="empty">No cards yet. Add one below.</div>';
   wireCards();
