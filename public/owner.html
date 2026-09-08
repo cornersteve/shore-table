@@ -74,8 +74,7 @@
   .gamerow .gname{font-weight:600;line-height:1.25}
   .gamerow .gsub{color:var(--ink-dim);font-size:12.5px;margin-top:1px}
   .gmove{display:flex;gap:6px;flex:none}
-  .gmove button{width:44px;height:44px;border:1px solid var(--line-2);border-radius:11px;background:var(--bg);color:var(--ink-dim);font-size:15px;line-height:1;cursor:pointer}
-  .gmove button:active{background:var(--panel-2, #efece6)}
+  .gmove .iconbtn:active{background:var(--panel-2)}
   .promo-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:12px}
   .promo-row label{font-size:13.5px;color:var(--ink-dim);font-weight:600}
   .sprow{display:flex;align-items:center;gap:10px;margin-top:8px}
@@ -117,7 +116,7 @@
   .cbox textarea:focus{border-color:var(--accent)}
   input[type=date]{min-height:44px;border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
   .counter{font-size:12px;color:var(--ink-dim);text-align:right;margin-top:4px}
-  input::placeholder,textarea::placeholder{color:var(--ink-faint);opacity:.65}
+  input::placeholder,textarea::placeholder{color:var(--ink-faint);opacity:1}
   .btn{font-family:var(--font-d);font-weight:700;font-size:14px;min-height:44px;border:0;border-radius:11px;padding:12px 22px;cursor:pointer;background:var(--accent);color:var(--on-accent,#fff);box-shadow:var(--shadow-sm);display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
   .btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line-2)}
   .btn:active{transform:scale(.98)}
@@ -195,7 +194,7 @@
   <div class="cards" id="scorecards"></div>
 <section>
     <h2>Suggestion box</h2>
-    <div class="hint">Newest first. Anonymous by design: there is no way to know who wrote what, so read for patterns, not people.</div>
+    <div class="hint">Anonymous by design: nobody can know who wrote what, so read for patterns, not people.</div>
     <div class="comments" id="comments"></div>
     <div class="promo-row" id="moreRow" style="display:none"><button class="btn ghost" id="moreBtn">Show older comments</button></div>
   </section>
@@ -211,7 +210,7 @@
   </section>
 <section>
     <h2>Games and activity</h2>
-    <div class="hint">All-time game starts, plus the last 30 days of app opens, Google review clicks, and taps on your home screen announcements.</div>
+    <div class="hint">All-time game starts, plus the last 30 days of app opens and taps on your home screen announcements.</div>
     <div id="games"></div>
   </section>
 <section>
@@ -224,7 +223,7 @@
   <div class="pane" id="paneApp" role="tabpanel">
 <section>
     <h2>Home screen cards</h2>
-    <div class="hint">What diners see on your app's home screen, under Play a game and Share feedback. Tap a card to edit it; arrows change the order.</div>
+    <div class="hint">The cards on your app's home screen, in this order. Tap one to edit it.</div>
     <div id="cardList"></div>
     <div class="promo-row" id="cardAddRow" style="margin-top:12px">
       <button class="btn ghost" id="addCardBtn">+ Add a card</button>
@@ -232,9 +231,9 @@
     </div>
     <div class="kind" id="cardKind" style="display:none">
       <h4>What kind of card?</h4>
-      <button type="button" class="kindopt" data-add="schedule"><b>Weekly schedule</b><span>Something that repeats by day: daily specials, live music nights</span></button>
       <button type="button" class="kindopt" data-add="list"><b>Menu or list</b><span>Rows of names and prices: a tap list, a happy hour menu</span></button>
       <button type="button" class="kindopt" data-add="notice"><b>Announcement</b><span>One message: an event, a notice, a one-off promo</span></button>
+      <button type="button" class="kindopt" data-add="schedule"><b>Weekly schedule</b><span>Something that repeats by day: daily specials, live music nights</span></button>
       <div class="promo-row" style="margin-top:10px"><button type="button" class="btn ghost sm" id="cardKindCancel">Cancel</button></div>
     </div>
     <div class="promo-row">
@@ -244,7 +243,7 @@
   </section>
 <section>
     <h2>Games in your app</h2>
-    <div class="hint">Tick what your tables can play; arrows set the order. New games start off. At least one stays on.</div>
+    <div class="hint">Tick what your tables can play, in this order. New games start off until you turn them on.</div>
     <div id="gameToggles"></div>
     <div class="promo-row">
       <button class="btn" id="gamesSave">Save games</button>
@@ -253,7 +252,7 @@
   </section>
 <section id="formSec" style="display:none">
     <h2>Feedback form</h2>
-    <div class="hint">What diners see in the suggestion box. Untick a standard question to hide it, or add up to 10 of your own.</div>
+    <div class="hint">Untick a standard question to hide it from the suggestion box, or add up to 10 of your own.</div>
     <div id="formBody"></div>
     <div class="promo-row">
       <button class="btn" id="formSave">Save form</button>
@@ -412,7 +411,7 @@ function render(s){
   const gameName = g => ({guess_the_split:'Guess the Split', who_knows_who:'Who Knows Who', wordy:'Wordy', trivia:'Trivia', who_invited_you:'Who Invited You?', fortune_teller:'Fortune Teller', all_talk:'All Talk', cornhole:'Cornhole', quick_pour:GNAME.quick_pour, horse_racing:'Horse Racing', ring_toss:'Ring Toss'}[g] || g);
   $('games').innerHTML =
     (gp.length ? gp.map(g => `<div class="bar"><span class="lbl">${esc(gameName(g.game))}</span><span class="track"><span class="fill" style="width:${Math.round(g.plays/gmax*100)}%"></span></span><span class="n">${g.plays}</span></div>`).join('') : '<div class="empty">No game plays recorded yet.</div>')
-    + `<div class="mini" style="margin-top:10px">Last 30 days: ${ev.opens ?? 0} app opens · ${ev.review_clicks ?? 0} Google review clicks${
+    + `<div class="mini" style="margin-top:10px">Last 30 days: ${ev.opens ?? 0} app opens${
         (ev.card_opens || (Array.isArray(s.cards) && s.cards.length)) ? ` · ${ev.card_opens ?? 0} announcement taps` : ''}</div>`;
 
   // game toggles. s.games is the enabled list; null (pre-migration or never
@@ -522,7 +521,7 @@ function fePaint(){
       ${feExtras.length ? feExtras.map((x, i) => `
         <div class="gamerow" data-ix="${i}">
           <span style="flex:1;min-width:0;font-size:14.5px">${esc(x.label)} <span style="color:var(--ink-faint);font-size:12px">· ${x.type === 'rating' ? '1-5 rating' : x.type === 'text' ? 'short text' : (x.multi ? 'choice, pick many' : 'choice, pick one') + ': ' + esc((x.opts || []).join(' / '))}</span></span>
-          <span class="gmove"><button type="button" data-mv="-1" aria-label="Move up">▲</button><button type="button" data-mv="1" aria-label="Move down">▼</button><button type="button" data-del aria-label="Remove">×</button></span>
+          <span class="gmove"><button type="button" class="iconbtn" data-mv="-1" aria-label="Move up">${ARR_UP}</button><button type="button" class="iconbtn" data-mv="1" aria-label="Move down">${ARR_DOWN}</button><button type="button" class="iconbtn" data-del aria-label="Remove">${TRASH}</button></span>
         </div>`).join('') : '<div class="empty">None yet.</div>'}
     </div>
     <div class="promo-row" style="margin-top:10px">
@@ -762,7 +761,7 @@ document.querySelectorAll('#cardKind [data-add]').forEach(b => b.onclick = ()=>{
   CARDS.push(defaultCard(b.dataset.add));
   CARD_OPEN = CARDS.length - 1; CARD_CONFIRM = -1;
   cardSaveDraft(); renderCards();
-  const opened = document.querelector ? null : document.querySelectorAll('.cbox')[CARD_OPEN];
+  const opened = document.querySelectorAll('.cbox')[CARD_OPEN];
   if(opened) opened.scrollIntoView({ block: 'start', behavior: 'smooth' });
 });
 
@@ -841,7 +840,7 @@ function renderGameToggles(list){
     const on = !list || !list.length || list.includes(g.id);
     return `<div class="gamerow" data-id="${g.id}">
       <label><input type="checkbox" value="${g.id}" ${on?'checked':''}><span class="gtext"><span class="gname">${g.name}</span><span class="gsub">${g.sub}</span></span></label>
-      <span class="gmove"><button type="button" data-mv="-1" aria-label="Move ${g.name} up">▲</button><button type="button" data-mv="1" aria-label="Move ${g.name} down">▼</button></span>
+      <span class="gmove"><button type="button" class="iconbtn" data-mv="-1" aria-label="Move ${g.name} up">${ARR_UP}</button><button type="button" class="iconbtn" data-mv="1" aria-label="Move ${g.name} down">${ARR_DOWN}</button></span>
     </div>`;
   }).join('');
   // an unsaved draft from an evicted tab wins over the server copy
@@ -897,7 +896,7 @@ const REPORT_HREF = 'report.html?v=' + encodeURIComponent(V || '') + '&k=' + enc
 if($('reportBtn')) $('reportBtn').href = REPORT_HREF;
 if($('reportBtn2')) $('reportBtn2').href = REPORT_HREF;
 
-/* Two halves: "This month" (read) and "Your app" (edit). The hash remembers
+/* Two halves: "This Month" (read) and "App Settings" (edit). The hash remembers
    the tab, so an evicted phone tab reloads where the owner was. */
 function showTab(which){
   const app = which === 'app';
