@@ -84,7 +84,7 @@
   .sprow input:focus{border-color:var(--accent)}
   .sprow.today input{background:var(--accent-soft)}
   /* home screen cards editor */
-  .cbox{border:1px solid var(--line-2);border-radius:14px;margin-top:10px;background:var(--bg);box-shadow:var(--shadow-sm)}
+  .cbox{border:1px solid var(--line-2);border-radius:14px;margin-top:10px;background:var(--bg);box-shadow:var(--shadow-sm);scroll-margin-top:72px}
   .cbox.isoff{opacity:.55}
   .cbox__head{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px}
   .cbox__main{flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:12px;background:none;border:0;padding:0;cursor:pointer;text-align:left;font-family:var(--font-b);color:var(--ink)}
@@ -725,13 +725,13 @@ function renderCards(){
         <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
         <button type="button" class="iconbtn" data-ask="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button></span>
       </div>
-      ${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
+      ${ix === CARD_CONFIRM && ix !== CARD_OPEN ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
       ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
         <div class="promo-row" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
           <button type="button" class="btn sm" id="cardsSaveInline" style="min-width:96px">Save</button>
           <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
           <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
-        </div></div>` : ''}
+        </div></div>${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}` : ''}
     </div>`).join('') : '<div class="empty">No cards yet. Add one below.</div>';
   wireCards();
   setSaveState('cards', 'cardsSaveInline', 'Save');

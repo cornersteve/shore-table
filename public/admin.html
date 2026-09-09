@@ -44,7 +44,7 @@
   .btn{font-family:var(--font-d);font-weight:700;font-size:14px;border:0;border-radius:11px;padding:12px 20px;cursor:pointer;background:var(--accent);color:#fff;box-shadow:var(--shadow-sm)}
   .btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line-2)}
   .btn.danger{background:var(--bad)}
-  .btn.sm{font-size:13px;padding:9px 14px;min-height:40px}
+  .btn.sm{font-size:13px;padding:9px 14px;min-height:44px}
   .btn.saved,.btn.saved:active{background:var(--panel-2);color:var(--ink-dim);box-shadow:none;cursor:default;transform:none}
   .btn.off{opacity:.45}
   .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
@@ -64,6 +64,8 @@
   .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);background:#fbeceb;font-size:14px;border-radius:0 0 14px 14px}
   .confirm b{flex:1 1 100%}
   .confirm.free{border:1px solid var(--line-2);border-radius:12px;margin-top:10px}
+  .confirm.calm{background:var(--panel-2)}
+  .cbox{scroll-margin-top:72px}
   input[type=checkbox],input[type=radio]{width:20px;height:20px;accent-color:var(--accent);flex:none;margin:0}
   .ck{display:flex;align-items:flex-start;gap:10px;font-size:14.5px;color:var(--ink);margin-top:10px;cursor:pointer}
   .ck input{margin-top:2px}
@@ -85,6 +87,7 @@
   .kindopt span{font-size:13px;color:var(--ink-dim)}
   .btn:active{transform:scale(.98)}
   .btn:disabled{opacity:.45;cursor:default}
+  .btn.cur:disabled{opacity:1;cursor:default}
   input[type=text],input[type=email],input[type=url],input[type=password],textarea{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:16px;color:var(--ink);background:var(--bg)}
   textarea{resize:none;display:block}
   input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
@@ -1033,8 +1036,8 @@ function failMsg(m, lead){ m.className = 'msg err'; m.innerHTML = esc(lead || 'C
 document.addEventListener('click', e => { const b = e.target.closest('[data-plat]'); if(b) platformView(); });
 
 /* Inline confirm strip: the question and its answer sit where the action is. */
-function askInline(host, html, yesLabel, onYes, danger, onNo){
-  host.innerHTML = `<div class="confirm free" role="alert"><b>${html}</b><button type="button" class="btn sm${danger ? ' danger' : ''}" data-yes>${esc(yesLabel)}</button><button type="button" class="btn ghost sm" data-no>Keep</button></div>`;
+function askInline(host, html, yesLabel, onYes, danger, onNo, noLabel){
+  host.innerHTML = `<div class="confirm free${danger ? '' : ' calm'}" role="alert"><b>${html}</b><button type="button" class="btn sm${danger ? ' danger' : ''}" data-yes>${esc(yesLabel)}</button><button type="button" class="btn ghost sm" data-no>${esc(noLabel || 'Cancel')}</button></div>`;
   host.querySelector('[data-yes]').onclick = ()=>{ host.innerHTML = ''; onYes(); };
   host.querySelector('[data-no]').onclick = ()=>{ host.innerHTML = ''; if(onNo) onNo(); };
   host.querySelector('[data-yes]').focus();
@@ -1043,7 +1046,7 @@ function askInline(host, html, yesLabel, onYes, danger, onNo){
 new MutationObserver(()=> document.querySelectorAll('.msg:not([aria-live])').forEach(m => m.setAttribute('aria-live', 'polite'))).observe($('main'), { childList: true, subtree: true });
 
 const ICO_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
-async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Copied'); } catch(e){ prompt('Copy this:', t); } }
+async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Copied'); } catch(e){ toast('Could not copy. Select the link and copy it by hand.'); } }
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function slug(name){ return name.toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'').slice(0,40); }
 function readableOn(hex){
@@ -1796,7 +1799,7 @@ function detail(id, tab){
       <section>
         <h2>Status</h2>
         <div class="hint">Lead: the app works but saves nothing. Active: everything saves. Inactive: the QR stops loading. You change this by hand when a subscription starts or ends.</div>
-        <div class="statusbtns">${['lead','active','inactive'].map(s=>`<button class="btn sm ${v.status===s?'':'ghost'}" data-st="${s}" ${v.status===s?'disabled':''}>${cap1(s)}</button>`).join('')}</div>
+        <div class="statusbtns" id="statusBtns"></div>
         <div id="stConfirm"></div>
         <div class="msg" id="stMsg"></div>
       </section>
@@ -1826,12 +1829,7 @@ function detail(id, tab){
 
         <label class="f" style="margin-top:18px">Owner passphrase</label>
         <div class="hint">Optional. Asked once per device when the owner opens their dashboard. Send it by text or in person, never in the same email as the link.</div>
-        <div class="hint" id="opStatus">${v.has_pass ? 'A passphrase is set.' : 'No passphrase. The link alone opens the dashboard.'}</div>
-        <div class="frow" style="margin-top:8px">
-          <input type="text" id="opPass" placeholder="Ex. blue heron" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:170px" />
-          <button class="btn sm ghost" id="opSet">${v.has_pass ? 'Replace' : 'Set'}</button>
-          ${v.has_pass ? '<button class="btn sm ghost" id="opClear">Remove</button>' : ''}
-        </div>
+        <div id="opRow"></div>
         <div id="opConfirm"></div>
         <div class="msg" id="opMsg"></div>
       </section>
@@ -1840,10 +1838,7 @@ function detail(id, tab){
         <h2>Send an email</h2>
         <div class="hint">${v.owner_email ? `Opens a prefilled email to ${esc(v.owner_email)} in your mail app. You read it over and send it from your own address.` : 'Add an owner email under Edit venue to turn these on.'}</div>
         <div class="mailbtns">
-          <a class="btn sm ghost" id="mDemo">Demo link</a>
-          <a class="btn sm ghost" id="mOwner">Owner dashboard link</a>
-          <a class="btn sm ghost" id="mReport">Guest report link</a>
-          ${plans.length ? '<a class="btn sm ghost" id="mStripe">Payment link</a>' : ''}
+          ${[['mDemo','Demo link'],['mOwner','Owner dashboard link'],['mReport','Guest report link']].concat(plans.length ? [['mStripe','Payment link']] : []).map(([id, label]) => v.owner_email ? `<a class="btn sm ghost" id="${id}">${label}</a>` : `<button type="button" class="btn sm ghost" disabled>${label}</button>`).join('')}
         </div>
       </section>
 
@@ -1909,6 +1904,7 @@ function detail(id, tab){
         <div id="ffEditWrap" style="display:${v.form_custom?'block':'none'};margin:4px 0 0 28px"><button class="btn sm ghost" id="ffEdit">Edit this venue's form</button></div>
         <label class="ck"><input type="checkbox" id="cqFlag" ${v.custom_questions?'checked':''}> <span>Custom questions (paid)<small>This venue's own game questions, dealt first. Turning it off hides them without deleting anything.</small></span></label>
         <label class="ck"><input type="checkbox" id="rcFlag" ${v.report_county !== false ? 'checked' : ''}> <span>County comparison on the guest report<small>Untick to leave the "vs county" page off this venue's monthly report.</small></span></label>
+        <div id="addonsConfirm"></div>
         <div class="saverow"><button class="btn" id="addonsSave">Save</button><span class="msg" id="addonsMsg"></span></div>
       </section>
 
@@ -1918,7 +1914,7 @@ function detail(id, tab){
         <label class="f">Custom-only games</label>
         <div class="hint">Deal only this venue's questions in these games. Each needs enough rows for a full round; aim for three times that so repeat visits stay fresh. Below the floor the app blends the shared pool back in.</div>
         <div id="cqOnly" class="hint">Loading…</div>
-        <div class="saverow"><button class="btn sm" id="cqOnlySave">Save custom-only games</button><span class="msg" id="cqOnlyMsg"></span></div>
+        <div class="saverow"><button class="btn sm" id="cqOnlySave">Save</button><span class="msg" id="cqOnlyMsg"></span></div>
         <label class="f" style="margin-top:16px">Import a pack for this venue</label>
         <div class="hint">Same JSON format as Question packs. Rows land as this venue's custom questions.</div>
         <input type="file" id="cqPackFile" accept=".json,application/json" />
@@ -1938,11 +1934,10 @@ function detail(id, tab){
     $('paneVenue').classList.toggle('on', !a); $('paneApp').classList.toggle('on', a);
     $('tabVenueBtn').classList.toggle('on', !a); $('tabAppBtn').classList.toggle('on', a);
     $('tabVenueBtn').setAttribute('aria-selected', String(!a)); $('tabAppBtn').setAttribute('aria-selected', String(a));
-    setView((a ? 'va=' : 'v=') + v.id);
+    _setView((a ? 'va=' : 'v=') + v.id);   // the plain one: a tab switch is not a new view, unsaved work stays guarded
   };
   $('tabVenueBtn').onclick = ()=>{ showTab('venue'); window.scrollTo(0, 0); };
   $('tabAppBtn').onclick = ()=>{ showTab('app'); window.scrollTo(0, 0); };
-  const rerender = ()=> detail(v.id, $('paneApp').classList.contains('on') ? 'app' : undefined);
 
   $('back').onclick = ()=> home();
   $('editBtn').onclick = ()=> form(v);
@@ -1954,43 +1949,58 @@ function detail(id, tab){
   $('opOwner').href = ownerLink(v);
   $('opReport').href = reportLink(v);
 
-  // ---- status: an inline confirm, then a next step ----
-  document.querySelectorAll('[data-st]').forEach(b=> b.onclick = ()=>{
-    const st = b.dataset.st;
-    const why = { active:'Votes, surveys, and plays start saving for real.', inactive:'Their QR stops loading at the table.', lead:'The app keeps working but stops saving.' }[st];
-    askInline($('stConfirm'), `Set ${esc(v.name)} to ${st}? ${why}`, 'Set ' + st, async ()=>{
-      const m = $('stMsg'); m.className = 'msg'; m.textContent = 'Saving…';
-      const { data, error } = await rpc('admin_set_status', { p_id: v.id, p_status: st });
-      if(error || !data || data.ok!==true){ failMsg(m, 'Could not change the status.'); return; }
-      v.status = st; rerender();
-      const m2 = $('stMsg'); m2.className = 'msg ok';
-      m2.textContent = st === 'active' ? 'Now active. Next: send them their dashboard link.' : st === 'inactive' ? 'Now inactive. Their QR no longer loads.' : 'Back to lead. The app works but saves nothing.';
-    }, st === 'inactive');
-  });
-
-  // ---- owner passphrase ----
-  $('opSet').onclick = async ()=>{
-    const p = $('opPass').value.trim(), m = $('opMsg');
-    if(p.length < 4){ m.className = 'msg err'; m.textContent = 'At least 4 characters.'; return; }
-    m.className = 'msg'; m.textContent = 'Saving…';
-    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
-    if(error || !data || data.ok!==true){ failMsg(m); return; }
-    v.has_pass = true; rerender();
-    const m2 = $('opMsg'); m2.className = 'msg ok'; m2.textContent = 'Set. Owners on other devices will be asked for it. Text it to them separately.';
+  // ---- status: an inline confirm, then a next step; the strip and badge repaint in place ----
+  const paintStatus = ()=>{
+    $('statusBtns').innerHTML = ['lead','active','inactive'].map(s=>`<button class="btn sm ${v.status===s?'cur':'ghost'}" data-st="${s}" ${v.status===s?'disabled aria-current="true"':''}>${cap1(s)}</button>`).join('');
+    const badge = document.querySelector('h1 .badge'); if(badge){ badge.className = 'badge ' + v.status; badge.textContent = v.status; }
+    document.querySelectorAll('[data-st]').forEach(b=> b.onclick = ()=>{
+      const st = b.dataset.st;
+      const why = { active:'Votes, surveys, and plays start saving for real.', inactive:'Their QR stops loading at the table.', lead:'The app keeps working but stops saving.' }[st];
+      askInline($('stConfirm'), `Set ${esc(v.name)} to ${st}? ${why}`, 'Set ' + st, async ()=>{
+        const m = $('stMsg'); m.className = 'msg'; m.textContent = 'Saving…';
+        const { data, error } = await rpc('admin_set_status', { p_id: v.id, p_status: st });
+        if(error || !data || data.ok!==true){ failMsg(m, 'Could not change the status.'); return; }
+        v.status = st; paintStatus();
+        m.className = 'msg ok';
+        m.textContent = st === 'active' ? 'Now active. Next: send them their dashboard link.' : st === 'inactive' ? 'Now inactive. Their QR no longer loads.' : 'Back to lead. The app works but saves nothing.';
+      }, st === 'inactive');
+    });
   };
-  const opClear = $('opClear');
-  if(opClear) opClear.onclick = ()=> askInline($('opConfirm'), `Remove ${esc(v.name)}'s passphrase? The link alone opens the dashboard again.`, 'Remove', async ()=>{
-    const m = $('opMsg'); m.className = 'msg'; m.textContent = 'Removing…';
-    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
-    if(error || !data || data.ok!==true){ failMsg(m, 'Could not remove it.'); return; }
-    v.has_pass = false; rerender();
-    const m2 = $('opMsg'); m2.className = 'msg ok'; m2.textContent = 'Removed. The link alone opens the dashboard.';
-  }, true);
+  paintStatus();
+
+  // ---- owner passphrase: the row repaints in place after a change ----
+  const paintPass = ()=>{
+    $('opRow').innerHTML = `
+        <div class="hint" id="opStatus">${v.has_pass ? 'A passphrase is set.' : 'No passphrase. The link alone opens the dashboard.'}</div>
+        <div class="frow" style="margin-top:8px">
+          <input type="text" id="opPass" placeholder="Ex. blue heron" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:170px" />
+          <button class="btn sm ghost" id="opSet">${v.has_pass ? 'Replace' : 'Set'}</button>
+          ${v.has_pass ? '<button class="btn sm ghost" id="opClear">Remove</button>' : ''}
+        </div>`;
+    $('opSet').onclick = async ()=>{
+      const p = $('opPass').value.trim(), m = $('opMsg');
+      if(p.length < 4){ m.className = 'msg err'; m.textContent = 'At least 4 characters.'; return; }
+      m.className = 'msg'; m.textContent = 'Saving…';
+      const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
+      if(error || !data || data.ok!==true){ failMsg(m); return; }
+      v.has_pass = true; paintPass();
+      m.className = 'msg ok'; m.textContent = 'Set. Owners on other devices will be asked for it. Text it to them separately.';
+    };
+    const opClear = $('opClear');
+    if(opClear) opClear.onclick = ()=> askInline($('opConfirm'), `Remove ${esc(v.name)}'s passphrase? The link alone opens the dashboard again.`, 'Remove', async ()=>{
+      const m = $('opMsg'); m.className = 'msg'; m.textContent = 'Removing…';
+      const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
+      if(error || !data || data.ok!==true){ failMsg(m, 'Could not remove it.'); return; }
+      v.has_pass = false; paintPass();
+      m.className = 'msg ok'; m.textContent = 'Removed. The link alone opens the dashboard.';
+    }, true, null, 'Keep');
+  };
+  paintPass();
 
   // ---- emails (mailto). Painted as a function so a new owner link repaints them. ----
   const mail = (id, subject, body)=>{
     const a = $(id); if(!a) return;
-    if(!v.owner_email){ a.classList.add('off'); a.onclick = e=>{ e.preventDefault(); toast('Add an owner email first'); }; return; }
+    if(!v.owner_email) return;   // rendered as a disabled button; the section hint says what to do
     a.href = mailto(v, subject, body);
   };
   const ownerMailBody = ()=>
@@ -2172,7 +2182,7 @@ ${SIG}`);
   }
 
   const renderCards = ()=>{
-    $('cardCapLine').textContent = CARDS.length + ' of ' + cap() + ' card slots used' + (CARDS.length >= cap() ? '. Delete one to add another.' : '');
+    $('cardCapLine').textContent = cap() === 0 ? 'This venue has no card slots.' : CARDS.length + ' of ' + cap() + ' card slots used' + (CARDS.length >= cap() ? '. Delete one to add another.' : '');
     $('addCardBtn').style.display = CARDS.length < cap() ? '' : 'none';
     if(CARDS.length >= cap()) $('cardKind').style.display = 'none';
     setSaveState('cards', 'cardsSave', 'Save');
@@ -2188,13 +2198,13 @@ ${SIG}`);
           <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
           <button type="button" class="iconbtn" data-ask="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button></span>
         </div>
-        ${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
+        ${ix === CARD_CONFIRM && ix !== CARD_OPEN ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
         ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
           <div class="frow" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
             <button type="button" class="btn sm" id="cardsSaveInline" style="min-width:96px">Save</button>
             <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
             <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
-          </div></div>` : ''}
+          </div></div>${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}` : ''}
       </div>`).join('') : '<div class="hint" style="margin:8px 0 0">No cards yet. Add one below.</div>';
     wireCards();
     setSaveState('cards', 'cardsSaveInline', 'Save');
@@ -2260,7 +2270,12 @@ ${SIG}`);
     m.className = 'msg ok'; m.textContent = 'Saved. Live on their tables now.';
   };
   renderCards();
-  if(hadDraft){ DIRTY.cards = true; setSaveState('cards', 'cardsSave', 'Save'); const m = $('cardsMsg'); m.className = 'msg'; m.textContent = 'Unsaved changes from last time are back. Save them or reload to drop them.'; }
+  if(hadDraft){
+    DIRTY.cards = true; setSaveState('cards', 'cardsSave', 'Save');
+    const m = $('cardsMsg'); m.className = 'msg';
+    m.innerHTML = 'Unsaved changes from last time are back. Save them, or <button type="button" class="linkbtn" id="dropDraft">drop them</button>.';
+    $('dropDraft').onclick = ()=>{ cardClearDraft(); CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : []; CARD_OPEN = -1; CARD_CONFIRM = -1; DIRTY.cards = false; renderCards(); m.textContent = 'Dropped. Showing what is live.'; };
+  }
 
   // ---- add-ons and limits: one Save runs only what changed ----
   const addonsDirty = ()=> markDirty('addons', 'addonsSave', 'Save', 'addonsMsg');
@@ -2277,14 +2292,19 @@ ${SIG}`);
     const ff = $('ffFlag').checked; if(ff !== !!v.form_custom) jobs.push(['admin_set_form_custom', { p_id: v.id, p_on: ff }, ()=>{ v.form_custom = ff; $('ffEditWrap').style.display = ff ? 'block' : 'none'; }]);
     const cq = $('cqFlag').checked; if(cq !== !!v.custom_questions) jobs.push(['admin_set_custom_questions', { p_id: v.id, p_on: cq }, ()=>{ v.custom_questions = cq; $('cqSection').style.display = cq ? 'block' : 'none'; }]);
     const rc = $('rcFlag').checked; if(rc !== (v.report_county !== false)) jobs.push(['admin_set_report_county', { p_id: v.id, p_on: rc }, ()=>{ v.report_county = rc; }]);
-    m.className = 'msg'; m.textContent = 'Saving…';
-    for(const [fn, args, ok] of jobs){
-      const { data, error } = await rpc(fn, args);
-      if(error || !data || data.ok !== true){ failMsg(m); paintAddons(); return; }
-      ok(data);
-    }
-    DIRTY.addons = false; setSaveState('addons', 'addonsSave', 'Save');
-    m.className = 'msg ok'; m.textContent = jobs.length ? 'Saved.' : 'Nothing changed.';
+    const run = async ()=>{
+      m.className = 'msg'; m.textContent = 'Saving…';
+      for(const [fn, args, ok] of jobs){
+        const { data, error } = await rpc(fn, args);
+        if(error || !data || data.ok !== true){ failMsg(m); paintAddons(); return; }
+        ok(data);
+      }
+      DIRTY.addons = false; setSaveState('addons', 'addonsSave', 'Save');
+      m.className = 'msg ok'; m.textContent = jobs.length ? 'Saved.' : 'Nothing changed.';
+    };
+    const dropped = CARDS.length - n;
+    if(n !== (v.card_cap ?? 4) && dropped > 0) askInline($('addonsConfirm'), `Lower the slots to ${n}? The last ${dropped} card${dropped === 1 ? '' : 's'} on the home screen ${dropped === 1 ? 'is' : 'are'} deleted.`, 'Lower and delete', run, true, null, 'Keep');
+    else run();
   };
   $('ffEdit').onclick = ()=> formBuilder(v.id, ()=> detail(v.id, 'app'));
 
@@ -2301,6 +2321,8 @@ ${SIG}`);
         <span>${esc(GAMES_META[g].name)} <span class="hint" style="display:inline;margin:0">${n} active${ok?'':`, needs ${floor}`}</span></span>
       </label>`;
     }).join('');
+    $('cqOnly').querySelectorAll('input').forEach(i => i.onchange = ()=> markDirty('cqonly', 'cqOnlySave', 'Save', 'cqOnlyMsg'));
+    setSaveState('cqonly', 'cqOnlySave', 'Save');
   };
   $('cqOnlySave').onclick = async ()=>{
     const picked = [...document.querySelectorAll('#cqOnly input:checked')].map(x=>x.dataset.co);
@@ -2309,6 +2331,7 @@ ${SIG}`);
     const { data, error } = await rpc('admin_set_custom_only', { p_id: v.id, p_games: picked });
     if(error || !data || data.ok!==true){ failMsg(m); return; }
     v.custom_only = data.custom_only;
+    DIRTY.cqonly = false; setSaveState('cqonly', 'cqOnlySave', 'Save');
     m.className = 'msg ok'; m.textContent = 'Saved.';
   };
 
@@ -2326,14 +2349,14 @@ ${SIG}`);
       let inserted = 0, skipped = 0;
       for(let i = 0; i < res.rows.length; i += 400){
         const { data, error } = await rpc('admin_add_content', { p_game: res.game, p_rows: res.rows.slice(i, i+400), p_venue_id: v.id });
-        if(error || !data || data.ok!==true){ m.className = 'msg err'; m.textContent = `Import stopped: ${error ? error.message : (data&&data.error)||'unknown'}. ${inserted} rows were inserted.`; return; }
+        if(error || !data || data.ok!==true){ failMsg(m, 'Import stopped after ' + inserted + ' rows.'); return; }
         inserted += data.inserted; skipped += data.skipped;
       }
       m.className = skipped ? 'msg err' : 'msg ok';
       m.textContent = `Done: ${inserted} inserted${skipped?`, ${skipped} skipped`:''}.`;
       $('cqPackFile').value = '';
       cqLoad();
-    }, false, ()=>{ $('cqPackFile').value = ''; });
+    }, false, ()=>{ $('cqPackFile').value = ''; }, 'Cancel');
   });
 
   const cqPaintFields = ()=>{
@@ -2357,11 +2380,18 @@ ${SIG}`);
           <span style="${r.status==='retired'?'text-decoration:line-through;color:var(--ink-dim)':''}">${esc(r.label)}</span></span>
         <button class="btn sm ghost" data-cq="${esc(r.game)}|${esc(r.key)}|${r.status==='active'?'retired':'active'}">${r.status==='active'?'Retire':'Restore'}</button>
       </div>`).join('');
-    el.querySelectorAll('[data-cq]').forEach(b=> b.onclick = async ()=>{
+    el.insertAdjacentHTML('beforeend', '<div id="cqRowConfirm"></div><div class="msg" id="cqListMsg"></div>');
+    el.querySelectorAll('[data-cq]').forEach(b=> b.onclick = ()=>{
       const [game, key, status] = b.dataset.cq.split('|');
-      const { data:d } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
-      if(!d || d.ok!==true){ toast('Could not update'); return; }
-      cqLoad();
+      const go = async ()=>{
+        const m = $('cqListMsg');
+        const { data:d } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+        if(!d || d.ok!==true){ failMsg(m, 'Could not update that row.'); return; }
+        await cqLoad();
+        const m2 = $('cqListMsg'); if(m2){ m2.className = 'msg ok'; m2.textContent = status === 'retired' ? 'Retired. It stops showing on tables now; Restore brings it back.' : 'Restored.'; }
+      };
+      if(status === 'retired') askInline($('cqRowConfirm'), 'Retire this question? It stops showing on tables now. Restore brings it back.', 'Retire', go, true, null, 'Keep');
+      else go();
     });
   };
   cqLoad();
@@ -2456,7 +2486,7 @@ function packs(){
     if(!d){ m.className='msg err'; m.textContent='Pick a date.'; return; }
     m.className='msg'; m.textContent='Checking…';
     const { data, error } = await rpc('admin_retire_before', { p_game: g, p_before: d, p_dry_run: true });
-    if(error || !data){ m.className='msg err'; m.textContent='Failed (has 28_custom_only_retire.sql been run?).'; return; }
+    if(error || !data){ failMsg(m, 'The preview is not available yet.'); return; }
     if(data.ok !== true){
       m.className='msg err';
       m.textContent = data.error === 'below_floor'
@@ -2472,7 +2502,7 @@ function packs(){
   };
   $('rbGo').onclick = ()=>{
     if(!rbChecked) return;
-    askInline($('rbConfirm'), `Retire the previewed ${esc(GAMES_META[rbChecked.g].name)} rows added before ${esc(rbChecked.d)}? They are kept and can be restored, but stop showing on tables right away.`, 'Retire', doRetire, true);
+    askInline($('rbConfirm'), `Retire the previewed ${esc(GAMES_META[rbChecked.g].name)} rows added before ${esc(rbChecked.d)}? They are kept and can be restored, but stop showing on tables right away.`, 'Retire', doRetire, true, null, 'Keep');
   };
   const doRetire = async ()=>{
     const m = $('rbMsg');
@@ -2489,7 +2519,7 @@ function packs(){
     if(!q){ el.className='hint'; el.textContent='Type something to search for.'; return; }
     el.className='hint'; el.textContent='Searching…';
     const { data, error } = await rpc('admin_search_content', { p_game: $('fqGame').value, p_q: q });
-    if(error || data === null){ el.textContent='Failed (has 28_custom_only_retire.sql been run?).'; return; }
+    if(error || data === null){ failMsg(el, 'Search is not available yet.'); return; }
     if(!data.length){ el.textContent='No matches.'; return; }
     el.className='';
     el.innerHTML = data.map(r=>`
@@ -2499,15 +2529,22 @@ function packs(){
           <span style="${r.status==='retired'?'text-decoration:line-through;color:var(--ink-dim)':''}">${esc(r.label)}</span></span>
         <button class="btn sm ${r.status==='active'?'danger':'ghost'}" data-fq="${esc(r.game)}|${esc(r.key)}|${r.status==='active'?'retired':'active'}">${r.status==='active'?'Retire':'Restore'}</button>
       </div>`).join('');
-    el.querySelectorAll('[data-fq]').forEach(b=> b.onclick = async ()=>{
+    el.insertAdjacentHTML('beforeend', '<div id="fqRowConfirm"></div><div class="msg" id="fqListMsg"></div>');
+    el.querySelectorAll('[data-fq]').forEach(b=> b.onclick = ()=>{
       const [game, key, status] = b.dataset.fq.split('|');
-      const { data:d, error:e } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
-      if(e || !d || d.ok!==true){
-        toast(d && d.error === 'below_floor' ? `Refused: the game would drop under its floor of ${d.floor}` : 'Could not update');
-        return;
-      }
-      toast(status === 'retired' ? 'Retired' : 'Restored');
-      fqRun(); paintCounts();
+      const go = async ()=>{
+        const m = $('fqListMsg');
+        const { data:d, error:e } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+        if(e || !d || d.ok!==true){
+          if(d && d.error === 'below_floor'){ m.className = 'msg err'; m.textContent = 'Not retired: the game would drop under its floor of ' + d.floor + ' active rows.'; }
+          else failMsg(m, 'Could not update that row.');
+          return;
+        }
+        await fqRun(); paintCounts();
+        const m2 = $('fqListMsg'); if(m2){ m2.className = 'msg ok'; m2.textContent = status === 'retired' ? 'Retired. It stops showing on tables now; Restore brings it back.' : 'Restored.'; }
+      };
+      if(status === 'retired') askInline($('fqRowConfirm'), 'Retire this question? It stops showing on tables now. Restore brings it back.', 'Retire', go, true, null, 'Keep');
+      else go();
     });
   };
   $('fqGo').onclick = fqRun;
