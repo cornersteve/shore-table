@@ -397,6 +397,68 @@ function brandNow(settings){
 }
 const b64utf8 = s => btoa(unescape(encodeURIComponent(s)));
 const fileToB64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = ()=> res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
+/* The sharing card (og:image) for the homepage: the same objects as the
+   page, drawn on a canvas so it always wears the current brand. Returns
+   base64 PNG, or null when the fonts or canvas are unavailable. */
+async function ogCardB64(b, pendingFiles){
+  const W = 1200, H = 630;
+  const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
+  const ctx = cnv.getContext('2d'); if(!ctx) return null;
+  // the homepage's display face, loaded on demand for this one drawing
+  if(!document.getElementById('ogFonts')){
+    const l = document.createElement('link'); l.id = 'ogFonts'; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Unbounded:wght@700&family=Hanken+Grotesk:wght@500&display=swap';
+    document.head.appendChild(l);
+  }
+  try { await Promise.all([document.fonts.load("700 52px 'Unbounded'"), document.fonts.load("500 24px 'Hanken Grotesk'"), document.fonts.load("700 22px 'Unbounded'")]); } catch(e){}
+  const accent = /^#[0-9a-f]{6}$/i.test(b.accent) ? b.accent : '#3a6ea5';
+  const lin = h => { const v = parseInt(h, 16) / 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  const mm = /^#(..)(..)(..)$/.exec(accent);
+  const L = .2126 * lin(mm[1]) + .7152 * lin(mm[2]) + .0722 * lin(mm[3]);
+  const onAccent = (1.05 / (L + .05)) >= 4.5 ? '#ffffff' : '#16110a';
+  ctx.fillStyle = accent; ctx.fillRect(0, 0, W, H);
+
+  // wordmark: the icon (pending upload, or the deployed file) in a white tile, then the name
+  const iconSrc = pendingFiles && pendingFiles.icon ? URL.createObjectURL(pendingFiles.icon) : (b.iconUrl || '');
+  let icon = null;
+  if(iconSrc){ try { icon = await new Promise((ok, no)=>{ const i = new Image(); i.onload = ()=> ok(i); i.onerror = no; i.src = iconSrc; }); } catch(e){ icon = null; } }
+  const rr = (x, y, w, h, r)=>{ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
+  ctx.fillStyle = '#fff'; rr(72, 72, 40, 40, 11); ctx.fill();
+  if(icon){ try { ctx.drawImage(icon, 75, 75, 34, 34); } catch(e){} }
+  else { ctx.fillStyle = accent; ctx.font = "800 20px 'Unbounded', sans-serif"; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillText((b.brandName || 'S')[0].toUpperCase(), 92, 93); }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = onAccent; ctx.font = "700 22px 'Unbounded', sans-serif";
+  ctx.fillText((b.brandName || '').toUpperCase(), 126, 100);
+
+  // headline and the one line under it
+  const wrap = (text, x, y, maxW, lh, font)=>{ ctx.font = font; const words = text.split(' '); let line = '', yy = y; for(const w of words){ const test = line ? line + ' ' + w : w; if(ctx.measureText(test).width > maxW && line){ ctx.fillText(line, x, yy); line = w; yy += lh; } else line = test; } if(line){ ctx.fillText(line, x, yy); yy += lh; } return yy; };
+  let y = wrap('A better experience at the table.', 72, 214, 620, 60, "700 52px 'Unbounded', sans-serif");
+  ctx.globalAlpha = .94;
+  wrap('Games while they wait, an anonymous suggestion box, and your own message of the week.', 72, y + 24, 400, 34, "500 24px 'Hanken Grotesk', sans-serif");
+  ctx.globalAlpha = 1;
+
+  // the phone: the demo venue's home screen, in this accent
+  const demo = venueById('demo') || {};
+  const vname = demo.name || 'Your restaurant';
+  ctx.save(); ctx.translate(1010, 380); ctx.rotate(-3 * Math.PI / 180); ctx.translate(-150, -310);
+  ctx.shadowColor = 'rgba(22,17,10,.35)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 26;
+  ctx.fillStyle = '#1b1813'; rr(0, 0, 300, 640, 44); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = '#f5f6f8'; rr(13, 13, 274, 614, 33); ctx.fill();
+  ctx.save(); rr(13, 13, 274, 614, 33); ctx.clip();
+  ctx.fillStyle = '#fff'; ctx.fillRect(13, 13, 274, 62); ctx.fillStyle = accent; ctx.fillRect(13, 73, 274, 3);
+  ctx.fillStyle = '#16110a'; ctx.font = "700 13px 'Unbounded', sans-serif"; ctx.textAlign = 'center';
+  let vn = vname.toUpperCase(); while(ctx.measureText(vn).width > 240 && vn.length > 4) vn = vn.slice(0, -2) + '…';
+  ctx.fillText(vn, 150, 50); ctx.textAlign = 'left';
+  const row = (yy, title, sub)=>{ ctx.fillStyle = '#fff'; rr(27, yy, 246, 70, 16); ctx.fill(); ctx.fillStyle = accent; rr(39, yy + 17, 36, 36, 10); ctx.fill(); ctx.fillStyle = '#16110a'; ctx.font = "700 14px 'Unbounded', sans-serif"; ctx.fillText(title, 86, yy + 30); ctx.fillStyle = '#6d6759'; ctx.font = "500 11px 'Hanken Grotesk', sans-serif"; ctx.fillText(sub, 86, yy + 50); };
+  row(94, 'Play a game', 'Pass the time, solo or together.');
+  row(176, 'Share feedback', 'Anonymous, seen only by the owner.');
+  ctx.fillStyle = accent; rr(27, 258, 246, 78, 16); ctx.fill();
+  ctx.fillStyle = onAccent; ctx.font = "700 11px 'Unbounded', sans-serif"; ctx.fillText('LIVE MUSIC FRIDAY', 43, 284);
+  ctx.font = "500 12px 'Hanken Grotesk', sans-serif"; ctx.fillText('Doors at 7, no cover.', 43, 306);
+  ctx.restore(); ctx.restore();
+  try { return cnv.toDataURL('image/png').split(',')[1]; } catch(e){ return null; }
+}
 function brandFileText(b){
   return '/* Generated by the operator dashboard (Settings) on ' + new Date().toISOString() + '.\n   Do not edit by hand: the dashboard overwrites this file on every Save. */\nwindow.OPERATOR_BRAND = ' + JSON.stringify(b, null, 2) + ';\n';
 }
@@ -569,6 +631,11 @@ async function settingsView(opts){
         m.className = 'msg ok'; m.textContent = 'Saved to your database. Connect GitHub under Platform updates, then Save again to publish it to your site.';
         return;
       }
+      m.textContent = 'Drawing your sharing card…';
+      try {
+        const og = await ogCardB64(out, pending);
+        if(og) await ghPutFile(repo, tok, 'public/images/og.png', og, 'Sharing card');
+      } catch(e){ console.warn('sharing card skipped', e); }
       m.textContent = 'Publishing to your site…';
       out.stamp = stamp;
       await ghPutFile(repo, tok, 'public/brand.js', b64utf8(brandFileText(out)), 'Brand settings');

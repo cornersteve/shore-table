@@ -348,7 +348,7 @@ The small label under a phone or the pinned report, hung on a string.
 - **Style:** `--stock` fill, 1.5px `--line-2` border, 10px radius, 9px 14px padding; caption lettering (Unbounded 500 11.5px, 0.06em, uppercase). A 1.5px string rises 22px from its top center. On the accent panel the border goes transparent and the string is white at 60%.
 
 ### Phone Frame
-A 232px ink slab (34px radius, 10px bezel) with a 26px-radius screen at 9:19, lifted shadow. Until a screenshot URL is set the screen shows a `#efece6` placeholder with a small accent diamond and `--ink-faint` text.
+A 232px ink slab (34px radius, 10px bezel) with a 26px-radius screen at 9:19, lifted shadow. The screen holds a live mockup of the app (`.mk`): the app's own components at their 390px size, scaled to 0.5436, in the accent, with the demo venue's name and logo filled in at load. No screenshot files.
 
 ### Pinned Report
 Ticket stock sheet, 2px dashed `--line-2` edge, 14px radius, 12px padding around a 6px-radius image, drop-shadow filter, tilted 0.8 degrees, captioned with a prize tag 24px below.

@@ -78,12 +78,14 @@ brand.js and must keep working through data attributes and class hooks
 
 ## Evidence on Hand
 
-- Real product screenshots: public/images/screenshot-1-landing.png,
-  screenshot-2-hotseat.png, screenshot-3-survey.png (1170x2469 phone
-  captures) and public/images/report.png (a sample monthly report).
+- The three hero phones are live mockups of the app's real screens
+  (home, a trivia round, the suggestion box), drawn in the operator accent
+  with the demo venue's name and logo; public/images/report.png is a
+  sample monthly report; public/images/og.png is the sharing card, drawn
+  by the dashboard Settings on every publish.
 - A live demo venue at app.html?v=demo.
 - No customer names, counts, testimonials, or quotes may appear yet
-  (confirmed 2026-09-07: screenshots only). Leave nothing that reads as a
+  (confirmed 2026-09-07). Leave nothing that reads as a
   claim of scale.
 
 ## Product Principles
@@ -96,5 +98,5 @@ brand.js and must keep working through data attributes and class hooks
    never blurred into one.
 4. Local and personal beats national and polished; the operator is a
    neighbor, and the page should sound like one.
-5. Truth over volume: real screenshots and real mechanics; no invented
-   proof.
+5. Truth over volume: the app's real screens and real mechanics; no
+   invented proof.

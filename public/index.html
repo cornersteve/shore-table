@@ -23,9 +23,8 @@
    placeholder in that spot, so it is safe to deploy as is.
    ================================================================ */
 const REPORT_IMAGE_URL = "images/report.png";
-const SCREENSHOT_URL_1 = "images/screenshot-1-landing.png";
-const SCREENSHOT_URL_2 = "images/screenshot-2-hotseat.png";
-const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
+/* The three phones in the hero are live mockups of the app, drawn in your
+   accent with your demo venue's name and logo: nothing to paste for them. */
 </script>
 <style>
   /* ============================================================
@@ -152,6 +151,39 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
   .phone-frame .screen{border-radius:26px;overflow:hidden;background:#efece6;aspect-ratio:9/19}
   .phone-frame img{width:100%;height:100%;object-fit:cover}
   .phone-frame .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--ink-faint);font-size:13px;text-align:center;padding:16px}
+  /* the three screens are the app's real components, drawn here at the app's
+     390px width and scaled into the frame, in the accent, with the demo
+     venue's name and logo filled in at load */
+  .mk{width:390px;height:823px;transform:scale(.5436);transform-origin:0 0;background:#f3f5f8;background:color-mix(in srgb, var(--accent) 5%, #f7f8f9);font-family:var(--font-b);color:#16110a;overflow:hidden;position:relative;pointer-events:none;user-select:none}
+  .mk-brand{display:flex;align-items:center;justify-content:center;gap:10px;min-height:62px;padding:14px 18px;background:#fff;border-bottom:3px solid var(--accent);box-shadow:0 2px 8px rgba(22,17,10,.08);position:relative}
+  .mk-logo{display:inline-flex;align-items:center;justify-content:center;max-height:38px}
+  .mk-logo img{max-height:38px;max-width:190px;object-fit:contain;display:block}
+  .mk-logo.has-img .mk-name{display:none}
+  .mk-name{font-family:var(--font-d);font-weight:700;font-size:15px;letter-spacing:.02em;text-transform:uppercase;color:#16110a}
+  .mk-quit{position:absolute;right:16px;top:50%;transform:translateY(-50%);background:var(--accent);color:var(--on-accent);font-weight:700;font-size:12px;border-radius:999px;padding:6px 12px}
+  .mk-body{padding:18px 16px}
+  .mk-opt{position:relative;display:flex;align-items:center;gap:14px;background:#fff;border:1px solid rgba(22,17,10,.09);border-radius:18px;padding:18px 44px 18px 16px;box-shadow:0 2px 4px rgba(22,17,10,.04),0 12px 28px rgba(22,17,10,.08);margin-bottom:11px}
+  .mk-opt b{display:block;font-family:var(--font-d);font-weight:700;font-size:19px;line-height:1.15}
+  .mk-opt i{display:block;font-style:normal;color:#6d6759;font-size:13.5px;line-height:1.4;margin-top:5px}
+  .mk-opt em{position:absolute;right:18px;top:50%;transform:translateY(-50%);font-style:normal;color:#a49d90;font-size:22px}
+  .mk-ic{flex:none;width:44px;height:44px;border-radius:12px;background:var(--accent);color:var(--on-accent);display:grid;place-items:center}
+  .mk-ic svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+  .mk-promo{background:var(--accent);color:var(--on-accent);border-radius:18px;padding:16px 18px;margin-top:6px}
+  .mk-promo b{display:block;font-family:var(--font-d);font-weight:700;font-size:15px;letter-spacing:.12em;text-transform:uppercase}
+  .mk-promo i{display:block;font-style:normal;font-size:14.5px;line-height:1.45;margin-top:5px;opacity:.94}
+  .mk-eyebrow{display:inline-block;background:#fff;border:1px solid rgba(22,17,10,.11);color:var(--accent-deep);border-radius:999px;padding:6px 12px;font-family:var(--font-d);font-weight:700;font-size:10.5px;letter-spacing:.13em;text-transform:uppercase;margin-bottom:14px;box-shadow:0 1px 2px rgba(22,17,10,.06)}
+  .mk-q{font-family:var(--font-d);font-weight:700;font-size:21px;line-height:1.2;margin-bottom:14px}
+  .mk-answer{position:relative;background:#fff;border:1px solid rgba(22,17,10,.2);border-radius:14px;padding:15px 18px;font-weight:600;font-size:15.5px;margin-bottom:10px;box-shadow:0 1px 2px rgba(22,17,10,.06)}
+  .mk-answer.right{border-color:#1f7a4a;background:#e7f5ec}
+  .mk-answer.right span{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.05em;color:#1f7a4a}
+  .mk-btn{margin-top:8px;background:var(--accent);color:var(--on-accent);border-radius:999px;padding:16px;text-align:center;font-family:var(--font-d);font-weight:700;font-size:15.5px}
+  .mk-label{font-weight:700;font-size:15.5px;margin-top:14px}
+  .mk-rate{display:flex;gap:8px;margin-top:10px}
+  .mk-rate span{flex:1;height:44px;border-radius:12px;background:#fff;border:1px solid rgba(22,17,10,.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-weight:700;color:#a49d90;font-size:14px}
+  .mk-rate span.on{background:var(--accent);color:var(--on-accent);border-color:transparent}
+  .mk-pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+  .mk-pills span{flex:1 1 auto;min-width:96px;background:#fff;border:1px solid rgba(22,17,10,.2);border-radius:12px;padding:12px;font-weight:600;font-size:13.5px;text-align:center}
+  .mk-pills span.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 12%, #fff)}
   .phone-frame .ph .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
   /* captions are prize tags on a string */
   .phone-caption{position:relative;margin-top:22px;background:var(--stock);border:1px solid var(--line-2);border-radius:10px;padding:9px 14px;font-family:var(--font-d);font-weight:500;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
@@ -311,12 +343,12 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
   <div class="booth on-accent">
     <div class="wrap booth-inner">
       <div class="booth-copy">
-        <h1>Give them a better experience, not just a better meal.</h1>
-        <p class="lede">A card on your table opens a branded app on your guests' phones: games while they wait, an anonymous suggestion box, and your own message of the week. You get a private live dashboard of what they think.</p>
+        <h1>A better experience at the table.</h1>
+        <p class="lede">Guests scan a card on your table and a branded web app opens on their phone, customized for your restaurant. Games while they wait, an anonymous suggestion box, and a spot for anything you want to tell them that week. You get a private live dashboard with all the important data and insights.</p>
       </div>
       <div class="ticket" aria-label="Get started">
         <div class="ticket__stub">
-          <div class="k">Admit one table</div>
+          <div class="k">Admit one</div>
           <div class="n">Free first month</div>
           <div class="s">For independent restaurants and bars in <span class="cfg-region">your area</span>.</div>
           <span class="notch a" aria-hidden="true"></span><span class="notch b" aria-hidden="true"></span>
@@ -332,15 +364,44 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
     <div class="wrap">
       <div class="phones">
         <div class="phone-col">
-          <div class="phone-frame"><div class="screen" data-img="SCREENSHOT_URL_1"><div class="ph"><span class="dot"></span>App screenshot 1</div></div></div>
+          <div class="phone-frame" role="img" aria-label="The app's home screen on a phone: play a game, share feedback, and the restaurant's own announcement"><div class="screen"><div class="mk" aria-hidden="true">
+            <div class="mk-brand"><span class="mk-logo"><span class="mk-name">Your restaurant</span></span></div>
+            <div class="mk-body">
+              <div class="mk-opt"><span class="mk-ic"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.2" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.2" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.2" fill="currentColor" stroke="none"/></svg></span><span><b>Play a game</b><i>Pass the time, solo or with the whole table.</i></span><em>›</em></div>
+              <div class="mk-opt"><span class="mk-ic"><svg viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8z"/></svg></span><span><b>Share feedback</b><i>Anonymous, and seen only by <span class="mk-name">Your restaurant</span>.</i></span><em>›</em></div>
+              <div class="mk-promo"><b>Live music Friday</b><i>Doors at 7, no cover. Kitchen open late.</i></div>
+            </div>
+          </div></div></div>
           <div class="phone-caption">What they see first</div>
         </div>
         <div class="phone-col">
-          <div class="phone-frame"><div class="screen" data-img="SCREENSHOT_URL_2"><div class="ph"><span class="dot"></span>App screenshot 2</div></div></div>
+          <div class="phone-frame" role="img" aria-label="A trivia round in progress on a phone"><div class="screen"><div class="mk" aria-hidden="true">
+            <div class="mk-brand"><span class="mk-logo"><span class="mk-name">Your restaurant</span></span><span class="mk-quit">Quit</span></div>
+            <div class="mk-body">
+              <div class="mk-eyebrow">Trivia · 3 of 8</div>
+              <div class="mk-q">Who directed the 1972 crime film The Godfather?</div>
+              <div class="mk-answer">Sidney Lumet</div>
+              <div class="mk-answer">Brian De Palma</div>
+              <div class="mk-answer right">Francis Ford Coppola<span>Correct</span></div>
+              <div class="mk-answer">Martin Scorsese</div>
+              <div class="mk-btn">Next ›</div>
+            </div>
+          </div></div></div>
           <div class="phone-caption">A game in progress</div>
         </div>
         <div class="phone-col">
-          <div class="phone-frame"><div class="screen" data-img="SCREENSHOT_URL_3"><div class="ph"><span class="dot"></span>App screenshot 3</div></div></div>
+          <div class="phone-frame" role="img" aria-label="The anonymous suggestion box on a phone"><div class="screen"><div class="mk" aria-hidden="true">
+            <div class="mk-brand"><span class="mk-logo"><span class="mk-name">Your restaurant</span></span></div>
+            <div class="mk-body">
+              <div class="mk-eyebrow">Your honest take</div>
+              <div class="mk-label">How was the food?</div>
+              <div class="mk-rate"><span>1</span><span>2</span><span>3</span><span>4</span><span class="on">5</span></div>
+              <div class="mk-label">How was the service?</div>
+              <div class="mk-rate"><span>1</span><span>2</span><span>3</span><span class="on">4</span><span>5</span></div>
+              <div class="mk-label">How'd you end up here tonight?</div>
+              <div class="mk-pills"><span class="on">Word of mouth</span><span>Social media</span><span>Walked by</span><span>Maps or search</span></div>
+            </div>
+          </div></div></div>
           <div class="phone-caption">The suggestion box</div>
         </div>
       </div>
@@ -501,19 +562,9 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
 
 <script>
 /* Applies the image URLs set in the <head> block at the top of this file. */
-const IMAGES = {
-  REPORT_IMAGE_URL,
-  SCREENSHOT_URL_1,
-  SCREENSHOT_URL_2,
-  SCREENSHOT_URL_3,
-};
+const IMAGES = { REPORT_IMAGE_URL };
 
-const ALT = {
-  SCREENSHOT_URL_1: "The app's home screen on a phone: play a game, share feedback, and the restaurant's own cards",
-  SCREENSHOT_URL_2: "A group game in progress on a phone",
-  SCREENSHOT_URL_3: "The anonymous suggestion box on a phone",
-  REPORT_IMAGE_URL: "A sample monthly guest report with example numbers",
-};
+const ALT = { REPORT_IMAGE_URL: "A sample monthly guest report with example numbers" };
 document.querySelectorAll("[data-img]").forEach(el => {
   const url = IMAGES[el.dataset.img];
   if(!url || url.startsWith("PASTE_")) return;   // keep the placeholder
@@ -525,6 +576,24 @@ document.querySelectorAll("[data-img]").forEach(el => {
   img.decoding = "async";
   img.onload = () => { el.innerHTML = ""; el.appendChild(img); };
 });
+
+/* ---- the demo venue's name and logo land in the phone mockups ---- */
+(function(){
+  const C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {});
+  if(!C.supabaseUrl || !C.supabaseKey) return;
+  fetch(C.supabaseUrl.replace(/\/$/, '') + '/rest/v1/public_venues?id=eq.demo&select=name,logo', { headers: { apikey: C.supabaseKey, Authorization: 'Bearer ' + C.supabaseKey } })
+    .then(r => r.ok ? r.json() : [])
+    .then(rows => {
+      const v = rows && rows[0]; if(!v || !v.name) return;
+      document.querySelectorAll('.mk-name').forEach(e => e.textContent = v.name);
+      if(!v.logo || !/^https?:/i.test(v.logo)) return;
+      document.querySelectorAll('.mk-logo').forEach(e => {
+        const i = new Image(); i.alt = '';
+        i.onload = ()=>{ e.appendChild(i); e.classList.add('has-img'); };
+        i.src = v.logo;
+      });
+    }).catch(()=>{});
+})();
 
 /* ---- operator config fill (config.js + brand.js) ---- */
 (function(){

@@ -55,9 +55,9 @@ Supabase account itself.
 
 - Replace nothing in code. Add to your fork's `public/` via the GitHub
   web editor if you want: `apple-touch-icon.png` (180x180 PNG, your
-  mark, full bleed) improves add-to-home-screen on iPhones. The three
-  `images/` screenshots are product shots; you can replace them with
-  screenshots of your own branded venues later.
+  mark, full bleed) improves add-to-home-screen on iPhones. The phones on
+  the homepage and the sharing card (`images/og.png`) draw themselves from
+  your Settings and your demo venue, so there are no screenshots to make.
 
 ## 5. Your config
 
