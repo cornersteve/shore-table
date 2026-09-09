@@ -36,7 +36,7 @@
   .wm-img{height:24px;width:auto;display:block}
   .wm-mark{width:24px;height:24px;border-radius:7px;background:#3a6ea5;color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:14px;flex:none}
   .optag{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim);display:flex;gap:14px;align-items:center}
-  .signout{background:none;border:0;color:var(--ink-faint);font-size:12px;cursor:pointer;text-decoration:underline}
+  .signout{background:none;border:0;color:var(--ink-dim);font-size:13px;cursor:pointer;text-decoration:underline;min-height:44px;padding:0 4px}
   h1{font-family:var(--font-d);font-weight:700;font-size:clamp(22px,5vw,30px);line-height:1.1;margin:2px 0 14px}
   section{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:18px;box-shadow:var(--shadow-sm);margin-bottom:14px}
   section h2{font-family:var(--font-d);font-weight:700;font-size:16px;margin-bottom:4px}
@@ -44,30 +44,71 @@
   .btn{font-family:var(--font-d);font-weight:700;font-size:14px;border:0;border-radius:11px;padding:12px 20px;cursor:pointer;background:var(--accent);color:#fff;box-shadow:var(--shadow-sm)}
   .btn.ghost{background:var(--bg);color:var(--ink);border:1.5px solid var(--line-2)}
   .btn.danger{background:var(--bad)}
-  .btn.sm{font-size:13px;padding:9px 14px}
+  .btn.sm{font-size:13px;padding:9px 14px;min-height:40px}
+  .btn.saved,.btn.saved:active{background:var(--panel-2);color:var(--ink-dim);box-shadow:none;cursor:default;transform:none}
+  .btn.off{opacity:.45}
+  .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
+  .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
+  .actions{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 16px}
+  .tabs{display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--line-2);border-radius:14px;padding:4px;margin:0 0 18px;position:sticky;top:8px;z-index:5;box-shadow:var(--shadow-sm)}
+  .tab{flex:1;min-height:44px;border:0;border-radius:10px;background:transparent;font-family:var(--font-d);font-weight:700;font-size:14.5px;color:var(--ink);cursor:pointer;transition:background .15s,color .15s}
+  .tab:hover{background:var(--panel-2)}
+  .tab.on,.tab.on:hover{background:var(--accent);color:#fff}
+  .pane{display:none}.pane.on{display:block}
+  .saverow{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-top:14px}
+  .saverow .msg{margin:0}
+  .chips{list-style:none;display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;display:flex;gap:6px;align-items:baseline}
+  .chip b{font-size:17px}.chip span{color:var(--ink-dim);font-size:13px}
+  /* inline confirm strips: the answer sits where the question is, never a browser dialog */
+  .confirm{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:10px 12px;border-top:1px solid var(--line);background:#fbeceb;font-size:14px;border-radius:0 0 14px 14px}
+  .confirm b{flex:1 1 100%}
+  .confirm.free{border:1px solid var(--line-2);border-radius:12px;margin-top:10px}
+  input[type=checkbox],input[type=radio]{width:20px;height:20px;accent-color:var(--accent);flex:none;margin:0}
+  .ck{display:flex;align-items:flex-start;gap:10px;font-size:14.5px;color:var(--ink);margin-top:10px;cursor:pointer}
+  .ck input{margin-top:2px}
+  .ck small{display:block;font-size:13px;color:var(--ink-dim);margin-top:2px}
+  .grow{display:flex;align-items:center;gap:10px;padding:4px 0;border-bottom:1px solid var(--line)}
+  .grow:last-child{border-bottom:0}
+  .gmove{display:flex;gap:6px;flex:none}
+  .cfl{display:block;font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);margin:12px 0 5px}
+  .cfl:first-child{margin-top:0}
+  .sprow{display:flex;align-items:center;gap:10px;margin-top:8px}
+  .sprow label{flex:none;width:44px;font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)}
+  .sprow.today label{color:var(--accent)}
+  .sprow.today input{background:var(--accent-soft)}
+  .kind{border:1px solid var(--line-2);border-radius:14px;padding:12px;margin-top:10px;background:var(--panel)}
+  .kind h4{font-family:var(--font-d);font-weight:700;font-size:14.5px;margin:0 0 4px}
+  .kindopt{display:flex;flex-direction:column;align-items:flex-start;width:100%;text-align:left;min-height:56px;padding:10px 14px;border:1px solid var(--line-2);border-radius:12px;background:#fff;margin-top:8px;font-family:var(--font-b);color:var(--ink);cursor:pointer;line-height:1.3}
+  .kindopt:hover{border-color:var(--accent)}
+  .kindopt b{font-weight:700;font-size:15px}
+  .kindopt span{font-size:13px;color:var(--ink-dim)}
   .btn:active{transform:scale(.98)}
   .btn:disabled{opacity:.45;cursor:default}
   input[type=text],input[type=email],input[type=url],input[type=password],textarea{width:100%;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:16px;color:var(--ink);background:var(--bg)}
   textarea{resize:none;display:block}
-  input:focus,textarea:focus{outline:none;border-color:var(--accent)}
-  input::placeholder,textarea::placeholder{color:var(--ink-faint);opacity:.65}
+  input:focus,textarea:focus,select:focus{outline:none;border-color:var(--accent)}
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  input:focus-visible,textarea:focus-visible,select:focus-visible{outline:none}
+  input::placeholder,textarea::placeholder{color:var(--ink-faint);opacity:1}
   label.f{display:block;font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px}
   .frow{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
   input[type=color]{width:52px;height:40px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);padding:2px;cursor:pointer}
   .msg{font-size:13.5px;font-weight:600;min-height:18px;margin-top:8px}
   .msg.ok{color:var(--good)} .msg.err{color:var(--bad)}
-  .back{background:none;border:0;color:var(--accent);font-family:var(--font-d);font-weight:700;font-size:14px;cursor:pointer;padding:0;margin-bottom:12px}
+  .back{background:none;border:0;color:var(--accent);font-family:var(--font-d);font-weight:700;font-size:14px;cursor:pointer;padding:0 6px 0 0;margin-bottom:8px;min-height:44px;display:inline-flex;align-items:center;gap:4px}
+  .back svg{width:18px;height:18px}
 
   /* venue list */
   .vrow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 14px;cursor:pointer;margin-bottom:9px;box-shadow:var(--shadow-sm)}
   .vrow:hover{border-color:var(--accent)}
   .vdot{width:14px;height:14px;border-radius:4px;flex:none}
   .vname{font-family:var(--font-d);font-weight:700;font-size:15.5px}
-  .vid{color:var(--ink-faint);font-size:12.5px}
+  .vid{color:var(--ink-dim);font-size:12.5px}
   .vspacer{margin-left:auto;display:flex;align-items:center;gap:10px}
-  .badge{font-family:var(--font-d);font-weight:700;font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;border-radius:999px;padding:4px 10px}
-  .badge.lead{background:#f3ecd9;color:var(--warn)}
-  .badge.active{background:#e7f5ec;color:var(--good)}
+  .badge{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;border-radius:999px;padding:4px 10px;vertical-align:middle}
+  .badge.lead{background:#f3ecd9;color:#7a5a0f}
+  .badge.active{background:#e7f5ec;color:#1f7a4a}
   .badge.inactive{background:var(--panel-2);color:var(--ink-faint)}
 
   /* demo watch */
@@ -88,28 +129,37 @@
   .cand:hover,.cand.sel{border-color:var(--accent)}
   .swatches{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
   .sw{width:34px;height:34px;border-radius:9px;border:2px solid var(--line-2);cursor:pointer}
-  .iconbtn{width:30px;height:30px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+  .iconbtn{width:44px;height:44px;border:1px solid var(--line-2);border-radius:11px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0;flex:none}
+  .iconbtn:disabled{opacity:.35;cursor:default}
+  .iconbtn:active{background:var(--panel-2)}
   /* home screen cards editor */
-  .cbox{border:1px solid var(--line-2);border-radius:12px;margin-top:10px;background:var(--bg)}
+  .cbox{border:1px solid var(--line-2);border-radius:14px;margin-top:10px;background:var(--bg);box-shadow:var(--shadow-sm)}
   .cbox.isoff{opacity:.55}
-  .cbox__head{display:flex;align-items:center;gap:8px;padding:9px 11px}
-  .cbox__main{flex:1;min-width:0;display:flex;align-items:center;gap:10px;background:none;border:0;padding:0;cursor:pointer;text-align:left;color:var(--ink);font:inherit}
-  .cbox__ic{flex:none;width:32px;height:32px;border-radius:9px;background:var(--accent);color:#fff;display:grid;place-items:center}
-  .cbox__ic svg{width:18px;height:18px;display:block}
-  .cbox__t{flex:1 1 auto;min-width:0;font-weight:700;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  @media (max-width:430px){ .cbox__type{display:none} }
-  .cbox__type{flex:none;font-weight:700;font-size:10px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);background:var(--panel-2);border-radius:999px;padding:3px 8px}
+  .cbox__head{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px}
+  .cbox__main{flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:12px;background:none;border:0;padding:0;cursor:pointer;text-align:left;font-family:var(--font-b);color:var(--ink)}
+  .cbox__ic{flex:none;width:38px;height:38px;border-radius:11px;background:var(--accent);color:#fff;display:grid;place-items:center}
+  .cbox__ic svg{width:20px;height:20px;display:block}
+  .cbox__tt{flex:1;min-width:0;display:flex;flex-direction:column}
+  .cbox__t{min-width:0;font-family:var(--font-d);font-weight:700;font-size:15px;line-height:1.25;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .cbox__type{font-size:12.5px;color:var(--ink-dim)}
+  .cbox__why{font-size:12.5px;color:var(--bad);font-weight:600;margin-top:2px}
+  .cbox__chev{flex:none;color:var(--ink-dim);width:22px;text-align:center;transition:transform .15s}
+  .cbox__ctl{display:flex;gap:8px;flex:none}
+  @media (max-width:480px){ .cbox__head{flex-wrap:wrap} .cbox__main{flex:1 1 100%} .cbox__ctl{width:100%;justify-content:flex-end;padding-top:2px} }
+  .cbox.open .cbox__chev{transform:rotate(90deg)}
   .cbox__body{border-top:1px solid var(--line);padding:12px}
-  .cbox__body input[type=checkbox],.cbox__body input[type=radio]{accent-color:var(--accent)}
+  .cbox textarea{width:100%;min-height:84px;border:1px solid var(--line-2);border-radius:12px;padding:11px 12px;font-family:var(--font-b);font-size:15px;color:var(--ink);background:var(--bg);resize:vertical}
+  input[type=date],input[type=number]{min-height:44px;border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
   .icongrid{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
-  .icopt{width:36px;height:36px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
+  .icopt{width:44px;height:44px;border:1px solid var(--line-2);border-radius:9px;background:var(--bg);color:var(--ink-dim);cursor:pointer;display:inline-flex;align-items:center;justify-content:center;padding:0}
   .icopt svg{width:19px;height:19px}
   .icopt.sel{border:1.5px solid var(--accent);color:var(--accent);background:var(--accent-soft)}
   .lirow{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding-bottom:10px;border-bottom:1px dashed var(--line)}
+  .lirow input{min-height:44px;border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
   .lirow .li-n{flex:1;min-width:130px}
   .lirow .li-p{width:76px;flex:none}
   .lirow .li-d{flex-basis:100%}
-  .iconbtn svg{width:15px;height:15px}
+  .iconbtn svg{width:17px;height:17px}
   .iconbtn.off{color:var(--bad);border-color:rgba(179,55,47,.4)}
   .spcount{flex:none;width:58px;text-align:right;font-size:11.5px;color:var(--ink-faint);font-variant-numeric:tabular-nums}
   .sw:hover{border-color:var(--ink)}
@@ -230,7 +280,8 @@ async function platformView(){
       <div class="hint">The update button pulls the latest version into your fork; your site redeploys automatically (usually under two minutes) and this page reloads itself. The second button lights up when an update needs database changes.</div>
       <div class="frow" style="margin-top:8px">
         <button class="btn sm" id="syncBtn">Update to the latest version</button>
-        <button class="btn sm ${pending.length ? '' : 'ghost'}" id="migBtn" ${pending.length ? '' : 'disabled'}>Apply ${pending.length || 'no'} pending migration${pending.length === 1 ? '' : 's'}</button>
+        <button class="btn sm ${pending.length ? '' : 'ghost'}" id="migBtn" ${pending.length ? '' : 'disabled'}>${pending.length ? 'Apply ' + pending.length + ' pending update' + (pending.length === 1 ? '' : 's') : 'No pending updates'}</button>
+      <div id="migConfirm"></div>
       </div>
       <div class="msg" id="platMsg"></div>
       ${NOTES_URL ? '<div class="hint" style="margin-top:8px"><a href="' + esc(NOTES_URL) + '" target="_blank" rel="noopener">What\'s new in this version &rsaquo;</a></div>' : ''}
@@ -281,10 +332,12 @@ async function platformView(){
     poll();
   };
 
-  $('migBtn').onclick = async ()=>{
-    const m = $('platMsg');
+  $('migBtn').onclick = ()=>{
     if(!pending.length) return;
-    if(!confirm('Apply ' + pending.length + ' database migration(s) now? Each runs in its own transaction, strictly in order.')) return;
+    askInline($('migConfirm'), 'Apply ' + pending.length + ' pending update' + (pending.length === 1 ? '' : 's') + ' to your database now? They run one at a time, in order. A failed one is rolled back and the rest wait.', 'Apply now', runMigrations);
+  };
+  const runMigrations = async ()=>{
+    const m = $('platMsg');
     for(const mig of pending.sort((a, b)=> a.version - b.version)){
       m.className = 'msg'; m.textContent = 'Applying migration ' + mig.version + '…';
       let stmts;
@@ -431,7 +484,7 @@ async function settingsView(opts){
       <h2>Advanced</h2>
       <label class="f">Website autofill Worker URL (optional)</label>
       <input type="url" id="sbWorker" maxlength="300" value="${esc(b.workerUrl || '')}" placeholder="https://….workers.dev/" autocapitalize="off" spellcheck="false" />
-      <div class="hint">From SETUP.md step 8. Blank hides the autofill button on the Add-venue form.</div>
+      <div class="hint">Optional. Blank hides the autofill button on the Add venue form.</div>
     </section>
     <div class="frow"><button class="btn" id="setSave">Save and publish</button></div>
     <div class="msg" id="setMsg"></div>`;
@@ -919,7 +972,7 @@ async function start(){
   }
   if(VENUES === null){
     $('main').innerHTML = `<section><h2>Not an operator</h2>
-      <div class="hint">This login is not in operator_users, or 25_operator_admin.sql has not been run yet. Fix that, then reload.</div></section>`;
+      <div class="hint">This login is not set up as an operator. Check the operator account in your database, then reload.</div></section>`;
     return;
   }
   // resume an interrupted form: add drafts reopen Add, edit drafts reopen
@@ -935,6 +988,7 @@ async function start(){
   // no interrupted form: restore the view the hash remembers (tab evictions)
   const h = location.hash.slice(1);
   if(h.startsWith('v=')){ const ve = venueById(h.slice(2)); if(ve){ detail(ve.id); return; } }
+  if(h.startsWith('va=')){ const ve = venueById(h.slice(3)); if(ve){ detail(ve.id, 'app'); return; } }
   if(h.startsWith('card=')){ const ve = venueById(h.slice(5)); if(ve){ cardView(ve); return; } }
   if(h === 'packs'){ packs(); return; }
   if(h === 'form'){ formBuilder('global', home); return; }
@@ -953,6 +1007,42 @@ function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show
    covered the add/edit FORM). replaceState = no history spam, and the app's
    own back buttons stay the only navigation. */
 function setView(h){ try { history.replaceState(null, '', location.pathname + location.search + (h ? '#' + h : '')); } catch(e){} }
+
+/* One Save pattern for every editor: "Save" while something is unsaved,
+   "Saved" (disabled) otherwise, and the browser asks before a tab closes
+   on unsaved work. A view repaint clears the flags (it repaints from data). */
+const DIRTY = {};
+function setSaveState(key, btnId, label){
+  const b = $(btnId); if(!b) return;
+  const dirty = !!DIRTY[key];
+  b.disabled = !dirty; b.classList.toggle('saved', !dirty);
+  b.textContent = dirty ? label : 'Saved';
+}
+function markDirty(key, btnId, label, msgId){
+  DIRTY[key] = true; setSaveState(key, btnId, label);
+  const m = $(msgId); if(m){ m.textContent = ''; m.className = 'msg'; }
+}
+window.addEventListener('beforeunload', e => { if(Object.values(DIRTY).some(Boolean)){ e.preventDefault(); e.returnValue = ''; } });
+const _setView = setView;
+setView = function(h){ Object.keys(DIRTY).forEach(k => DIRTY[k] = false); _setView(h); };
+
+/* Failures say what to do, not which SQL file to run. Most "could not save"
+   cases on a live instance are a database behind the deployed build. */
+const PLAT_LINK = '<button type="button" class="linkbtn" data-plat>open Platform updates</button>';
+function failMsg(m, lead){ m.className = 'msg err'; m.innerHTML = esc(lead || 'Could not save.') + ' Check your connection, or your database may need an update: ' + PLAT_LINK + ' and apply pending changes.'; }
+document.addEventListener('click', e => { const b = e.target.closest('[data-plat]'); if(b) platformView(); });
+
+/* Inline confirm strip: the question and its answer sit where the action is. */
+function askInline(host, html, yesLabel, onYes, danger, onNo){
+  host.innerHTML = `<div class="confirm free" role="alert"><b>${html}</b><button type="button" class="btn sm${danger ? ' danger' : ''}" data-yes>${esc(yesLabel)}</button><button type="button" class="btn ghost sm" data-no>Keep</button></div>`;
+  host.querySelector('[data-yes]').onclick = ()=>{ host.innerHTML = ''; onYes(); };
+  host.querySelector('[data-no]').onclick = ()=>{ host.innerHTML = ''; if(onNo) onNo(); };
+  host.querySelector('[data-yes]').focus();
+}
+/* Save/error lines announce themselves to screen readers. */
+new MutationObserver(()=> document.querySelectorAll('.msg:not([aria-live])').forEach(m => m.setAttribute('aria-live', 'polite'))).observe($('main'), { childList: true, subtree: true });
+
+const ICO_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
 async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Copied'); } catch(e){ prompt('Copy this:', t); } }
 function esc(s){ return String(s??'').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function slug(name){ return name.toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'').slice(0,40); }
@@ -1144,7 +1234,7 @@ async function formBuilder(id, backFn){
   setView(id === 'global' ? 'form' : 'v=' + id);   // a venue form restores to its venue
   $('main').innerHTML = '<div class="hint">Loading…</div>';
   const { data, error } = await db.from('feedback_forms').select('*').in('id', id === 'global' ? ['global'] : ['global', id]);
-  if(error){ $('main').innerHTML = '<section><div class="hint">Could not load (has 35_feedback_forms.sql been run?).</div><button class="btn sm ghost" id="fbBack" style="margin-top:10px">Back</button></section>'; $('fbBack').onclick = ()=> backFn(); return; }
+  if(error){ $('main').innerHTML = '<section><div class="hint">Could not load the form. Check your connection, or your database may need an update (Platform updates).</div><button class="btn sm ghost" id="fbBack" style="margin-top:10px">Back</button></section>'; $('fbBack').onclick = ()=> backFn(); return; }
   const rows = {}; (data || []).forEach(r=>{ rows[r.id] = r; });
   // venue form seeds from a copy of global on first open
   const seed = rows[id] || rows.global || { core:{}, extras:[] };
@@ -1173,9 +1263,9 @@ async function formBuilder(id, backFn){
           ${extras.length ? extras.map((x, i)=>`
             <div class="frow" style="margin-top:6px;align-items:center" data-ix="${i}">
               <span style="flex:1;min-width:0">${esc(x.label)} <span style="color:var(--ink-faint);font-size:12px">· ${x.type === 'rating' ? '1-5 rating' : x.type === 'text' ? 'short text' : (x.multi ? 'choice, pick many' : 'choice, pick one') + ': ' + esc((x.opts || []).join(' / '))}</span></span>
-              <button type="button" class="btn sm ghost" data-mv="-1" style="padding:6px 11px">▲</button>
-              <button type="button" class="btn sm ghost" data-mv="1" style="padding:6px 11px">▼</button>
-              <button type="button" class="btn sm danger" data-del style="padding:6px 11px">×</button>
+              <button type="button" class="iconbtn" data-mv="-1" aria-label="Move up">${ARR_UP}</button>
+              <button type="button" class="iconbtn" data-mv="1" aria-label="Move down">${ARR_DOWN}</button>
+              <button type="button" class="iconbtn" data-del aria-label="Remove">${TRASH}</button>
             </div>`).join('') : '<div class="hint">None yet.</div>'}
         </div>
         <label class="f" style="margin-top:14px">Add a question</label>
@@ -1224,7 +1314,7 @@ async function formBuilder(id, backFn){
       const m = $('fbMsg');
       m.className='msg'; m.textContent='Saving…';
       const { data:res, error:err } = await rpc('admin_set_form', { p_id: id, p_core: collectCore(), p_extras: extras });
-      if(err || !res || res.ok !== true){ m.className='msg err'; m.textContent='Could not save (has 35_feedback_forms.sql been run?).'; return; }
+      if(err || !res || res.ok !== true){ failMsg(m); return; }
       extras = res.extras || extras;
       m.className='msg ok'; m.textContent='Saved. Live on the next app load.';
     };
@@ -1284,7 +1374,8 @@ function form(existing){
           <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="fHbOn" ${v.header_bg?'checked':''}/> custom</label>
           <input type="color" id="fHb" value="${esc(v.header_bg||'#16233a')}" style="${v.header_bg?'':'display:none'}" />
         </div>
-        <label class="f">Dark mode <span style="font-weight:400;text-transform:none">(black nav + dark app. Only for venues with a dark website AND a light logo — there is no logo filtering; if the logo needs white, leave this off.)</span></label>
+        <label class="f">Dark mode</label>
+        <div class="hint" style="margin:0 0 6px">Black nav and a dark app. Only for venues with a dark website and a light logo. Logos are not recolored, so if the logo needs a white background, leave this off.</div>
         <div class="frow">
           <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="fDark" ${v.dark_mode?'checked':''}/> dark mode</label>
         </div>
@@ -1606,7 +1697,7 @@ function form(existing){
         if(error || !data || data.ok!==true) throw new Error((data&&data.error)||'update failed');
         if($('fDark').checked !== !!v.dark_mode){
           const r = await rpc('admin_set_dark_mode', { p_id: s.id, p_on: $('fDark').checked });
-          if(r.error || !r.data || r.data.ok!==true) toast('Saved, but dark mode needs 30_dark_mode.sql');
+          if(r.error || !r.data || r.data.ok!==true) toast('Saved, but dark mode needs a database update. See Platform updates.');
         }
         clearDraft();
         await loadAll(); toast('Saved'); detail(s.id);
@@ -1625,7 +1716,7 @@ function form(existing){
         }
         if($('fDark').checked){
           const r = await rpc('admin_set_dark_mode', { p_id: s.id, p_on: true });
-          if(r.error || !r.data || r.data.ok!==true) toast('Added, but dark mode needs 30_dark_mode.sql');
+          if(r.error || !r.data || r.data.ok!==true) toast('Added, but dark mode needs a database update. See Platform updates.');
         }
         clearDraft();
         await loadAll(); toast('Venue added'); detail(s.id);
@@ -1638,175 +1729,220 @@ function form(existing){
 }
 
 /* ---------------- venue detail ---------------- */
-function detail(id){
+/* ---- home screen card icons and helpers, shared by the venue editor ---- */
+const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+const CARD_ICONS = {
+  calendar: CI('<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'),
+  clock: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 1.9"/>'),
+  beer: CI('<path d="M7 4.5h8.5v14.5a1.8 1.8 0 0 1-1.8 1.8H8.8A1.8 1.8 0 0 1 7 19z"/><path d="M15.5 8.5h1.9a1.9 1.9 0 0 1 1.9 1.9v2.7a1.9 1.9 0 0 1-1.9 1.9h-1.9M10 8.5V17M12.5 8.5V17"/>'),
+  wine: CI('<path d="M8 3.5h8c0 5.2-1.7 7.8-4 7.8s-4-2.6-4-7.8z"/><path d="M12 11.3v8.2M8.5 20.5h7"/>'),
+  cocktail: CI('<path d="M4.5 4.5h15L12 13.2z"/><path d="M12 13.2v6.3M8.5 20.5h7M8 8h8"/>'),
+  coffee: CI('<path d="M4.5 9.5h12v6.5a3.5 3.5 0 0 1-3.5 3.5H8a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M16.5 11.5h1.3a2.4 2.4 0 0 1 0 4.8h-1.4M8.2 3.5c0 1.3 1 1.4 1 2.7M12.2 3.5c0 1.3 1 1.4 1 2.7"/>'),
+  plate: CI('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/>'),
+  pizza: CI('<path d="M4 6a18.5 18.5 0 0 1 16 0L12 21z"/><circle cx="9.6" cy="8.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.4" cy="8.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="12.6" r="1.05" fill="currentColor" stroke="none"/>'),
+  burger: CI('<path d="M4 10a8 8 0 0 1 16 0z"/><path d="M4 13.5h16"/><path d="M4.5 17h15v.8a2.7 2.7 0 0 1-2.7 2.7H7.2a2.7 2.7 0 0 1-2.7-2.7z"/>'),
+  dessert: CI('<path d="M7.5 10.5a4.5 4.5 0 1 1 9 0"/><path d="M7.5 10.5h9L12 21z"/>'),
+  music: CI('<path d="M9 18.5V6.2l10-2.2v12.3"/><circle cx="6.6" cy="18.6" r="2.4"/><circle cx="16.6" cy="16.4" r="2.4"/>'),
+  mic: CI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>'),
+  trophy: CI('<path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3.2 4M17 6h3a3 3 0 0 1-3.2 4M12 15v3.5M8 21h8l-.9-2.5H8.9z"/>'),
+  star: CI('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
+  tag: CI('<path d="M3.5 12.5v-9h9L21 12l-8.5 8.5z"/><circle cx="8" cy="8" r="1.4"/>'),
+  gift: CI('<rect x="4" y="9.5" width="16" height="11" rx="2"/><path d="M12 9.5v11M4 13.5h16M7.5 6.7A2.1 2.1 0 0 1 11.3 5c.7 1 .7 4.5.7 4.5S8 9.7 7.5 6.7zM16.5 6.7A2.1 2.1 0 0 0 12.7 5c-.7 1-.7 4.5-.7 4.5s4 .2 4.5-2.8z"/>'),
+  dice: CI('<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/>'),
+  megaphone: CI('<path d="M3.5 10.2v3.6l3.2.6L18.5 19V5L6.7 9.6z"/><path d="M18.5 9.2a3.1 3.1 0 0 1 0 5.6M7.8 14.8l1 5.2h2.9l-.8-4.6"/>'),
+  info: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 11.2v5.3"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/>'),
+  pin: CI('<path d="M12 21s-7-6.4-7-11.4a7 7 0 0 1 14 0C19 14.6 12 21 12 21z"/><circle cx="12" cy="9.6" r="2.5"/>'),
+  book: CI('<path d="M12 6.2C10.5 4.5 7.5 4.1 4 4.6V19c3.5-.5 6.5-.1 8 1.6 1.5-1.7 4.5-2.1 8-1.6V4.6c-3.5-.5-6.5-.1-8 1.6z"/><path d="M12 6.2v14.4"/>'),
+  flame: CI('<path d="M12 3.5c.8 2.9-4.7 5.3-4.7 9.9a4.7 4.7 0 0 0 9.4 0c0-1.9-.9-3.4-1.9-4.5-.1 1.4-.7 2.2-1.5 2.5.9-2.4-.6-5.7-1.3-7.9z"/>'),
+  leaf: CI('<path d="M5 19C5 9.5 12 4.5 20 4.5c0 8-5 14.5-15 14.5z"/><path d="M5 19c3-6 7-9 11-11"/>'),
+  heart: CI('<path d="M12 20.5S3.5 15 3.5 8.9A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 8.5 1.6C20.5 15 12 20.5 12 20.5z"/>'),
+  sun: CI('<circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/>'),
+  moon: CI('<path d="M20 13.6A8.5 8.5 0 1 1 10.4 4 7 7 0 0 0 20 13.6z"/>'),
+  sparkle: CI('<path d="M11 3.5l1.6 4.9 4.9 1.6-4.9 1.6L11 16.5l-1.6-4.9-4.9-1.6 4.9-1.6z"/><path d="M18 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>')
+};
+const CARD_TYPES = { schedule:'Weekly schedule', list:'Menu or list', notice:'Announcement' };
+const SP_DAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
+const SP_TODAY = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const ARR_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+const TODAY_YMD = (d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'))(new Date());
+const cardExpired = c => c.t === 'notice' && !!c.until && c.until < TODAY_YMD;
+
+function detail(id, tab){
   const v = venueById(id);
   if(!v){ home(); return; }
-  setView('v=' + v.id);
+  const app = tab === 'app';
+  setView((app ? 'va=' : 'v=') + v.id);
   const plans = STRIPE_PLANS.filter(p=>p.url);
+  const cap = ()=> v.card_cap ?? 4;
+  const gamesOrder = (()=>{ const saved = (v.games || []).filter(g => GAME_ORDER.includes(g)); return saved.concat(GAME_ORDER.filter(g => !saved.includes(g))); })();
+  const gameOn = g => !v.games || !v.games.length || v.games.includes(g);
+  const cap1 = s => s[0].toUpperCase() + s.slice(1);
+
   $('main').innerHTML = `
-    <button class="back" id="back">‹ Venues</button>
-    <h1>${esc(v.name)} <span class="badge ${esc(v.status)}" style="vertical-align:6px">${esc(v.status)}</span></h1>
+    <button class="back" id="back">${ICO_BACK}Venues</button>
+    <h1>${esc(v.name)} <span class="badge ${esc(v.status)}">${esc(v.status)}</span></h1>
+    <div class="actions">
+      <button class="btn" id="cardBtn">Table card</button>
+      <button class="btn ghost" id="editBtn">Edit venue</button>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="tab${app ? '' : ' on'}" id="tabVenueBtn" role="tab" aria-selected="${!app}" aria-controls="paneVenue">Venue</button>
+      <button class="tab${app ? ' on' : ''}" id="tabAppBtn" role="tab" aria-selected="${app}" aria-controls="paneApp">App Settings</button>
+    </div>
 
-    <section>
-      <h2>Links</h2>
-      <div class="hint">The Live App link is safe to share any time. The Owner Dashboard link is private; rotate it if it ever leaks.</div>
-      <label class="f" style="margin-top:10px">Live App</label>
-      <div class="linkrow">
-        <span class="lk" id="lkDemo">${esc(demoLink(v))}</span>
-        <div class="linkbtns"><a class="btn sm ghost" id="opDemo" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpDemo">Copy</button></div>
-      </div>
-      <label class="f" style="margin-top:10px">Owner Dashboard</label>
-      <div class="linkrow">
-        <span class="lk" id="lkOwner">${esc(ownerLink(v))}</span>
-        <div class="linkbtns"><a class="btn sm ghost" id="opOwner" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpOwner">Copy</button><button class="btn sm danger" id="rotate">Rotate</button></div>
-      </div>
-      <label class="f" style="margin-top:10px">Guest Report <span style="font-weight:400;text-transform:none">(permanent link; the month picker lives on the page. Same key as the owner link, so Rotate cycles both.)</span></label>
-      <div class="linkrow">
-        <span class="lk" id="lkReport">${esc(reportLink(v))}</span>
-        <div class="linkbtns"><a class="btn sm ghost" id="opReport" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpReport">Copy</button></div>
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer;font-size:14px">
-        <input type="checkbox" id="rcFlag2" ${v.report_county !== false ? 'checked' : ''} /> County comparison on the guest report
-      </label>
-      <div class="msg" id="rcMsg2"></div>
-      <label class="f" style="margin-top:10px">Owner passphrase <span style="font-weight:400;text-transform:none">(optional; asked once per device on the Owner Dashboard. Send it by TEXT or in person, never in the same email as the link. Reset = set a new one; Clear = back to link-only.)</span></label>
-      <div class="hint" id="opStatus">${v.has_pass ? 'A passphrase is set.' : 'No passphrase; the link alone opens the dashboard.'}</div>
-      <div class="frow" style="margin-top:8px">
-        <input type="text" id="opPass" placeholder="New passphrase (4+ characters)" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:170px" />
-        <button class="btn sm ghost" id="opSet">Set</button>
-        ${v.has_pass ? '<button class="btn sm danger" id="opClear">Clear</button>' : ''}
-      </div>
-      <div class="msg" id="opMsg"></div>
-    </section>
+    <div class="pane${app ? '' : ' on'}" id="paneVenue">
+      <section>
+        <h2>Status</h2>
+        <div class="hint">Lead: the app works but saves nothing. Active: everything saves. Inactive: the QR stops loading. You change this by hand when a subscription starts or ends.</div>
+        <div class="statusbtns">${['lead','active','inactive'].map(s=>`<button class="btn sm ${v.status===s?'':'ghost'}" data-st="${s}" ${v.status===s?'disabled':''}>${cap1(s)}</button>`).join('')}</div>
+        <div id="stConfirm"></div>
+        <div class="msg" id="stMsg"></div>
+      </section>
 
-    <section>
-      <h2>Status</h2>
-      <div class="hint">lead plays but saves nothing · active saves everything · inactive does not load. You flip these by hand when a subscription starts or ends.</div>
-      <div class="statusbtns">
-        ${['lead','active','inactive'].map(s=>`<button class="btn sm ${v.status===s?'':'ghost'}" data-st="${s}" ${v.status===s?'disabled':''}>${s}</button>`).join('')}
-      </div>
-      <div class="msg" id="stMsg"></div>
-    </section>
+      <section>
+        <h2>Links</h2>
+        <div class="hint">The live app link is safe to share. The owner dashboard and guest report links are private to the owner.</div>
+        <label class="f">Live app</label>
+        <div class="linkrow">
+          <span class="lk" id="lkDemo">${esc(demoLink(v))}</span>
+          <div class="linkbtns"><a class="btn sm ghost" id="opDemo" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpDemo">Copy</button></div>
+        </div>
+        <label class="f">Owner dashboard</label>
+        <div class="linkrow">
+          <span class="lk" id="lkOwner">${esc(ownerLink(v))}</span>
+          <div class="linkbtns"><a class="btn sm ghost" id="opOwner" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpOwner">Copy</button></div>
+        </div>
+        <label class="f">Guest report</label>
+        <div class="hint" style="margin:0 0 6px">Same link every month; the month picker is on the page. It shares the owner's key, so a new owner link also makes a new report link.</div>
+        <div class="linkrow">
+          <span class="lk" id="lkReport">${esc(reportLink(v))}</span>
+          <div class="linkbtns"><a class="btn sm ghost" id="opReport" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpReport">Copy</button></div>
+        </div>
+        <div class="frow" style="margin-top:4px"><button class="btn sm ghost" id="rotate">Issue a new owner link</button><span class="hint" style="margin:0">Only if the private link ever gets out. The old links stop working right away.</span></div>
+        <div id="rotConfirm"></div>
+        <div class="msg" id="rotMsg"></div>
 
-    <section>
-      <h2>Send an email</h2>
-      <div class="hint">${v.owner_email ? `Opens a prefilled email to ${esc(v.owner_email)} in your mail app. You review, you tap send, it goes from your address.` : 'Add an owner email (Edit venue) to enable these.'}</div>
-      <div class="mailbtns">
-        <a class="btn sm ghost ${v.owner_email?'':'off'}" id="mDemo">Demo link</a>
-        <a class="btn sm ghost" id="mOwner">Owner dashboard link</a>
-        <a class="btn sm ghost" id="mReport">Guest report link</a>
-        ${plans.length ? '<a class="btn sm ghost" id="mStripe">Payment link</a>' : ''}
-      </div>
-    </section>
+        <label class="f" style="margin-top:18px">Owner passphrase</label>
+        <div class="hint">Optional. Asked once per device when the owner opens their dashboard. Send it by text or in person, never in the same email as the link.</div>
+        <div class="hint" id="opStatus">${v.has_pass ? 'A passphrase is set.' : 'No passphrase. The link alone opens the dashboard.'}</div>
+        <div class="frow" style="margin-top:8px">
+          <input type="text" id="opPass" placeholder="Ex. blue heron" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:170px" />
+          <button class="btn sm ghost" id="opSet">${v.has_pass ? 'Replace' : 'Set'}</button>
+          ${v.has_pass ? '<button class="btn sm ghost" id="opClear">Remove</button>' : ''}
+        </div>
+        <div id="opConfirm"></div>
+        <div class="msg" id="opMsg"></div>
+      </section>
 
-    <section>
-      <h2>Subscription</h2>
-      <div class="hint">${plans.length ? 'Pick a plan; the link arrives pre-tagged with this venue and prefilled with the owner email.' : 'Paste your Stripe payment links into STRIPE_PLANS at the top of admin.html to enable this.'}</div>
-      ${plans.length ? `
-      <div class="frow">
-        <select id="planSel">${plans.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('')}</select>
-        <button class="btn sm ghost" id="cpPlan">Copy link</button>
-      </div>
-      <div class="linkrow"><span class="lk" id="lkPlan"></span></div>` : ''}
-    </section>
+      <section>
+        <h2>Send an email</h2>
+        <div class="hint">${v.owner_email ? `Opens a prefilled email to ${esc(v.owner_email)} in your mail app. You read it over and send it from your own address.` : 'Add an owner email under Edit venue to turn these on.'}</div>
+        <div class="mailbtns">
+          <a class="btn sm ghost" id="mDemo">Demo link</a>
+          <a class="btn sm ghost" id="mOwner">Owner dashboard link</a>
+          <a class="btn sm ghost" id="mReport">Guest report link</a>
+          ${plans.length ? '<a class="btn sm ghost" id="mStripe">Payment link</a>' : ''}
+        </div>
+      </section>
 
-    <section>
-      <h2>Engagement</h2>
-      <div class="hint">Last 30 days from the app. Lead venues count too (that is the demo signal). Ratings and comments stay owner-only on purpose.</div>
-      <div id="engBody" class="hint" style="margin-top:8px">Loading…</div>
-    </section>
+      <section>
+        <h2>Subscription</h2>
+        ${plans.length ? `
+        <div class="hint">Pick a plan. The link is tagged with this venue and prefilled with the owner email.</div>
+        <div class="frow">
+          <select id="planSel">${plans.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('')}</select>
+          <button class="btn sm ghost" id="cpPlan">Copy link</button>
+        </div>
+        <div class="linkrow"><span class="lk" id="lkPlan"></span></div>` : `
+        <div class="hint" style="margin:0">Add your Stripe plan links under Settings to send signup links from here.</div>`}
+      </section>
 
-    <section>
-      <h2>Games</h2>
-      <div class="hint">What shows in this venue's hub, in this order (arrows reorder; 33_game_order preserves it). At least one stays on. The owner can also edit this from their dashboard.</div>
-      <div id="gToggles" style="margin-top:8px">
-        ${(()=>{
-          const saved = (v.games || []).filter(g => GAME_ORDER.includes(g));
-          const order = saved.concat(GAME_ORDER.filter(g => !saved.includes(g)));
-          return order.map(g=>{
-            const on = !v.games || !v.games.length || v.games.includes(g);
-            return `<div style="display:flex;align-items:center;gap:8px;padding:4px 0" data-id="${g}">
-              <label style="display:flex;align-items:center;gap:8px;flex:1;cursor:pointer">
-                <input type="checkbox" data-game="${g}" ${on?'checked':''} /> ${esc(GAMES_META[g].name)}
-              </label>
-              <button type="button" class="btn sm ghost" data-mv="-1" aria-label="Move up" style="padding:6px 11px">▲</button>
-              <button type="button" class="btn sm ghost" data-mv="1" aria-label="Move down" style="padding:6px 11px">▼</button>
-            </div>`;
-          }).join('');
-        })()}
-      </div>
-      <button class="btn sm" id="saveGames" style="margin-top:8px">Save games</button>
-      <div class="msg" id="gMsg"></div>
-    </section>
+      <section>
+        <h2>Engagement</h2>
+        <div class="hint">Last 30 days in the app. Lead venues count too; that is the demo signal. Ratings and comments stay owner-only on purpose.</div>
+        <div id="engBody" class="hint" style="margin:8px 0 0">Loading…</div>
+      </section>
+    </div>
 
-    <section>
-      <h2>Home screen cards</h2>
-      <div class="hint">The cards on the app's home screen, under the two pinned rows: weekly schedule (daily specials, live music nights), menu or list (tap list), announcement (events, notices, one-off promos; can stand out in the accent color, open a link, and hide itself after a last day). The owner edits these from their dashboard too; this is the same editor. Tap a card to open it; arrows reorder, the eye hides one without deleting it.</div>
-      <div id="cardList"></div>
-      <div class="frow" id="cardAddRow" style="margin-top:10px">
-        <button class="btn sm ghost" data-add="schedule">+ Weekly schedule</button>
-        <button class="btn sm ghost" data-add="list">+ Menu or list</button>
-        <button class="btn sm ghost" data-add="notice">+ Announcement</button>
-      </div>
-      <button class="btn sm" id="cardsSave" style="margin-top:10px">Save cards</button>
-      <div class="msg" id="cardsMsg"></div>
-      <div class="frow" style="margin-top:14px;align-items:center">
-        <label class="f" style="margin:0">Card cap</label>
-        <input type="number" id="capIn" min="0" max="20" value="${v.card_cap ?? 4}" style="width:74px;flex:none" />
-        <button class="btn sm ghost" id="capSave">Save cap</button>
-        <span class="hint" style="margin:0;flex:none">Per-venue slot count (default 4); the sellable knob.</span>
-      </div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:12px;cursor:pointer">
-        <input type="checkbox" id="gamesOn" ${v.games_enabled === false ? '' : 'checked'} /> Games enabled for this venue
-      </label>
-      <div class="hint">Off = the games side of the app disappears for this venue (feedback-and-cards venues). The landing keeps Share feedback, so it can never be empty, and a games QR falls back to the chooser. Operator-set only; owners never see this switch.</div>
-      <div class="msg" id="cgMsg"></div>
-    </section>
+    <div class="pane${app ? ' on' : ''}" id="paneApp">
+      <section>
+        <h2>Games</h2>
+        <div class="hint">What this venue's tables can play, in this order. At least one stays on. The owner can change this from their dashboard too.</div>
+        <div id="gToggles">${gamesOrder.map(g => `
+          <div class="grow" data-id="${g}">
+            <label class="ck" style="flex:1;margin:0;align-items:center"><input type="checkbox" data-game="${g}" ${gameOn(g)?'checked':''}> ${esc(GAMES_META[g].name)}</label>
+            <span class="gmove"><button type="button" class="iconbtn" data-mv="-1" aria-label="Move ${esc(GAMES_META[g].name)} up">${ARR_UP}</button><button type="button" class="iconbtn" data-mv="1" aria-label="Move ${esc(GAMES_META[g].name)} down">${ARR_DOWN}</button></span>
+          </div>`).join('')}</div>
+        <div class="saverow"><button class="btn" id="gamesSave">Save</button><span class="msg" id="gMsg"></span></div>
+      </section>
 
-    <section>
-      <h2>Feedback form</h2>
-      <div class="hint">By default this venue uses the global form (edit it under Tools on the home screen). A custom form is the paid add-on: it fully replaces the global form here, starts as a copy of it, and later global edits never change it. While the flag is on, the venue can also edit their form from their own owner dashboard (42_owner_form_editor.sql).</div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
-        <input type="checkbox" id="ffFlag" ${v.form_custom?'checked':''} /> Custom feedback form enabled (paid)
-      </label>
-      <button class="btn sm ghost" id="ffEdit" style="margin-top:10px;display:${v.form_custom?'inline-flex':'none'}">Edit this venue's form</button>
-      <div class="msg" id="ffMsg"></div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:14px;cursor:pointer">
-        <input type="checkbox" id="rcFlag" ${v.report_county !== false ? 'checked' : ''} /> County comparison on the guest report
-      </label>
-      <div class="hint" style="margin-top:4px;margin-bottom:0">Untick to leave the "vs county" page and its benchmarks off this venue's monthly report.</div>
-      <div class="msg" id="rcMsg"></div>
-    </section>
+      <section>
+        <h2>Home screen cards</h2>
+        <div class="hint">The cards on the app's home screen, in this order. Tap one to edit it. The owner has this same editor on their dashboard.</div>
+        <div id="cardList"></div>
+        <div class="frow" id="cardAddRow" style="margin-top:12px">
+          <button class="btn ghost" id="addCardBtn">+ Add a card</button>
+          <span class="hint" id="cardCapLine" style="margin:0"></span>
+        </div>
+        <div class="kind" id="cardKind" style="display:none">
+          <h4>What kind of card?</h4>
+          <button type="button" class="kindopt" data-add="list"><b>Menu or list</b><span>Rows of names and prices: a tap list, a happy hour menu</span></button>
+          <button type="button" class="kindopt" data-add="notice"><b>Announcement</b><span>One message: an event, a notice, a one-off promo</span></button>
+          <button type="button" class="kindopt" data-add="schedule"><b>Weekly schedule</b><span>Something that repeats by day: daily specials, live music nights</span></button>
+          <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" id="cardKindCancel">Cancel</button></div>
+        </div>
+        <div class="saverow"><button class="btn" id="cardsSave">Save</button><span class="msg" id="cardsMsg"></span></div>
+      </section>
 
-    <section>
-      <h2>Custom questions</h2>
-      <div class="hint">The paid add-on. Rows here belong to ${esc(v.name)} only and deal custom-first while the flag is on; turning the flag off hides them without deleting anything.</div>
-      <label style="display:flex;align-items:center;gap:8px;margin-top:10px;cursor:pointer">
-        <input type="checkbox" id="cqFlag" ${v.custom_questions?'checked':''} /> Custom questions enabled (paid)
-      </label>
-      <div id="cqOnlyWrap" style="display:${v.custom_questions?'block':'none'};margin-top:14px">
-        <label class="f">Custom-only games <span style="font-weight:400;text-transform:none">(deal ONLY this venue's questions; needs one full round, aim for 3x so repeat visits survive. Below the floor the app quietly blends the shared pool back in.)</span></label>
+      <section>
+        <h2>Add-ons and limits</h2>
+        <div class="hint">Operator-only. Owners never see these switches.</div>
+        <label class="f">Card slots</label>
+        <div class="frow">
+          <input type="number" id="capIn" min="0" max="20" value="${v.card_cap ?? 4}" style="width:84px;flex:none" />
+          <span class="hint" style="margin:0">How many home screen cards this venue can use. Default 4. Lowering it drops the last cards.</span>
+        </div>
+        <label class="ck" style="margin-top:14px"><input type="checkbox" id="gamesOn" ${v.games_enabled === false ? '' : 'checked'}> <span>Games on for this venue<small>Off hides the games side of the app. Feedback and cards stay.</small></span></label>
+        <label class="ck"><input type="checkbox" id="ffFlag" ${v.form_custom?'checked':''}> <span>Custom feedback form (paid)<small>Replaces the shared form for this venue. It starts as a copy; later changes to the shared form never touch it. The owner can edit it from their dashboard.</small></span></label>
+        <div id="ffEditWrap" style="display:${v.form_custom?'block':'none'};margin:4px 0 0 28px"><button class="btn sm ghost" id="ffEdit">Edit this venue's form</button></div>
+        <label class="ck"><input type="checkbox" id="cqFlag" ${v.custom_questions?'checked':''}> <span>Custom questions (paid)<small>This venue's own game questions, dealt first. Turning it off hides them without deleting anything.</small></span></label>
+        <label class="ck"><input type="checkbox" id="rcFlag" ${v.report_county !== false ? 'checked' : ''}> <span>County comparison on the guest report<small>Untick to leave the "vs county" page off this venue's monthly report.</small></span></label>
+        <div class="saverow"><button class="btn" id="addonsSave">Save</button><span class="msg" id="addonsMsg"></span></div>
+      </section>
+
+      <section id="cqSection" style="display:${v.custom_questions?'block':'none'}">
+        <h2>Custom questions</h2>
+        <div class="hint">Rows here belong to ${esc(v.name)} only.</div>
+        <label class="f">Custom-only games</label>
+        <div class="hint">Deal only this venue's questions in these games. Each needs enough rows for a full round; aim for three times that so repeat visits stay fresh. Below the floor the app blends the shared pool back in.</div>
         <div id="cqOnly" class="hint">Loading…</div>
-        <button class="btn sm ghost" id="cqOnlySave" style="margin-top:8px">Save custom-only</button>
-        <div class="msg" id="cqOnlyMsg"></div>
-      </div>
-      <label class="f" style="margin-top:14px">Import a pack for this venue <span style="font-weight:400;text-transform:none">(same JSON format as the shared importer; rows land as ${esc(v.name)}'s custom questions)</span></label>
-      <input type="file" id="cqPackFile" accept=".json,application/json" />
-      <div class="msg" id="cqPackMsg"></div>
-      <div id="cqList" class="hint" style="margin-top:10px">Loading…</div>
-      <div style="margin-top:12px">
-        <label class="f">Add a custom row</label>
+        <div class="saverow"><button class="btn sm" id="cqOnlySave">Save custom-only games</button><span class="msg" id="cqOnlyMsg"></span></div>
+        <label class="f" style="margin-top:16px">Import a pack for this venue</label>
+        <div class="hint">Same JSON format as Question packs. Rows land as this venue's custom questions.</div>
+        <input type="file" id="cqPackFile" accept=".json,application/json" />
+        <div id="cqPackConfirm"></div>
+        <div class="msg" id="cqPackMsg"></div>
+        <div id="cqList" class="hint" style="margin-top:10px">Loading…</div>
+        <label class="f" style="margin-top:16px">Add a custom row</label>
         <select id="cqGame">${CONTENT_GAMES.map(g=>`<option value="${g}">${esc(GAMES_META[g].name)}</option>`).join('')}</select>
         <div id="cqFields" style="margin-top:8px"></div>
-        <button class="btn sm" id="cqAdd" style="margin-top:8px">Add row</button>
-        <div class="msg" id="cqMsg"></div>
-      </div>
-    </section>
-
-    <div style="display:flex;gap:10px;margin-top:4px">
-      <button class="btn ghost" id="editBtn">Edit venue</button>
-      <button class="btn" id="cardBtn">Table card</button>
+        <div class="saverow"><button class="btn sm" id="cqAdd">Add row</button><span class="msg" id="cqMsg"></span></div>
+      </section>
     </div>`;
+
+  // ---- tabs: switching starts the new pane at the top ----
+  const showTab = which => {
+    const a = which === 'app';
+    $('paneVenue').classList.toggle('on', !a); $('paneApp').classList.toggle('on', a);
+    $('tabVenueBtn').classList.toggle('on', !a); $('tabAppBtn').classList.toggle('on', a);
+    $('tabVenueBtn').setAttribute('aria-selected', String(!a)); $('tabAppBtn').setAttribute('aria-selected', String(a));
+    setView((a ? 'va=' : 'v=') + v.id);
+  };
+  $('tabVenueBtn').onclick = ()=>{ showTab('venue'); window.scrollTo(0, 0); };
+  $('tabAppBtn').onclick = ()=>{ showTab('app'); window.scrollTo(0, 0); };
+  const rerender = ()=> detail(v.id, $('paneApp').classList.contains('on') ? 'app' : undefined);
 
   $('back').onclick = ()=> home();
   $('editBtn').onclick = ()=> form(v);
@@ -1818,53 +1954,57 @@ function detail(id){
   $('opOwner').href = ownerLink(v);
   $('opReport').href = reportLink(v);
 
-  // owner passphrase: set / reset / clear (29_owner_passphrase.sql)
-  $('opSet').onclick = async ()=>{
-    const p = $('opPass').value.trim(), m = $('opMsg');
-    if(p.length < 4){ m.className='msg err'; m.textContent='At least 4 characters.'; return; }
-    m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
-    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 29_owner_passphrase.sql been run?).'; return; }
-    v.has_pass = true; $('opPass').value='';
-    m.className='msg ok'; m.textContent='Set. Owners on other devices will be asked for it; text it to them separately.';
-    detail(v.id);
-  };
-  const opClear = $('opClear');
-  if(opClear) opClear.onclick = async ()=>{
-    if(!confirm(`Remove ${v.name}'s dashboard passphrase? The link alone opens it again.`)) return;
-    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
-    if(error || !data || data.ok!==true){ toast('Could not clear'); return; }
-    v.has_pass = false; toast('Cleared. Link-only again.');
-    detail(v.id);
-  };
-
-  $('rotate').onclick = async ()=>{
-    if(!confirm(`Rotate ${v.name}'s owner key? Their current dashboard link stops working immediately.`)) return;
-    const { data, error } = await rpc('admin_rotate_owner_key', { p_id: v.id });
-    if(error || !data || data.ok!==true){ toast('Rotate failed'); return; }
-    v.owner_key = data.owner_key;
-    toast('Rotated. Send them the new link.');
-    detail(v.id);
-  };
-
-  document.querySelectorAll('[data-st]').forEach(b=> b.onclick = async ()=>{
+  // ---- status: an inline confirm, then a next step ----
+  document.querySelectorAll('[data-st]').forEach(b=> b.onclick = ()=>{
     const st = b.dataset.st;
-    const warn = { active:`Set ${v.name} to ACTIVE? Votes, surveys, and plays start saving for real.`,
-                   inactive:`Set ${v.name} to INACTIVE? Their QR stops loading at the table.`,
-                   lead:`Set ${v.name} back to LEAD? The app keeps working but stops saving.` }[st];
-    if(!confirm(warn)) return;
-    const { data, error } = await rpc('admin_set_status', { p_id: v.id, p_status: st });
-    if(error || !data || data.ok!==true){ $('stMsg').className='msg err'; $('stMsg').textContent='Could not change status.'; return; }
-    v.status = st; toast('Status: '+st); detail(v.id);
+    const why = { active:'Votes, surveys, and plays start saving for real.', inactive:'Their QR stops loading at the table.', lead:'The app keeps working but stops saving.' }[st];
+    askInline($('stConfirm'), `Set ${esc(v.name)} to ${st}? ${why}`, 'Set ' + st, async ()=>{
+      const m = $('stMsg'); m.className = 'msg'; m.textContent = 'Saving…';
+      const { data, error } = await rpc('admin_set_status', { p_id: v.id, p_status: st });
+      if(error || !data || data.ok!==true){ failMsg(m, 'Could not change the status.'); return; }
+      v.status = st; rerender();
+      const m2 = $('stMsg'); m2.className = 'msg ok';
+      m2.textContent = st === 'active' ? 'Now active. Next: send them their dashboard link.' : st === 'inactive' ? 'Now inactive. Their QR no longer loads.' : 'Back to lead. The app works but saves nothing.';
+    }, st === 'inactive');
   });
 
-  // email buttons (mailto). Disabled look when no owner_email.
+  // ---- owner passphrase ----
+  $('opSet').onclick = async ()=>{
+    const p = $('opPass').value.trim(), m = $('opMsg');
+    if(p.length < 4){ m.className = 'msg err'; m.textContent = 'At least 4 characters.'; return; }
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
+    if(error || !data || data.ok!==true){ failMsg(m); return; }
+    v.has_pass = true; rerender();
+    const m2 = $('opMsg'); m2.className = 'msg ok'; m2.textContent = 'Set. Owners on other devices will be asked for it. Text it to them separately.';
+  };
+  const opClear = $('opClear');
+  if(opClear) opClear.onclick = ()=> askInline($('opConfirm'), `Remove ${esc(v.name)}'s passphrase? The link alone opens the dashboard again.`, 'Remove', async ()=>{
+    const m = $('opMsg'); m.className = 'msg'; m.textContent = 'Removing…';
+    const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
+    if(error || !data || data.ok!==true){ failMsg(m, 'Could not remove it.'); return; }
+    v.has_pass = false; rerender();
+    const m2 = $('opMsg'); m2.className = 'msg ok'; m2.textContent = 'Removed. The link alone opens the dashboard.';
+  }, true);
+
+  // ---- emails (mailto). Painted as a function so a new owner link repaints them. ----
   const mail = (id, subject, body)=>{
     const a = $(id); if(!a) return;
-    if(!v.owner_email){ a.style.opacity=.45; a.onclick=e=>{e.preventDefault(); toast('Add an owner email first');}; return; }
+    if(!v.owner_email){ a.classList.add('off'); a.onclick = e=>{ e.preventDefault(); toast('Add an owner email first'); }; return; }
     a.href = mailto(v, subject, body);
   };
-  mail('mDemo', `Your ${v.name} demo`,
+  const ownerMailBody = ()=>
+`Hi,
+
+Here is your private ${v.name} dashboard. Live ratings, comments from your guests, game activity, and the home screen cards you can update any time:
+
+${ownerLink(v)}
+
+This link is just for you. If it ever gets out, tell me and I will issue a fresh one.
+
+${SIG}`;
+  const paintMail = ()=>{
+    mail('mDemo', `Your ${v.name} demo`,
 `Hi,
 
 Great meeting you. Here is the ${v.name} demo, live right now with your branding. Open it on your phone and tap around like a guest would:
@@ -1874,17 +2014,8 @@ ${demoLink(v)}
 First month is free if you want it on your tables. Reply here${CFG.operatorPhone ? ", or call or text me at " + CFG.operatorPhone : ""}.
 
 ${SIG}`);
-  mail('mOwner', `Your private ${v.name} dashboard`,
-`Hi,
-
-Here is your private ${v.name} dashboard. Live ratings, comments from your guests, game activity, and the home screen cards you can update any time:
-
-${ownerLink(v)}
-
-This link is just for you. If it ever gets out, tell me and I will issue a fresh one.
-
-${SIG}`);
-  mail('mReport', `Your ${v.name} guest report`,
+    mail('mOwner', `Your private ${v.name} dashboard`, ownerMailBody());
+    mail('mReport', `Your ${v.name} guest report`,
 `Hi,
 
 Your ${v.name} guest report is ready. Same link every month, always current:
@@ -1894,6 +2025,8 @@ ${reportLink(v)}
 Pick any month at the top of the page, and print or save it as a PDF right from there. This link is private to you, like your dashboard.
 
 ${SIG}`);
+  };
+  paintMail();
   if(plans.length){
     const paint = ()=>{
       const p = plans[+$('planSel').value];
@@ -1914,201 +2047,195 @@ ${SIG}`);
     paint();
   }
 
-  // ---- engagement snapshot (27_admin_content.sql) ----
+  // ---- a new owner link: inline confirm, links repaint in place, a next step stays on screen ----
+  $('rotate').onclick = ()=> askInline($('rotConfirm'), `Issue a new owner link for ${esc(v.name)}? Their current dashboard and report links stop working right away.`, 'Issue new link', async ()=>{
+    const m = $('rotMsg'); m.className = 'msg'; m.textContent = 'Working…';
+    const { data, error } = await rpc('admin_rotate_owner_key', { p_id: v.id });
+    if(error || !data || data.ok!==true){ failMsg(m, 'Could not issue a new link.'); return; }
+    v.owner_key = data.owner_key;
+    $('lkOwner').textContent = ownerLink(v); $('lkReport').textContent = reportLink(v);
+    $('opOwner').href = ownerLink(v); $('opReport').href = reportLink(v);
+    paintMail();
+    m.className = 'msg ok';
+    m.innerHTML = 'New link issued. The old one no longer works. <span class="frow" style="display:inline-flex;margin-left:6px"><button type="button" class="btn sm ghost" id="rotCopy">Copy new link</button>' + (v.owner_email ? '<a class="btn sm ghost" id="rotMail">Email it</a>' : '') + '</span>';
+    $('rotCopy').onclick = ()=> copy(ownerLink(v));
+    if($('rotMail')) $('rotMail').href = mailto(v, `Your new ${v.name} dashboard link`, ownerMailBody());
+  }, true);
+
+  // ---- engagement snapshot ----
   (async ()=>{
     const { data, error } = await rpc('admin_venue_stats', { p_id: v.id });
     const el = $('engBody');
-    if(error || !data){ el.textContent = 'Needs 27_admin_content.sql (run it once, then reload).'; return; }
+    if(error || !data){ el.innerHTML = 'Not available yet. Your database may need an update: ' + PLAT_LINK + '.'; return; }
     const e30 = data.events_30d || {};
-    const stat = (n, label) => `<span style="display:inline-block;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:8px 12px;margin:0 8px 8px 0"><b style="font-size:17px">${n||0}</b> <span style="color:var(--ink-dim);font-size:13px">${label}</span></span>`;
-    const games30 = (data.games_30d||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.n}`).join(' · ');
-    const playsAll = (data.plays_all_time||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.plays}`).join(' · ');
+    const stat = (n, label) => `<li class="chip"><b>${n||0}</b><span>${label}</span></li>`;
+    const games30 = (data.games_30d||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.n}`).join(', ');
+    const playsAll = (data.plays_all_time||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.plays}`).join(', ');
     const last = data.last_event_at ? new Date(data.last_event_at).toLocaleDateString([], {month:'short', day:'numeric'}) : 'never';
     el.className = '';
     el.innerHTML = `
-      <div>${stat(e30.opens,'opens')}${stat(e30.game_starts,'game starts')}${stat(e30.surveys,'surveys')}${stat(e30.review_clicks,'review clicks')}${stat(e30.promo_clicks,'promo clicks')}</div>
-      ${games30 ? `<div class="hint" style="margin-top:6px">Games, 30 days: ${games30}</div>` : ''}
+      <ul class="chips">${stat(e30.opens,'opens')}${stat(e30.game_starts,'game starts')}${stat(e30.surveys,'surveys')}${stat(e30.review_clicks,'review clicks')}${stat(e30.promo_clicks,'card taps')}</ul>
+      ${games30 ? `<div class="hint" style="margin-top:8px">Games, 30 days: ${games30}</div>` : ''}
       ${playsAll ? `<div class="hint" style="margin-top:2px">All-time plays: ${playsAll}</div>` : ''}
       <div class="hint" style="margin-top:2px">Last activity: ${last}</div>`;
   })();
 
-  // ---- game toggles ----
-  $('saveGames').onclick = async ()=>{
-    const picked = [...document.querySelectorAll('#gToggles input:checked')].map(x=>x.dataset.game);
-    const m = $('gMsg');
-    if(!picked.length){ m.className='msg err'; m.textContent='At least one game stays on.'; return; }
-    m.className='msg'; m.textContent='Saving…';
-    const { data, error } = await rpc('admin_set_games', { p_id: v.id, p_games: picked });
-    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 27_admin_content.sql been run?).'; return; }
-    v.games = data.games;
-    m.className='msg ok'; m.textContent='Saved.';
-  };
+  // ---- games: dirty state, one Save ----
+  const gamesDirty = ()=> markDirty('games', 'gamesSave', 'Save', 'gMsg');
+  setSaveState('games', 'gamesSave', 'Save');
+  document.querySelectorAll('#gToggles input[type=checkbox]').forEach(i => i.onchange = gamesDirty);
   document.querySelectorAll('#gToggles [data-mv]').forEach(b => b.onclick = ()=>{
     const row = b.closest('[data-id]');
     if (b.dataset.mv === '-1' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
     if (b.dataset.mv === '1'  && row.nextElementSibling)     row.parentNode.insertBefore(row.nextElementSibling, row);
+    gamesDirty();
   });
-
-  // ---- home screen cards (schema 2): the same working-copy editor the
-  // owner dashboard has; Save pushes the whole array through admin_set_cards.
-  // A localStorage draft keyed by venue survives tab eviction (draftify rule;
-  // the fields are dynamic, so the cards get their own JSON draft).
-  const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
-  const CARD_ICONS = {
-    calendar: CI('<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'),
-    clock: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 1.9"/>'),
-    beer: CI('<path d="M7 4.5h8.5v14.5a1.8 1.8 0 0 1-1.8 1.8H8.8A1.8 1.8 0 0 1 7 19z"/><path d="M15.5 8.5h1.9a1.9 1.9 0 0 1 1.9 1.9v2.7a1.9 1.9 0 0 1-1.9 1.9h-1.9M10 8.5V17M12.5 8.5V17"/>'),
-    wine: CI('<path d="M8 3.5h8c0 5.2-1.7 7.8-4 7.8s-4-2.6-4-7.8z"/><path d="M12 11.3v8.2M8.5 20.5h7"/>'),
-    cocktail: CI('<path d="M4.5 4.5h15L12 13.2z"/><path d="M12 13.2v6.3M8.5 20.5h7M8 8h8"/>'),
-    coffee: CI('<path d="M4.5 9.5h12v6.5a3.5 3.5 0 0 1-3.5 3.5H8a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M16.5 11.5h1.3a2.4 2.4 0 0 1 0 4.8h-1.4M8.2 3.5c0 1.3 1 1.4 1 2.7M12.2 3.5c0 1.3 1 1.4 1 2.7"/>'),
-    plate: CI('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/>'),
-    pizza: CI('<path d="M4 6a18.5 18.5 0 0 1 16 0L12 21z"/><circle cx="9.6" cy="8.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.4" cy="8.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="12.6" r="1.05" fill="currentColor" stroke="none"/>'),
-    burger: CI('<path d="M4 10a8 8 0 0 1 16 0z"/><path d="M4 13.5h16"/><path d="M4.5 17h15v.8a2.7 2.7 0 0 1-2.7 2.7H7.2a2.7 2.7 0 0 1-2.7-2.7z"/>'),
-    dessert: CI('<path d="M7.5 10.5a4.5 4.5 0 1 1 9 0"/><path d="M7.5 10.5h9L12 21z"/>'),
-    music: CI('<path d="M9 18.5V6.2l10-2.2v12.3"/><circle cx="6.6" cy="18.6" r="2.4"/><circle cx="16.6" cy="16.4" r="2.4"/>'),
-    mic: CI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>'),
-    trophy: CI('<path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3.2 4M17 6h3a3 3 0 0 1-3.2 4M12 15v3.5M8 21h8l-.9-2.5H8.9z"/>'),
-    star: CI('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
-    tag: CI('<path d="M3.5 12.5v-9h9L21 12l-8.5 8.5z"/><circle cx="8" cy="8" r="1.4"/>'),
-    gift: CI('<rect x="4" y="9.5" width="16" height="11" rx="2"/><path d="M12 9.5v11M4 13.5h16M7.5 6.7A2.1 2.1 0 0 1 11.3 5c.7 1 .7 4.5.7 4.5S8 9.7 7.5 6.7zM16.5 6.7A2.1 2.1 0 0 0 12.7 5c-.7 1-.7 4.5-.7 4.5s4 .2 4.5-2.8z"/>'),
-    dice: CI('<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/>'),
-    megaphone: CI('<path d="M3.5 10.2v3.6l3.2.6L18.5 19V5L6.7 9.6z"/><path d="M18.5 9.2a3.1 3.1 0 0 1 0 5.6M7.8 14.8l1 5.2h2.9l-.8-4.6"/>'),
-    info: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 11.2v5.3"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/>'),
-    pin: CI('<path d="M12 21s-7-6.4-7-11.4a7 7 0 0 1 14 0C19 14.6 12 21 12 21z"/><circle cx="12" cy="9.6" r="2.5"/>'),
-    book: CI('<path d="M12 6.2C10.5 4.5 7.5 4.1 4 4.6V19c3.5-.5 6.5-.1 8 1.6 1.5-1.7 4.5-2.1 8-1.6V4.6c-3.5-.5-6.5-.1-8 1.6z"/><path d="M12 6.2v14.4"/>'),
-    flame: CI('<path d="M12 3.5c.8 2.9-4.7 5.3-4.7 9.9a4.7 4.7 0 0 0 9.4 0c0-1.9-.9-3.4-1.9-4.5-.1 1.4-.7 2.2-1.5 2.5.9-2.4-.6-5.7-1.3-7.9z"/>'),
-    leaf: CI('<path d="M5 19C5 9.5 12 4.5 20 4.5c0 8-5 14.5-15 14.5z"/><path d="M5 19c3-6 7-9 11-11"/>'),
-    heart: CI('<path d="M12 20.5S3.5 15 3.5 8.9A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 8.5 1.6C20.5 15 12 20.5 12 20.5z"/>'),
-    sun: CI('<circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/>'),
-    moon: CI('<path d="M20 13.6A8.5 8.5 0 1 1 10.4 4 7 7 0 0 0 20 13.6z"/>'),
-    sparkle: CI('<path d="M11 3.5l1.6 4.9 4.9 1.6-4.9 1.6L11 16.5l-1.6-4.9-4.9-1.6 4.9-1.6z"/><path d="M18 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>')
+  $('gamesSave').onclick = async ()=>{
+    const picked = [...document.querySelectorAll('#gToggles input:checked')].map(x=>x.dataset.game);
+    const m = $('gMsg');
+    if(!picked.length){ m.className = 'msg err'; m.textContent = 'At least one game stays on.'; return; }
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const { data, error } = await rpc('admin_set_games', { p_id: v.id, p_games: picked });
+    if(error || !data || data.ok!==true){ failMsg(m); return; }
+    v.games = data.games;
+    DIRTY.games = false; setSaveState('games', 'gamesSave', 'Save');
+    m.className = 'msg ok'; m.textContent = 'Saved. Live on their tables now.';
   };
-  const CARD_TYPES = { schedule:'Weekly schedule', list:'Menu or list', notice:'Announcement' };
-  const SP_DAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
-  const SP_TODAY = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
-  const EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
-  const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
-  const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
-  const ARR_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
-  const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
 
+  // ---- home screen cards: the owner dashboard's editor, verbatim in behavior ----
   const cardDraftK = 'st_admin_cards_' + v.id;
   let CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : [];
-  try { const d = localStorage.getItem(cardDraftK); if(d) CARDS = JSON.parse(d); } catch(e){}
-  let CARD_OPEN = -1;
-  const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK, JSON.stringify(CARDS)); } catch(e){} };
-
+  let hadDraft = false;
+  try { const d = localStorage.getItem(cardDraftK); if(d){ CARDS = JSON.parse(d); hadDraft = JSON.stringify(CARDS) !== JSON.stringify(Array.isArray(v.cards) ? v.cards : []); } } catch(e){}
+  let CARD_OPEN = -1, CARD_CONFIRM = -1;
+  const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK, JSON.stringify(CARDS)); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); setSaveState('cards', 'cardsSaveInline', 'Save'); };
+  const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK); } catch(e){} };
   const defaultCard = t =>
       t === 'schedule' ? { t, title:'Daily specials', icon:'calendar', days:{} }
     : t === 'list'     ? { t, title:'', icon:'beer', items:[{n:'',d:'',p:''}] }
     :                    { t, title:'', icon:'megaphone', mode:'inline', body:'' };
 
-  const cardBody = (c, ix)=>{
+  function cardBody(c, ix){
     const mode = c.mode || 'inline';
     const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
-      <label class="f">Short line under the name (optional)</label>
-      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}" />` : '';
+      <label class="cfl">Short line under the name (optional)</label>
+      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
     const common = `
-      <label class="f">Card name</label>
-      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}" />${short}
-      <label class="f">Icon</label>
-      <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}">${CARD_ICONS[k]}</button>`).join('')}</div>`;
+      <label class="cfl">Card name</label>
+      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}
+      <label class="cfl">Icon</label>
+      <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
+      <div class="hint" style="margin:6px 0 0">Icon: ${esc(c.icon || 'star')}</div>`;
     if (c.t === 'schedule') return common + `
-      <div class="hint" style="margin:10px 0 2px">One line per day. Diners see today's line on the home screen and can tap in for the week. Blank days show no card that day.</div>
+      <label class="cfl">The week</label>
+      <div class="hint" style="margin-bottom:2px">One line per day. Diners see today's line on the home screen and can tap in for the whole week. Blank days show no card that day.</div>
       ${SP_DAYS.map(([k, label]) => `
-        <div class="frow" style="margin-top:6px;align-items:center">
-          <label class="f" style="width:42px;flex:none;margin:0${k === SP_TODAY ? ';color:var(--accent)' : ''}">${label}</label>
-          <input type="text" maxlength="200" data-day="${k}" data-ix="${ix}" value="${esc((c.days || {})[k] || '')}" style="flex:1" />
+        <div class="sprow${k === SP_TODAY ? ' today' : ''}">
+          <label>${label}</label>
+          <input type="text" maxlength="200" data-day="${k}" data-ix="${ix}" value="${esc((c.days || {})[k] || '')}" placeholder="${k === 'mon' ? 'Ex. Half price specialty cocktails, $2 off Modelo drafts' : ''}">
         </div>`).join('')}
-      <label style="display:flex;align-items:flex-start;gap:8px;margin-top:10px;cursor:pointer">
-        <input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''} style="margin-top:3px" /> Keep the card on the home screen even on blank days
-      </label>`;
+      <label class="ck"><input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''}> Keep the card on the home screen even on blank days, so diners can still open the week</label>`;
     if (c.t === 'list') return common + `
-      <label class="f">The list</label>
-      <div class="hint" style="margin:0 0 4px">Prices get a dollar sign in the app. A bare number, or words like "Market price".</div>
+      <label class="cfl">The list</label>
+      <div class="hint" style="margin-bottom:2px">Prices get a dollar sign in the app. Type just the number, or words like "Market price".</div>
       ${(c.items || []).map((i, j) => `
         <div class="lirow">
-          <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness" />
-          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" />
+          <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness">
+          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" inputmode="decimal">
           <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
-          <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)" />
+          <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
         </div>`).join('')}
-      <button type="button" class="btn sm ghost" data-additem="${ix}" style="margin-top:8px">+ Add a row</button>`;
-    const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />`;
+      <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" data-additem="${ix}">+ Add a row</button></div>`;
+    const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
     return common + `
-      <label class="f">What it does</label>
-      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''} /> The message sits right on the app home screen</label>
-      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''} /> Tapping it opens a link</label>
-      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''} /> Tapping it opens a page on the app with more details</label>
+      <label class="cfl">What it does</label>
+      <label class="ck"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''}> The message sits right on the app home screen</label>
+      <label class="ck"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''}> Tapping it opens a link</label>
+      <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>
       ${mode === 'inline' ? `
-        <label class="f">Message</label>
-        <textarea data-f="body" data-ix="${ix}" maxlength="240" rows="3">${esc(c.body || '')}</textarea>
-        <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer">
-          <input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''} /> Make it stand out: a banner in the accent color
-        </label>` : ''}
+        <label class="cfl">Message</label>
+        <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>
+        <label class="ck"><input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''}> Make it stand out: a banner in the accent color</label>` : ''}
       ${mode === 'link' ? `
-        <label class="f">Link</label>
+        <label class="cfl">Link</label>
         ${urlField}` : ''}
       ${mode === 'page' ? `
-        <label class="f">The details page</label>
-        <textarea data-f="body" data-ix="${ix}" maxlength="1500" rows="5">${esc(c.body || '')}</textarea>
-        <label class="f">Button link at the bottom of the page (optional)</label>
+        <label class="cfl">The details page</label>
+        <textarea data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Ex. Doors at 7, $10 cover, 21 and over. Reserve a table by Thursday.">${esc(c.body || '')}</textarea>
+        <label class="cfl">Button link at the bottom of the page (optional)</label>
         ${urlField}
-        <label class="f">Button text</label>
-        <input type="text" data-f="btn" data-ix="${ix}" maxlength="30" value="${esc(c.btn || '')}" placeholder="Ex. Learn More" style="max-width:240px" />` : ''}
-      <label class="f">Hide message after this date (optional)</label>
-      <input type="date" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}" style="max-width:190px" />
-      <div class="hint" style="margin-top:4px">After this day the card hides itself in the app and stays here to reuse.</div>`;
-  };
+        <label class="cfl">Button text</label>
+        <input type="text" style="max-width:260px" data-f="btn" data-ix="${ix}" maxlength="30" value="${esc(c.btn || '')}" placeholder="Ex. Learn More">` : ''}
+      <label class="cfl">Hide message after this date (optional)</label>
+      <input type="date" style="max-width:200px" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}">
+      <div class="hint" style="margin:4px 0 0">The card hides itself the day after, and stays here to reuse. Blank = shows until you hide or delete it.</div>`;
+  }
 
   const renderCards = ()=>{
-    $('cardAddRow').style.display = CARDS.length < (v.card_cap ?? 4) ? '' : 'none';
+    $('cardCapLine').textContent = CARDS.length + ' of ' + cap() + ' card slots used' + (CARDS.length >= cap() ? '. Delete one to add another.' : '');
+    $('addCardBtn').style.display = CARDS.length < cap() ? '' : 'none';
+    if(CARDS.length >= cap()) $('cardKind').style.display = 'none';
+    setSaveState('cards', 'cardsSave', 'Save');
     $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
-      <div class="cbox${c.off ? ' isoff' : ''}">
+      <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
         <div class="cbox__head">
-          <button type="button" class="cbox__main" data-open="${ix}">
+          <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
             <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
-            <span class="cbox__t">${esc(c.title || 'Untitled card')}</span>
-            <span class="cbox__type">${CARD_TYPES[c.t]}${c.t === 'notice' && c.until && c.until < new Date().toISOString().slice(0, 10) ? ' <span style="color:var(--bad,#b3261e);font-weight:600">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>' : ''}</span>
+            <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(c.desc || CARD_TYPES[c.t])}${c.off ? ' · hidden' : ''}</span>${cardExpired(c) ? `<span class="cbox__why">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>` : ''}</span>
+            <span class="cbox__chev" aria-hidden="true">›</span>
           </button>
-          <button type="button" class="iconbtn" data-up="${ix}" title="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
-          <button type="button" class="iconbtn" data-down="${ix}" title="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
-          <button type="button" class="iconbtn" data-eye="${ix}" title="${c.off ? 'Hidden in the app. Tap to show it.' : 'Shows in the app. Tap to hide it.'}">${c.off ? EYE_OFF : EYE_ON}</button>
-          <button type="button" class="iconbtn" data-del="${ix}" title="Delete this card">${TRASH}</button>
+          <span class="cbox__ctl"><button type="button" class="iconbtn" data-up="${ix}" title="Move up" aria-label="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
+          <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
+          <button type="button" class="iconbtn" data-ask="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button></span>
         </div>
-        ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}</div>` : ''}
-      </div>`).join('') : '<div class="hint">No cards yet. Add one below.</div>';
+        ${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
+        ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
+          <div class="frow" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
+            <button type="button" class="btn sm" id="cardsSaveInline" style="min-width:96px">Save</button>
+            <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
+            <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
+          </div></div>` : ''}
+      </div>`).join('') : '<div class="hint" style="margin:8px 0 0">No cards yet. Add one below.</div>';
     wireCards();
+    setSaveState('cards', 'cardsSaveInline', 'Save');
   };
 
   function wireCards(){
     const L = $('cardList');
-    L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; renderCards(); });
+    L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; CARD_CONFIRM = -1; renderCards(); });
     L.querySelectorAll('[data-up]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.up; [CARDS[ix-1], CARDS[ix]] = [CARDS[ix], CARDS[ix-1]]; if(CARD_OPEN === ix) CARD_OPEN = ix - 1; else if(CARD_OPEN === ix - 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-down]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.down; [CARDS[ix], CARDS[ix+1]] = [CARDS[ix+1], CARDS[ix]]; if(CARD_OPEN === ix) CARD_OPEN = ix + 1; else if(CARD_OPEN === ix + 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
-    L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; cardSaveDraft(); renderCards(); });
-    L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; if(!confirm('Delete "' + (CARDS[ix].title || 'this card') + '"? This takes effect when you save.')) return; CARDS.splice(ix, 1); if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; CARD_OPEN = -1; CARD_CONFIRM = -1; cardSaveDraft(); renderCards(); });
+    const si = $('cardsSaveInline'); if(si) si.onclick = ()=> $('cardsSave').onclick();
+    L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; renderCards(); });
+    L.querySelectorAll('[data-keep]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = -1; renderCards(); });
+    L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; CARDS.splice(ix, 1); CARD_CONFIRM = -1; if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-icon]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.ix].icon = b.dataset.icon; cardSaveDraft(); renderCards(); });
     L.querySelectorAll('input[data-f], textarea[data-f]').forEach(i => i.addEventListener('input', ()=>{
       const c = CARDS[+i.dataset.ix];
       if(i.type === 'checkbox') c[i.dataset.f] = i.checked; else c[i.dataset.f] = i.value;
       if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
+      if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
+      if(i.dataset.f === 'until'){ cardSaveDraft(); renderCards(); return; }
       cardSaveDraft();
     }));
-    L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{
-      const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft();
-    }));
+    L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{ const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft(); }));
     L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards(); }));
     L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{ CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft(); }));
     L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
   }
 
-  document.querySelectorAll('#cardAddRow [data-add]').forEach(b => b.onclick = ()=>{
-    if(CARDS.length >= (v.card_cap ?? 4)) return;
+  $('addCardBtn').onclick = ()=>{ $('cardKind').style.display = ''; $('cardKind').querySelector('.kindopt').focus(); };
+  $('cardKindCancel').onclick = ()=>{ $('cardKind').style.display = 'none'; };
+  document.querySelectorAll('#cardKind [data-add]').forEach(b => b.onclick = ()=>{
+    if(CARDS.length >= cap()) return;
+    $('cardKind').style.display = 'none';
     CARDS.push(defaultCard(b.dataset.add));
-    CARD_OPEN = CARDS.length - 1;
+    CARD_OPEN = CARDS.length - 1; CARD_CONFIRM = -1;
     cardSaveDraft(); renderCards();
+    const opened = document.querySelectorAll('.cbox')[CARD_OPEN];
+    if(opened) opened.scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
   $('cardsSave').onclick = async ()=>{
@@ -2124,123 +2251,89 @@ ${SIG}`);
     });
     m.className = 'msg'; m.textContent = 'Saving…';
     const { data, error } = await rpc('admin_set_cards', { p_id: v.id, p_cards: out.length ? out : null });
-    if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save (has the schema 2 migration been applied?).'; return; }
+    if(error || !data || data.ok !== true){ failMsg(m); return; }
     CARDS = out; v.cards = out;
-    try { localStorage.removeItem(cardDraftK); } catch(e){}
+    cardClearDraft();
+    DIRTY.cards = false;
+    CARD_OPEN = -1; CARD_CONFIRM = -1;
     renderCards();
     m.className = 'msg ok'; m.textContent = 'Saved. Live on their tables now.';
   };
-
-  $('capSave').onclick = async ()=>{
-    const m = $('cgMsg');
-    const n = parseInt($('capIn').value, 10);
-    if(isNaN(n) || n < 0 || n > 20){ m.className = 'msg err'; m.textContent = 'The cap is a number from 0 to 20.'; return; }
-    m.className = 'msg'; m.textContent = 'Saving…';
-    const { data, error } = await rpc('admin_set_card_cap', { p_id: v.id, p_cap: n });
-    if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save the cap.'; return; }
-    v.card_cap = n;
-    // lowering the cap trims saved cards server-side; mirror that here
-    if(CARDS.length > n){ CARDS = CARDS.slice(0, n); v.cards = v.cards ? v.cards.slice(0, n) : v.cards; if(CARD_OPEN >= n) CARD_OPEN = -1; }
-    renderCards();
-    m.className = 'msg ok'; m.textContent = 'Cap saved.';
-  };
-
-  $('gamesOn').onchange = async ()=>{
-    const on = $('gamesOn').checked, m = $('cgMsg');
-    const { data, error } = await rpc('admin_set_games_enabled', { p_id: v.id, p_on: on });
-    if(error || !data || data.ok !== true){ $('gamesOn').checked = !on; m.className = 'msg err'; m.textContent = 'Could not change it (has the schema 2 migration been applied?).'; return; }
-    v.games_enabled = on;
-    m.className = 'msg ok'; m.textContent = on ? 'Games are on for this venue.' : 'Games are off for this venue. The landing keeps feedback and cards.';
-  };
-
   renderCards();
+  if(hadDraft){ DIRTY.cards = true; setSaveState('cards', 'cardsSave', 'Save'); const m = $('cardsMsg'); m.className = 'msg'; m.textContent = 'Unsaved changes from last time are back. Save them or reload to drop them.'; }
 
-  // ---- feedback form (35_feedback_forms.sql) ----
-  $('ffFlag').onchange = async ()=>{
-    const on = $('ffFlag').checked, m = $('ffMsg');
-    const { data, error } = await rpc('admin_set_form_custom', { p_id: v.id, p_on: on });
-    if(error || !data || data.ok!==true){ $('ffFlag').checked = !on; m.className='msg err'; m.textContent='Could not change the flag (has 35_feedback_forms.sql been run?).'; return; }
-    v.form_custom = on;
-    $('ffEdit').style.display = on ? 'inline-flex' : 'none';
-    m.className='msg ok'; m.textContent = on ? 'Custom form ON.' : 'Back to the global form (the custom form is kept).';
-  };
-  $('ffEdit').onclick = ()=> formBuilder(v.id, ()=> detail(v.id));
-
-  // ---- county comparison on the guest report (41_report_county_venue.sql) ----
-  // The same flag has TWO checkboxes on this view (under the report link,
-  // and in the Feedback form section): one save path, always kept in sync.
-  const rcSave = async (on, m)=>{
-    const { data, error } = await rpc('admin_set_report_county', { p_id: v.id, p_on: on });
-    if(error || !data || data.ok!==true){
-      $('rcFlag').checked = $('rcFlag2').checked = v.report_county !== false;
-      m.className='msg err'; m.textContent='Could not change it (has 41_report_county_venue.sql been run?).'; return;
+  // ---- add-ons and limits: one Save runs only what changed ----
+  const addonsDirty = ()=> markDirty('addons', 'addonsSave', 'Save', 'addonsMsg');
+  setSaveState('addons', 'addonsSave', 'Save');
+  ['capIn','gamesOn','ffFlag','cqFlag','rcFlag'].forEach(id => { $(id).addEventListener('input', addonsDirty); $(id).addEventListener('change', addonsDirty); });
+  const paintAddons = ()=>{ $('capIn').value = v.card_cap ?? 4; $('gamesOn').checked = v.games_enabled !== false; $('ffFlag').checked = !!v.form_custom; $('cqFlag').checked = !!v.custom_questions; $('rcFlag').checked = v.report_county !== false; };
+  $('addonsSave').onclick = async ()=>{
+    const m = $('addonsMsg');
+    const n = parseInt($('capIn').value, 10);
+    if(isNaN(n) || n < 0 || n > 20){ m.className = 'msg err'; m.textContent = 'Card slots is a number from 0 to 20.'; return; }
+    const jobs = [];
+    if(n !== (v.card_cap ?? 4)) jobs.push(['admin_set_card_cap', { p_id: v.id, p_cap: n }, ()=>{ v.card_cap = n; if(CARDS.length > n){ CARDS = CARDS.slice(0, n); v.cards = v.cards ? v.cards.slice(0, n) : v.cards; if(CARD_OPEN >= n) CARD_OPEN = -1; } renderCards(); }]);
+    const gOn = $('gamesOn').checked; if(gOn !== (v.games_enabled !== false)) jobs.push(['admin_set_games_enabled', { p_id: v.id, p_on: gOn }, ()=>{ v.games_enabled = gOn; }]);
+    const ff = $('ffFlag').checked; if(ff !== !!v.form_custom) jobs.push(['admin_set_form_custom', { p_id: v.id, p_on: ff }, ()=>{ v.form_custom = ff; $('ffEditWrap').style.display = ff ? 'block' : 'none'; }]);
+    const cq = $('cqFlag').checked; if(cq !== !!v.custom_questions) jobs.push(['admin_set_custom_questions', { p_id: v.id, p_on: cq }, ()=>{ v.custom_questions = cq; $('cqSection').style.display = cq ? 'block' : 'none'; }]);
+    const rc = $('rcFlag').checked; if(rc !== (v.report_county !== false)) jobs.push(['admin_set_report_county', { p_id: v.id, p_on: rc }, ()=>{ v.report_county = rc; }]);
+    m.className = 'msg'; m.textContent = 'Saving…';
+    for(const [fn, args, ok] of jobs){
+      const { data, error } = await rpc(fn, args);
+      if(error || !data || data.ok !== true){ failMsg(m); paintAddons(); return; }
+      ok(data);
     }
-    v.report_county = on;
-    $('rcFlag').checked = $('rcFlag2').checked = on;
-    m.className='msg ok'; m.textContent = on ? 'County comparison ON.' : 'County comparison hidden on their report.';
+    DIRTY.addons = false; setSaveState('addons', 'addonsSave', 'Save');
+    m.className = 'msg ok'; m.textContent = jobs.length ? 'Saved.' : 'Nothing changed.';
   };
-  $('rcFlag').onchange  = ()=> rcSave($('rcFlag').checked,  $('rcMsg'));
-  $('rcFlag2').onchange = ()=> rcSave($('rcFlag2').checked, $('rcMsg2'));
+  $('ffEdit').onclick = ()=> formBuilder(v.id, ()=> detail(v.id, 'app'));
 
   // ---- custom questions ----
-  $('cqFlag').onchange = async ()=>{
-    const on = $('cqFlag').checked;
-    const { data, error } = await rpc('admin_set_custom_questions', { p_id: v.id, p_on: on });
-    if(error || !data || data.ok!==true){ $('cqFlag').checked = !on; toast('Could not change the flag'); return; }
-    v.custom_questions = on;
-    $('cqOnlyWrap').style.display = on ? 'block' : 'none';
-    toast(on ? 'Custom questions ON' : 'Custom questions off (rows kept, hidden)');
-  };
-
-  // per-game custom-only toggles, drawn with live ACTIVE custom counts so
-  // the floor is visible; under-floor games are shown disabled
   const cqOnlyPaint = (rows)=>{
     const counts = {};
     (rows||[]).forEach(r=>{ if(r.status==='active') counts[r.game]=(counts[r.game]||0)+1; });
     const sel = v.custom_only || [];
-    $('cqOnly').className='';
+    $('cqOnly').className = '';
     $('cqOnly').innerHTML = CONTENT_GAMES.map(g=>{
       const n = counts[g]||0, floor = MIN_CUSTOM_ONLY[g], ok = n >= floor;
-      return `<label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:${ok?'pointer':'default'};opacity:${ok?1:.5}">
-        <input type="checkbox" data-co="${g}" ${sel.includes(g)?'checked':''} ${ok?'':'disabled'} />
-        ${esc(GAMES_META[g].name)}
-        <span style="color:var(--ink-dim);font-size:12px">${n} active${ok?'':` · needs ${floor}`}</span>
+      return `<label class="ck" style="align-items:center;cursor:${ok?'pointer':'default'};opacity:${ok?1:.55}">
+        <input type="checkbox" data-co="${g}" ${sel.includes(g)?'checked':''} ${ok?'':'disabled'}>
+        <span>${esc(GAMES_META[g].name)} <span class="hint" style="display:inline;margin:0">${n} active${ok?'':`, needs ${floor}`}</span></span>
       </label>`;
     }).join('');
   };
   $('cqOnlySave').onclick = async ()=>{
     const picked = [...document.querySelectorAll('#cqOnly input:checked')].map(x=>x.dataset.co);
     const m = $('cqOnlyMsg');
-    m.className='msg'; m.textContent='Saving…';
+    m.className = 'msg'; m.textContent = 'Saving…';
     const { data, error } = await rpc('admin_set_custom_only', { p_id: v.id, p_games: picked });
-    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Could not save (has 28_custom_only_retire.sql been run?).'; return; }
+    if(error || !data || data.ok!==true){ failMsg(m); return; }
     v.custom_only = data.custom_only;
-    m.className='msg ok'; m.textContent='Saved.';
+    m.className = 'msg ok'; m.textContent = 'Saved.';
   };
 
-  // pack import scoped to this venue: same format + validators as the
-  // shared importer, same RPC, with p_venue_id set
   $('cqPackFile').addEventListener('change', async ()=>{
     const f = $('cqPackFile').files[0], m = $('cqPackMsg');
     if(!f) return;
     let pack;
     try { pack = JSON.parse(await f.text()); }
-    catch(e){ m.className='msg err'; m.textContent='Not valid JSON: '+e.message; return; }
+    catch(e){ m.className = 'msg err'; m.textContent = 'Not valid JSON: ' + e.message; return; }
     const res = validatePack(pack);
-    if(res.error){ m.className='msg err'; m.textContent=res.error; return; }
-    if(res.bad.length){ m.className='msg err'; m.textContent=`${res.bad.length} bad row(s): ${res.bad.slice(0,3).join('; ')}${res.bad.length>3?'; …':''}`; return; }
-    if(!confirm(`Import ${res.rows.length} ${GAMES_META[res.game].name} row(s) as ${v.name}'s CUSTOM questions?`)){ $('cqPackFile').value=''; return; }
-    m.className='msg'; m.textContent='Importing…';
-    let inserted = 0, skipped = 0;
-    for(let i = 0; i < res.rows.length; i += 400){
-      const { data, error } = await rpc('admin_add_content', { p_game: res.game, p_rows: res.rows.slice(i, i+400), p_venue_id: v.id });
-      if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent=`Import stopped: ${error ? error.message : (data&&data.error)||'unknown'}. ${inserted} rows were inserted.`; return; }
-      inserted += data.inserted; skipped += data.skipped;
-    }
-    m.className = skipped ? 'msg err' : 'msg ok';
-    m.textContent = `Done: ${inserted} inserted${skipped?`, ${skipped} skipped`:''}.`;
-    $('cqPackFile').value='';
-    cqLoad();
+    if(res.error){ m.className = 'msg err'; m.textContent = res.error; return; }
+    if(res.bad.length){ m.className = 'msg err'; m.textContent = `${res.bad.length} bad row(s): ${res.bad.slice(0,3).join('; ')}${res.bad.length>3?'; …':''}`; return; }
+    askInline($('cqPackConfirm'), `Import ${res.rows.length} ${esc(GAMES_META[res.game].name)} row${res.rows.length === 1 ? '' : 's'} as ${esc(v.name)}'s custom questions?`, 'Import', async ()=>{
+      m.className = 'msg'; m.textContent = 'Importing…';
+      let inserted = 0, skipped = 0;
+      for(let i = 0; i < res.rows.length; i += 400){
+        const { data, error } = await rpc('admin_add_content', { p_game: res.game, p_rows: res.rows.slice(i, i+400), p_venue_id: v.id });
+        if(error || !data || data.ok!==true){ m.className = 'msg err'; m.textContent = `Import stopped: ${error ? error.message : (data&&data.error)||'unknown'}. ${inserted} rows were inserted.`; return; }
+        inserted += data.inserted; skipped += data.skipped;
+      }
+      m.className = skipped ? 'msg err' : 'msg ok';
+      m.textContent = `Done: ${inserted} inserted${skipped?`, ${skipped} skipped`:''}.`;
+      $('cqPackFile').value = '';
+      cqLoad();
+    }, false, ()=>{ $('cqPackFile').value = ''; });
   });
 
   const cqPaintFields = ()=>{
@@ -2254,7 +2347,7 @@ ${SIG}`);
   const cqLoad = async ()=>{
     const { data, error } = await rpc('admin_list_custom', { p_id: v.id });
     const el = $('cqList');
-    if(error || data === null){ el.textContent = 'Needs 27_admin_content.sql.'; $('cqOnly').textContent='Needs 27/28.'; return; }
+    if(error || data === null || !Array.isArray(data)){ el.innerHTML = 'Not available yet. Your database may need an update: ' + PLAT_LINK + '.'; $('cqOnly').textContent = 'Not available yet.'; return; }
     cqOnlyPaint(data);
     if(!data.length){ el.textContent = 'No custom rows yet.'; return; }
     el.className = '';
@@ -2278,16 +2371,16 @@ ${SIG}`);
     const row = {};
     document.querySelectorAll('#cqFields input').forEach(i=> row[i.dataset.k] = i.value.trim());
     const bad = validateRow(g, row);
-    if(bad){ m.className='msg err'; m.textContent = bad; return; }
-    m.className='msg'; m.textContent='Adding…';
+    if(bad){ m.className = 'msg err'; m.textContent = bad; return; }
+    m.className = 'msg'; m.textContent = 'Adding…';
     const { data, error } = await rpc('admin_add_content', { p_game: g, p_rows: [row], p_venue_id: v.id });
     if(error || !data || data.ok!==true || data.inserted!==1){
-      m.className='msg err';
-      m.textContent = (data && data.errors && data.errors[0] && data.errors[0].error) || 'Could not add (has 27_admin_content.sql been run?).';
+      const why = data && data.errors && data.errors[0] && data.errors[0].error;
+      if(why){ m.className = 'msg err'; m.textContent = why; } else failMsg(m, 'Could not add it.');
       return;
     }
-    m.className='msg ok'; m.textContent='Added.';
-    document.querySelectorAll('#cqFields input').forEach(i=> i.value='');
+    m.className = 'msg ok'; m.textContent = 'Added.';
+    document.querySelectorAll('#cqFields input').forEach(i=> i.value = '');
     cqLoad();
   };
 }
@@ -2336,6 +2429,7 @@ function packs(){
         <input type="date" id="rbDate" />
         <button class="btn sm ghost" id="rbPreview">Preview</button>
         <button class="btn sm danger" id="rbGo" disabled style="opacity:.5">Retire</button>
+      <div id="rbConfirm"></div>
       </div>
       <div class="msg" id="rbMsg"></div>
     </section>
@@ -2376,10 +2470,12 @@ function packs(){
     m.textContent = `Would retire ${data.would_retire} of ${data.active_now} active ${GAMES_META[g].name} rows, leaving ${data.left_active}. Tap Retire to do it.`;
     $('rbGo').disabled = false; $('rbGo').style.opacity = 1;
   };
-  $('rbGo').onclick = async ()=>{
+  $('rbGo').onclick = ()=>{
     if(!rbChecked) return;
+    askInline($('rbConfirm'), `Retire the previewed ${esc(GAMES_META[rbChecked.g].name)} rows added before ${esc(rbChecked.d)}? They are kept and can be restored, but stop showing on tables right away.`, 'Retire', doRetire, true);
+  };
+  const doRetire = async ()=>{
     const m = $('rbMsg');
-    if(!confirm(`Retire the previewed ${GAMES_META[rbChecked.g].name} rows added before ${rbChecked.d}? They are kept and can be restored, but stop showing on tables immediately.`)) return;
     const { data, error } = await rpc('admin_retire_before', { p_game: rbChecked.g, p_before: rbChecked.d, p_dry_run: false });
     rbInvalidate();
     if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Retire failed: ' + (error ? error.message : (data&&data.error)||'unknown'); return; }
@@ -2420,14 +2516,14 @@ function packs(){
   const paintCounts = async ()=>{
     const { data, error } = await rpc('admin_content_counts');
     const el = $('ccBody');
-    if(error || !data){ el.textContent = 'Needs 27_admin_content.sql (run it once, then reload).'; return; }
+    if(error || !data){ el.innerHTML = 'Not available yet. Your database may need an update: ' + PLAT_LINK + '.'; return; }
     el.className = '';
     el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:14px">
       <tr style="color:var(--ink-dim);font-size:12px;text-align:left"><th style="padding:4px 0">Game</th><th>Active</th><th>Retired</th><th>Custom</th><th>Newest</th></tr>
       ${data.map(r=>`<tr style="border-top:1px solid var(--line)">
         <td style="padding:6px 0">${esc((GAMES_META[r.game]||{name:r.game}).name)}</td>
         <td>${r.active}</td><td>${r.retired}</td><td>${r.custom}</td>
-        <td style="color:var(--ink-dim)">${r.newest ? new Date(r.newest).toLocaleDateString([], {month:'short', day:'numeric', year:'2-digit'}) : '—'}</td>
+        <td style="color:var(--ink-dim)">${r.newest ? new Date(r.newest).toLocaleDateString([], {month:'short', day:'numeric', year:'2-digit'}) : 'none'}</td>
       </tr>`).join('')}
     </table>`;
   };
@@ -2454,7 +2550,7 @@ function packs(){
     if(res.error){ m.className='msg err'; m.textContent = res.error; return; }
     if(res.bad.length){
       m.className='msg err';
-      m.innerHTML = `${res.bad.length} bad row${res.bad.length===1?'':'s'} — fix these first:<br/>` +
+      m.innerHTML = `${res.bad.length} bad row${res.bad.length===1?'':'s'}. Fix these first:<br/>` +
         res.bad.slice(0,8).map(esc).join('<br/>') + (res.bad.length>8?'<br/>…':'');
       return;
     }
