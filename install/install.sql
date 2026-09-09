@@ -231,7 +231,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3);
+insert into schema_migrations (version) values (1), (2), (3), (4);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -827,6 +827,7 @@ begin
         'body', nullif(left(btrim(coalesce(v_el->>'body', '')), 1500), ''),
         'url',  public.clean_card_url(v_el->>'url'),
         'hot',  v_el->'hot' = 'true'::jsonb,
+        'btn',  nullif(left(btrim(coalesce(v_el->>'btn', '')), 30), ''),
         'until', case when coalesce(v_el->>'until', '') ~ '^\d{4}-\d{2}-\d{2}$' then v_el->>'until' end);
     end if;
 

@@ -1059,7 +1059,7 @@ reg('landing', (el)=>{
       if (!today && !c.always) return '';
       // today's line carries the day name so a diner never wonders which day it is
       sub = today ? `<div class="lo-special"><b>${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()]}:</b> ${escHtml(today)}</div>`
-                  : `<div class="landing-opt__d">${escHtml(c.desc || 'See the week.')}</div>`;
+                  : `<div class="landing-opt__d">${escHtml(c.desc || 'Tap to view the calendar')}</div>`;
     }
     return `
       <button class="landing-opt" data-cardix="${ix}">
@@ -1156,7 +1156,7 @@ reg('card', (el)=>{
     <div class="eyebrow">${escHtml(venue().name)}</div>
     <h1 class="big">${escHtml(c.title)}</h1>
     <div class="privacy-body" style="white-space:pre-line;margin-top:14px">${escHtml(c.body || '')}</div>
-    ${u ? `<div style="margin-top:18px"><a class="btn" style="text-decoration:none" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">Learn more ↗</a></div>` : ''}
+    ${u ? `<div style="margin-top:18px"><a class="btn" style="text-decoration:none" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">${escHtml(c.btn || 'Learn more')} ↗</a></div>` : ''}
     <div class="spacer"></div>`;
 });
 

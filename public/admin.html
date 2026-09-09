@@ -369,7 +369,7 @@ async function settingsView(opts){
     <section>
       <h2>Your brand</h2>
       <label class="f">Brand name</label>
-      <input type="text" id="sbName" maxlength="40" value="${esc(b.brandName || '')}" placeholder="Table Time" />
+      <input type="text" id="sbName" maxlength="40" value="${esc(b.brandName || '')}" placeholder="Ex. Table Time" />
       <label class="f">Your site address</label>
       <div class="hint" style="margin-top:2px">${esc(location.origin)} (detected from where this dashboard is running; it is what every QR code and owner link points to).</div>
       <label class="f">Contact email</label>
@@ -402,7 +402,7 @@ async function settingsView(opts){
     <section>
       <h2>Your area</h2>
       <label class="f">Region name</label>
-      <input type="text" id="sbRegion" maxlength="60" value="${esc(b.regionName || '')}" placeholder="Ocean County" />
+      <input type="text" id="sbRegion" maxlength="60" value="${esc(b.regionName || '')}" placeholder="Ex. Ocean County" />
       <div class="hint">As it reads in a sentence on the homepage: "restaurants across Ocean County".</div>
       <label class="f">How copy refers to the area</label>
       <input type="text" id="sbRegionShort" maxlength="40" value="${esc(b.regionShort || '')}" placeholder="the county" />
@@ -1257,7 +1257,7 @@ function form(existing){
         <div id="afPlaces"></div>
         <hr style="border:0;border-top:1px solid var(--line);margin:16px 0 2px" />` : ''}
         <label class="f">Restaurant name</label>
-        <input type="text" id="fName" value="${esc(v.name)}" placeholder="Bahrs Landing" />
+        <input type="text" id="fName" value="${esc(v.name)}" placeholder="Ex. Bahrs Landing" />
         <label class="f">Venue id ${editing?'(permanent)':'(permanent, becomes the QR link)'}</label>
         <input type="text" id="fId" value="${esc(v.id)}" ${editing?'disabled style="opacity:.6"':''} placeholder="bahrs" autocapitalize="off" autocorrect="off" spellcheck="false" />
         <label class="f">Logo</label>
@@ -2005,14 +2005,12 @@ ${SIG}`);
 
   const cardBody = (c, ix)=>{
     const mode = c.mode || 'inline';
-    const todayYmd = (d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'))(new Date());
-    const expired = c.t === 'notice' && !!c.until && c.until < todayYmd;
     const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
       <label class="f">Short line under the name (optional)</label>
-      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Rotating drafts, updated often' : ''}" />` : '';
+      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}" />` : '';
     const common = `
       <label class="f">Card name</label>
-      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'On tap this week' : c.t === 'notice' ? 'Trivia night is back' : 'Daily specials'}" />${short}
+      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}" />${short}
       <label class="f">Icon</label>
       <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}">${CARD_ICONS[k]}</button>`).join('')}</div>`;
     if (c.t === 'schedule') return common + `
@@ -2030,13 +2028,13 @@ ${SIG}`);
       <div class="hint" style="margin:0 0 4px">Prices get a dollar sign in the app. A bare number, or words like "Market price".</div>
       ${(c.items || []).map((i, j) => `
         <div class="lirow">
-          <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Name" />
-          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Price" />
+          <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness" />
+          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" />
           <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
-          <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Details (optional)" />
+          <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)" />
         </div>`).join('')}
       <button type="button" class="btn sm ghost" data-additem="${ix}" style="margin-top:8px">+ Add a row</button>`;
-    const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="https://theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />`;
+    const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />`;
     return common + `
       <label class="f">What it does</label>
       <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''} /> The message sits right on the app home screen</label>
@@ -2055,12 +2053,12 @@ ${SIG}`);
         <label class="f">The details page</label>
         <textarea data-f="body" data-ix="${ix}" maxlength="1500" rows="5">${esc(c.body || '')}</textarea>
         <label class="f">Button link at the bottom of the page (optional)</label>
-        ${urlField}` : ''}
+        ${urlField}
+        <label class="f">Button text</label>
+        <input type="text" data-f="btn" data-ix="${ix}" maxlength="30" value="${esc(c.btn || '')}" placeholder="Ex. Learn More" style="max-width:240px" />` : ''}
       <label class="f">Hide message after this date (optional)</label>
       <input type="date" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}" style="max-width:190px" />
-      ${expired
-        ? `<div class="hint" style="margin-top:4px;color:var(--bad,#b3261e);font-weight:600">Hidden in the app: that date has passed. Pick a later date, or clear it, to show the card again.</div>`
-        : `<div class="hint" style="margin-top:4px">After this day the card hides itself in the app and stays here to reuse.</div>`}`;
+      <div class="hint" style="margin-top:4px">After this day the card hides itself in the app and stays here to reuse.</div>`;
   };
 
   const renderCards = ()=>{
@@ -2071,7 +2069,7 @@ ${SIG}`);
           <button type="button" class="cbox__main" data-open="${ix}">
             <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
             <span class="cbox__t">${esc(c.title || 'Untitled card')}</span>
-            <span class="cbox__type">${CARD_TYPES[c.t]}</span>
+            <span class="cbox__type">${CARD_TYPES[c.t]}${c.t === 'notice' && c.until && c.until < new Date().toISOString().slice(0, 10) ? ' <span style="color:var(--bad,#b3261e);font-weight:600">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>' : ''}</span>
           </button>
           <button type="button" class="iconbtn" data-up="${ix}" title="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
           <button type="button" class="iconbtn" data-down="${ix}" title="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
@@ -2669,7 +2667,7 @@ function cardView(v){
     <div class="split">
       <section>
         <label class="f">Town line <span style="font-weight:400;text-transform:none">(shown top right)</span></label>
-        <input type="text" id="cTown" value="${esc(d.town)}" placeholder="Springfield, USA" maxlength="30" />
+        <input type="text" id="cTown" value="${esc(d.town)}" placeholder="Ex. Springfield, USA" maxlength="30" />
         <label class="f">Structure color <span style="font-weight:400;text-transform:none">(pills, headlines, bottom bar)</span></label>
         <div class="frow">
           <input type="color" id="cA1" value="${esc(d.a1)}" />
