@@ -187,7 +187,7 @@
   <div class="sub">Live numbers from your table cards. Anonymous, seen only by you. The monthly report adds the bigger local picture.</div>
 
   <div class="tabs" role="tablist">
-    <button class="tab on" id="tabMonthBtn" role="tab" aria-selected="true" aria-controls="paneMonth">This Month</button>
+    <button class="tab on" id="tabMonthBtn" role="tab" aria-selected="true" aria-controls="paneMonth">My Stats</button>
     <button class="tab" id="tabAppBtn" role="tab" aria-selected="false" aria-controls="paneApp">App Settings</button>
   </div>
 
@@ -917,7 +917,7 @@ const REPORT_HREF = 'report.html?v=' + encodeURIComponent(V || '') + '&k=' + enc
 if($('reportBtn')) $('reportBtn').href = REPORT_HREF;
 if($('reportBtn2')) $('reportBtn2').href = REPORT_HREF;
 
-/* Two halves: "This Month" (read) and "App Settings" (edit). The hash remembers
+/* Two halves: "My Stats" (read) and "App Settings" (edit). The hash remembers
    the tab, so an evicted phone tab reloads where the owner was. */
 function showTab(which){
   const app = which === 'app';
@@ -926,8 +926,10 @@ function showTab(which){
   $('tabMonthBtn').setAttribute('aria-selected', String(!app)); $('tabAppBtn').setAttribute('aria-selected', String(app));
   try { history.replaceState(null, '', location.pathname + location.search + (app ? '#app' : '#month')); } catch(e){}
 }
-$('tabMonthBtn').onclick = ()=> showTab('month');
-$('tabAppBtn').onclick = ()=> showTab('app');
+// switching tabs starts the new pane at the top; the first paint keeps the
+// browser's own scroll position (a reload should not jump)
+$('tabMonthBtn').onclick = ()=>{ showTab('month'); window.scrollTo(0, 0); };
+$('tabAppBtn').onclick = ()=>{ showTab('app'); window.scrollTo(0, 0); };
 showTab(location.hash === '#app' ? 'app' : 'month');
 
 
