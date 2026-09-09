@@ -5,6 +5,12 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>A better experience at the table</title>
 <meta name="description" content="A branded table card for independent restaurants. It gives your guests something to do while they wait and something to talk about after, and gives you the honest, private read on your room that the chains pay analytics teams for." />
+<meta property="og:type" content="website" />
+<meta property="og:title" content="A better experience at the table" />
+<meta property="og:description" content="A card on your table opens a branded app on your guests' phones: games while they wait, an anonymous suggestion box, and your own message of the week. Free first month for independent restaurants." />
+<meta property="og:image" content="images/og.png" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="theme-color" content="#3a6ea5" />
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='10'%20y='10'%20width='44'%20height='44'%20rx='11'%20fill='%233a6ea5'/%3E%3Cpath%20d='M18%2024Q21.5%2020.4%2025%2024T32%2024T39%2024T46%2024M18%2033Q21.5%2029.4%2025%2033T32%2033T39%2033T46%2033M18%2042Q21.5%2038.4%2025%2042T32%2042T39%2042T46%2042'%20fill='none'%20stroke='%23fff'%20stroke-width='3.4'%20stroke-linecap='round'/%3E%3C/svg%3E" />
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -62,12 +68,17 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
   }
 
   *{box-sizing:border-box;margin:0;padding:0}
-  html{scroll-behavior:smooth}
+  html{scroll-behavior:smooth;scroll-padding-top:76px}
+  .skip{position:absolute;left:12px;top:-60px;z-index:20;background:var(--ink);color:#fff;font-family:var(--font-b);font-weight:700;font-size:14px;padding:10px 14px;border-radius:999px;text-decoration:none;transition:top .15s var(--ease)}
+  .skip:focus{top:12px}
+  a,button{touch-action:manipulation}
+  h1,h2,h3{text-wrap:balance}
+  p{text-wrap:pretty}
   body{font-family:var(--font-b);color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;line-height:1.55}
   img{max-width:100%;display:block}
   ::selection{background:var(--accent);color:var(--on-accent)}
   a:focus-visible,button:focus-visible{outline:3px solid var(--accent-deep);outline-offset:3px;border-radius:8px}
-  .on-accent a:focus-visible,.on-accent button:focus-visible{outline-color:#fff}
+  .on-accent a:focus-visible,.on-accent button:focus-visible{outline-color:var(--on-accent)}
   h1,h2,h3{text-wrap:balance}
 
   .wrap{width:100%;max-width:1080px;margin:0 auto;padding:0 22px}
@@ -79,7 +90,7 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
   .wm-img{height:26px;width:auto;display:block}
   .wm-mark{width:28px;height:28px;border-radius:8px;background:var(--accent);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex:none;font-family:var(--font-d)}
   .wm-mark svg,.wm-mark img{width:100%;height:100%;display:block;object-fit:contain}
-  .header-cta{font-family:var(--font-b);font-weight:700;font-size:14px;background:var(--ink);color:#fff;text-decoration:none;border-radius:999px;padding:10px 18px;white-space:nowrap;transition:background .2s var(--ease),transform .14s var(--ease)}
+  .header-cta{font-family:var(--font-b);font-weight:700;font-size:14px;background:var(--ink);color:#fff;text-decoration:none;border-radius:999px;padding:10px 18px;min-height:44px;display:inline-flex;align-items:center;white-space:nowrap;transition:background .2s var(--ease),transform .14s var(--ease)}
   .header-cta:hover{background:var(--accent);transform:translateY(-1px)}
 
   /* ---------- buttons: ticket stubs ---------- */
@@ -249,10 +260,21 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
 <script>
 /* the operator accent lands before first paint, so the panels never flash
    the default blue on a differently colored instance */
-(function(){ var C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {}); if(/^#[0-9a-f]{6}$/i.test(C.accent || '')) document.documentElement.style.setProperty('--accent', C.accent); })();
+(function(){
+  var C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {});
+  var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(C.accent || '');
+  if(!m) return;
+  document.documentElement.style.setProperty('--accent', C.accent);
+  // white text on a light accent fails contrast; ink text takes over past the 4.5:1 line
+  var lin = function(h){ var v = parseInt(h, 16) / 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  var L = .2126 * lin(m[1]) + .7152 * lin(m[2]) + .0722 * lin(m[3]);
+  document.documentElement.style.setProperty('--on-accent', (1.05 / (L + .05)) >= 4.5 ? '#ffffff' : '#16110a');
+  var tc = document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute('content', C.accent);
+})();
 </script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 <!--
   DIRECTION CONTRACT (impeccable, seed 0ef9d8b8)
   THESIS: The table card is an admission ticket to a better night and the
@@ -282,7 +304,7 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
   </div>
 </header>
 
-<main>
+<main id="main">
 
   <!-- ============ THE BOOTH ============
        Say plainly what the thing is, hand over the ticket, then show it. -->
@@ -290,7 +312,7 @@ const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
     <div class="wrap booth-inner">
       <div class="booth-copy">
         <h1>Give them a better experience, not just a better meal.</h1>
-        <p class="lede">Guests scan a card on your table and a branded web app opens on their phone, customized for your restaurant. Games while they wait, an anonymous suggestion box, and a spot for anything you want to tell them that week. You get a private live dashboard with all the important data and insights.</p>
+        <p class="lede">A card on your table opens a branded app on your guests' phones: games while they wait, an anonymous suggestion box, and your own message of the week. You get a private live dashboard of what they think.</p>
       </div>
       <div class="ticket" aria-label="Get started">
         <div class="ticket__stub">
@@ -486,6 +508,12 @@ const IMAGES = {
   SCREENSHOT_URL_3,
 };
 
+const ALT = {
+  SCREENSHOT_URL_1: "The app's home screen on a phone: play a game, share feedback, and the restaurant's own cards",
+  SCREENSHOT_URL_2: "A group game in progress on a phone",
+  SCREENSHOT_URL_3: "The anonymous suggestion box on a phone",
+  REPORT_IMAGE_URL: "A sample monthly guest report with example numbers",
+};
 document.querySelectorAll("[data-img]").forEach(el => {
   const url = IMAGES[el.dataset.img];
   if(!url || url.startsWith("PASTE_")) return;   // keep the placeholder
@@ -493,7 +521,8 @@ document.querySelectorAll("[data-img]").forEach(el => {
   // NOTE: no loading="lazy" here; a detached lazy image never loads, so
   // onload would never fire and the placeholder would never be replaced.
   img.src = url;
-  img.alt = el.querySelector(".ph") ? el.querySelector(".ph").textContent.trim() : "";
+  img.alt = ALT[el.dataset.img] || "";
+  img.decoding = "async";
   img.onload = () => { el.innerHTML = ""; el.appendChild(img); };
 });
 
@@ -505,7 +534,7 @@ document.querySelectorAll("[data-img]").forEach(el => {
   const region = C.regionName || 'your area';
   const regionShort = C.regionShort || 'the county';
   const acc = /^#[0-9a-f]{6}$/i.test(C.accent || '') ? C.accent : '#3a6ea5';
-  document.title = brand + ': a better experience at the table, and the truth about it';
+  document.title = brand + ': a better experience at the table';
   const initial = brand.trim().charAt(0).toUpperCase();
   const logoSvg = (typeof C.logoSvg === 'string' && C.logoSvg.trim().startsWith('<svg')) ? C.logoSvg : '';
   const iconUrl = (typeof C.iconUrl === 'string' && C.iconUrl) ? C.iconUrl : '';
