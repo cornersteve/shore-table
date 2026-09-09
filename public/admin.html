@@ -2004,9 +2004,15 @@ ${SIG}`);
     :                    { t, title:'', icon:'megaphone', mode:'inline', body:'' };
 
   const cardBody = (c, ix)=>{
+    const mode = c.mode || 'inline';
+    const todayYmd = (d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'))(new Date());
+    const expired = c.t === 'notice' && !!c.until && c.until < todayYmd;
+    const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
+      <label class="f">Short line under the name (optional)</label>
+      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Rotating drafts, updated often' : ''}" />` : '';
     const common = `
       <label class="f">Card name</label>
-      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'On tap this week' : c.t === 'notice' ? 'Trivia night is back' : 'Daily specials'}" />
+      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'On tap this week' : c.t === 'notice' ? 'Trivia night is back' : 'Daily specials'}" />${short}
       <label class="f">Icon</label>
       <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}">${CARD_ICONS[k]}</button>`).join('')}</div>`;
     if (c.t === 'schedule') return common + `
@@ -2020,39 +2026,41 @@ ${SIG}`);
         <input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''} style="margin-top:3px" /> Keep the card on the home screen even on blank days
       </label>`;
     if (c.t === 'list') return common + `
-      <label class="f">Short line under the name (optional)</label>
-      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="Rotating drafts, updated often" />
       <label class="f">The list</label>
+      <div class="hint" style="margin:0 0 4px">Prices get a dollar sign in the app. A bare number, or words like "Market price".</div>
       ${(c.items || []).map((i, j) => `
         <div class="lirow">
           <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Name" />
-          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="$" />
+          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Price" />
           <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
           <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Details (optional)" />
         </div>`).join('')}
       <button type="button" class="btn sm ghost" data-additem="${ix}" style="margin-top:8px">+ Add a row</button>`;
-    const mode = c.mode || 'inline';
+    const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="https://theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />`;
     return common + `
       <label class="f">What it does</label>
-      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''} /> The message sits right on the home screen</label>
+      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''} /> The message sits right on the app home screen</label>
       <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''} /> Tapping it opens a link</label>
-      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''} /> Tapping it opens a page with more details</label>
+      <label style="display:block;margin-top:4px;cursor:pointer"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''} /> Tapping it opens a page on the app with more details</label>
       ${mode === 'inline' ? `
         <label class="f">Message</label>
         <textarea data-f="body" data-ix="${ix}" maxlength="240" rows="3">${esc(c.body || '')}</textarea>
         <label style="display:flex;align-items:center;gap:8px;margin-top:8px;cursor:pointer">
           <input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''} /> Make it stand out: a banner in the accent color
-        </label>` : `
-        <label class="f">Short line under the name (optional)</label>
-        <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" />`}
+        </label>` : ''}
+      ${mode === 'link' ? `
+        <label class="f">Link</label>
+        ${urlField}` : ''}
       ${mode === 'page' ? `
         <label class="f">The details page</label>
-        <textarea data-f="body" data-ix="${ix}" maxlength="1500" rows="5">${esc(c.body || '')}</textarea>` : ''}
-      <label class="f">Link${mode === 'link' ? '' : mode === 'page' ? ' (optional, shown as a button on the page)' : ' (optional, tapping the card opens it)'}</label>
-      <input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="https://theirrestaurant.com/events" autocapitalize="off" spellcheck="false" />
-      <label class="f">Last day shown (optional)</label>
+        <textarea data-f="body" data-ix="${ix}" maxlength="1500" rows="5">${esc(c.body || '')}</textarea>
+        <label class="f">Button link at the bottom of the page (optional)</label>
+        ${urlField}` : ''}
+      <label class="f">Hide message after this date (optional)</label>
       <input type="date" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}" style="max-width:190px" />
-      <div class="hint" style="margin-top:4px">After this day the card hides itself in the app.</div>`;
+      ${expired
+        ? `<div class="hint" style="margin-top:4px;color:var(--bad,#b3261e);font-weight:600">Hidden in the app: that date has passed. Pick a later date, or clear it, to show the card again.</div>`
+        : `<div class="hint" style="margin-top:4px">After this day the card hides itself in the app and stays here to reuse.</div>`}`;
   };
 
   const renderCards = ()=>{

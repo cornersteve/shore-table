@@ -1057,7 +1057,8 @@ reg('landing', (el)=>{
       // no entry today hides the card, unless "always" keeps it up so diners
       // can still browse the rest of the week
       if (!today && !c.always) return '';
-      sub = today ? `<div class="lo-special">${escHtml(today)}</div>`
+      // today's line carries the day name so a diner never wonders which day it is
+      sub = today ? `<div class="lo-special"><b>${['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][new Date().getDay()]}:</b> ${escHtml(today)}</div>`
                   : `<div class="landing-opt__d">${escHtml(c.desc || 'See the week.')}</div>`;
     }
     return `
@@ -1109,6 +1110,8 @@ reg('landing', (el)=>{
 
 /* ---------- CARD DETAIL (schedule week / list / notice page) ---------- */
 reg('card__back', ()=> go('landing'));
+// prices are free text: a bare number gets a dollar sign; "$8" and "Market price" stay as typed
+const priceText = p => /^[\d.]/.test(String(p).trim()) ? '$' + String(p).trim() : String(p).trim();
 reg('card', (el)=>{
   backBtn.style.display='block';   // always reached from the landing
   const c = (venue().cards || [])[state.cardIx];
@@ -1137,7 +1140,7 @@ reg('card', (el)=>{
           <div class="lr__n">${escHtml(i.n)}</div>
           ${i.d ? `<div class="lr__d">${escHtml(i.d)}</div>` : ''}
         </div>
-        ${i.p ? `<div class="lr__p">${escHtml(i.p)}</div>` : ''}
+        ${i.p ? `<div class="lr__p">${escHtml(priceText(i.p))}</div>` : ''}
       </div>`).join('');
     el.innerHTML = `
       <div class="eyebrow">${escHtml(venue().name)}</div>

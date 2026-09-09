@@ -84,7 +84,7 @@
   .sprow input:focus{border-color:var(--accent)}
   .sprow.today input{background:var(--accent-soft)}
   /* home screen cards editor */
-  .cbox{border:1px solid var(--line-2);border-radius:14px;margin-top:10px;background:var(--bg)}
+  .cbox{border:1px solid var(--line-2);border-radius:14px;margin-top:10px;background:var(--bg);box-shadow:var(--shadow-sm)}
   .cbox.isoff{opacity:.55}
   .cbox__head{display:flex;align-items:center;gap:8px;padding:8px 10px 8px 12px}
   .cbox__main{flex:1;min-width:0;min-height:44px;display:flex;align-items:center;gap:12px;background:none;border:0;padding:0;cursor:pointer;text-align:left;font-family:var(--font-b);color:var(--ink)}
@@ -237,7 +237,7 @@
       <div class="promo-row" style="margin-top:10px"><button type="button" class="btn ghost sm" id="cardKindCancel">Cancel</button></div>
     </div>
     <div class="promo-row">
-      <button class="btn" id="cardsSave">Save home screen</button>
+      <button class="btn" id="cardsSave">Save</button>
       <span class="savemsg" id="cardsMsg"></span>
     </div>
   </section>
@@ -246,7 +246,7 @@
     <div class="hint">Tick what your tables can play, in this order. New games start off until you turn them on.</div>
     <div id="gameToggles"></div>
     <div class="promo-row">
-      <button class="btn" id="gamesSave">Save games</button>
+      <button class="btn" id="gamesSave">Save</button>
       <span class="savemsg" id="gamesMsg"></span>
     </div>
   </section>
@@ -255,7 +255,7 @@
     <div class="hint">Untick a standard question to hide it from the suggestion box, or add up to 10 of your own.</div>
     <div id="formBody"></div>
     <div class="promo-row">
-      <button class="btn" id="formSave">Save form</button>
+      <button class="btn" id="formSave">Save</button>
       <span class="savemsg" id="formMsg"></span>
     </div>
   </section>
@@ -577,15 +577,15 @@ $('formSave').onclick = async ()=>{
     const { data, error } = await db.rpc('set_venue_form', { p_venue_id: V, p_key: K, p_core: feCollectCore(), p_extras: feExtras, p_pass: P });
     if (error || data !== true) throw new Error();
     Object.assign(feCore, feCollectCore());
-    DIRTY.form = false; setSaveState('form', 'formSave', 'Save form');
+    DIRTY.form = false; setSaveState('form', 'formSave', 'Save');
     msg.className='savemsg ok'; msg.textContent='Live on the next app load.';
   } catch(e){
     msg.className='savemsg err'; msg.textContent='Could not save. Check your connection and try again.';
   }
 };
-$('formBody').addEventListener('input', ()=> markDirty('form', 'formSave', 'Save form', 'formMsg'));
-$('formBody').addEventListener('click', e => { if(e.target.closest('[data-mv],[data-del],#feAdd')) markDirty('form', 'formSave', 'Save form', 'formMsg'); });
-setSaveState('form', 'formSave', 'Save form');
+$('formBody').addEventListener('input', ()=> markDirty('form', 'formSave', 'Save', 'formMsg'));
+$('formBody').addEventListener('click', e => { if(e.target.closest('[data-mv],[data-del],#feAdd')) markDirty('form', 'formSave', 'Save', 'formMsg'); });
+setSaveState('form', 'formSave', 'Save');
 
 /* ---- home screen cards (schema 2): one local working copy of the cards
    array, edited in place, pushed whole through set_venue_cards on Save.
@@ -624,6 +624,10 @@ const CARD_ICONS = {
 const CARD_TYPES = { schedule:'Weekly schedule', list:'Menu or list', notice:'Announcement' };
 const SP_DAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
 const SP_TODAY = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+const TODAY_YMD = (d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'))(new Date());
+// a notice whose date has passed is hidden in the app but never deleted
+const cardExpired = c => c.t === 'notice' && !!c.until && c.until < TODAY_YMD;
+const cardSuffix = c => c.off ? ' · hidden' : cardExpired(c) ? ' · hidden, date passed' : '';
 const EYE_ON  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/></svg>';
 const EYE_OFF = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/><path d="M4 4l16 16"/></svg>';
 const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
@@ -635,7 +639,7 @@ let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1, CARD_CONFIRM = -1;
 // a localStorage draft survives tab eviction (phones especially); it clears
 // on a successful save and wins over the server copy until then
 const cardDraftK = ()=> 'st_owner_cards_' + (V || '');
-const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK(), JSON.stringify(CARDS)); } catch(e){} markDirty('cards', 'cardsSave', 'Save home screen', 'cardsMsg'); };
+const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK(), JSON.stringify(CARDS)); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); };
 const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK()); } catch(e){} };
 const cardLoadDraft = ()=>{ try { const d = localStorage.getItem(cardDraftK()); return d ? JSON.parse(d) : null; } catch(e){ return null; } };
 
@@ -646,9 +650,14 @@ function defaultCard(t){
 }
 
 function cardBody(c, ix){
+  const mode = c.mode || 'inline';
+  // the short line sits right under the name, the same order diners see it
+  const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
+    <label class="cfl">Short line under the name (optional)</label>
+    <input type="text" class="promo-head" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Rotating drafts, updated often' : 'Friday at 8, no cover'}">` : '';
   const common = `
     <label class="cfl">Card name</label>
-    <input type="text" class="promo-head" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'On tap this week' : c.t === 'notice' ? 'Trivia night is back' : 'Daily specials'}">
+    <input type="text" class="promo-head" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'On tap this week' : c.t === 'notice' ? 'Trivia night is back' : 'Daily specials'}">${short}
     <label class="cfl">Icon</label>
     <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
     <div class="mini" style="margin-top:6px">Icon: ${esc(c.icon || 'star')}</div>`;
@@ -662,51 +671,53 @@ function cardBody(c, ix){
       </div>`).join('')}
     <label class="ck"><input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''}> Keep the card on the home screen even on blank days, so diners can still open the week</label>`;
   if (c.t === 'list') return common + `
-    <label class="cfl">Short line under the name (optional)</label>
-    <input type="text" class="promo-head" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="Rotating drafts, updated often">
     <label class="cfl">The list</label>
+    <div class="hint" style="margin-bottom:2px">Prices get a dollar sign in the app. Type just the number, or words like "Market price".</div>
     ${(c.items || []).map((i, j) => `
       <div class="lirow">
         <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Name">
-        <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="$" inputmode="decimal">
+        <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Price" inputmode="decimal">
         <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
         <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Details (optional)">
       </div>`).join('')}
     <div class="promo-row" style="margin-top:10px"><button type="button" class="btn ghost" data-additem="${ix}">+ Add a row</button></div>`;
   // notice
-  const mode = c.mode || 'inline';
+  const urlField = `<input type="url" class="promo-head" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
   return common + `
     <label class="cfl">What it does</label>
-    <label class="ck"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''}> The message sits right on the home screen</label>
+    <label class="ck"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''}> The message sits right on the app home screen</label>
     <label class="ck"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''}> Tapping it opens a link</label>
-    <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page with more details</label>
+    <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>
     ${mode === 'inline' ? `
       <label class="cfl">Message</label>
       <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>
-      <label class="ck"><input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''}> Make it stand out: a banner in your accent color</label>` : `
-      <label class="cfl">Short line under the name (optional)</label>
-      <input type="text" class="promo-head" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}">`}
+      <label class="ck"><input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''}> Make it stand out: a banner in your accent color</label>` : ''}
+    ${mode === 'link' ? `
+      <label class="cfl">Link</label>
+      ${urlField}` : ''}
     ${mode === 'page' ? `
       <label class="cfl">The details page</label>
-      <textarea data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Everything diners should know, in your words.">${esc(c.body || '')}</textarea>` : ''}
-    <label class="cfl">Link${mode === 'link' ? '' : mode === 'page' ? ' (optional, shown as a button on the page)' : ' (optional, tapping the card opens it)'}</label>
-    <input type="url" class="promo-head" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">
-    <label class="cfl">Last day shown (optional)</label>
+      <textarea data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Everything diners should know, in your words.">${esc(c.body || '')}</textarea>
+      <label class="cfl">Button link at the bottom of the page (optional)</label>
+      ${urlField}` : ''}
+    <label class="cfl">Hide message after this date (optional)</label>
     <input type="date" class="promo-head" style="max-width:200px" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}">
-    <div class="hint" style="margin-top:4px">After this day the card hides itself. Blank = shows until you hide or delete it.</div>`;
+    ${cardExpired(c)
+      ? `<div class="hint" style="margin-top:4px;color:var(--bad);font-weight:600">Hidden in the app: that date has passed. Pick a later date, or clear it, to show the card again.</div>`
+      : `<div class="hint" style="margin-top:4px">The card hides itself the day after, and stays here so you can reuse it. Blank = shows until you hide or delete it.</div>`}`;
 }
 
 function renderCards(){
-  $('cardCapLine').textContent = CARDS.length + ' of ' + CARD_CAP + ' cards' + (CARDS.length >= CARD_CAP ? '. Delete one to add another.' : '');
+  $('cardCapLine').textContent = CARDS.length + ' of ' + CARD_CAP + ' card slots used' + (CARDS.length >= CARD_CAP ? '. Delete one to add another.' : '');
   $('addCardBtn').style.display = CARDS.length < CARD_CAP ? '' : 'none';
   if(CARDS.length >= CARD_CAP) $('cardKind').style.display = 'none';
-  setSaveState('cards', 'cardsSave', 'Save home screen');
+  setSaveState('cards', 'cardsSave', 'Save');
   $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
-    <div class="cbox${c.off ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
+    <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
       <div class="cbox__head">
         <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
           <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
-          <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(c.desc || CARD_TYPES[c.t])}${c.off ? ' · hidden' : ''}</span></span>
+          <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(c.desc || CARD_TYPES[c.t])}${cardSuffix(c)}</span></span>
           <span class="cbox__chev" aria-hidden="true">›</span>
         </button>
         <span class="cbox__ctl"><button type="button" class="iconbtn" data-up="${ix}" title="Move up" aria-label="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
@@ -716,11 +727,13 @@ function renderCards(){
       ${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
       ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
         <div class="promo-row" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
-          <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:120px">${c.off ? 'Show card' : 'Hide card'}</button>
-          <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:120px">Delete card</button>
+          <button type="button" class="btn sm" id="cardsSaveInline" style="min-width:96px">Save</button>
+          <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
+          <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
         </div></div>` : ''}
     </div>`).join('') : '<div class="empty">No cards yet. Add one below.</div>';
   wireCards();
+  setSaveState('cards', 'cardsSaveInline', 'Save');
 }
 
 function wireCards(){
@@ -728,7 +741,9 @@ function wireCards(){
   L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; CARD_CONFIRM = -1; renderCards(); });
   L.querySelectorAll('[data-up]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.up; [CARDS[ix-1], CARDS[ix]] = [CARDS[ix], CARDS[ix-1]]; if(CARD_OPEN === ix) CARD_OPEN = ix - 1; else if(CARD_OPEN === ix - 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
   L.querySelectorAll('[data-down]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.down; [CARDS[ix], CARDS[ix+1]] = [CARDS[ix+1], CARDS[ix]]; if(CARD_OPEN === ix) CARD_OPEN = ix + 1; else if(CARD_OPEN === ix + 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
-  L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; cardSaveDraft(); renderCards(); });
+  // hiding or showing collapses the card; both take effect when you save
+  L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; CARD_OPEN = -1; CARD_CONFIRM = -1; cardSaveDraft(); renderCards(); });
+  const si = $('cardsSaveInline'); if(si) si.onclick = ()=> $('cardsSave').onclick();
   L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; renderCards(); });
   L.querySelectorAll('[data-keep]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = -1; renderCards(); });
   L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; CARDS.splice(ix, 1); CARD_CONFIRM = -1; if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
@@ -739,7 +754,9 @@ function wireCards(){
     else c[i.dataset.f] = i.value;
     if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
     // the short line mirrors into the card row as it is typed, like the name
-    if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
+    if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + cardSuffix(c); }
+    // the date decides whether the card is hidden, so the row and the note re-render
+    if(i.dataset.f === 'until'){ cardSaveDraft(); renderCards(); return; }
     cardSaveDraft();
   }));
   L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{
@@ -786,6 +803,7 @@ $('cardsSave').onclick = async ()=>{
     CARDS = out;
     cardClearDraft();
     DIRTY.cards = false;
+    CARD_OPEN = -1; CARD_CONFIRM = -1;   // saving closes whatever was open
     renderCards();
     msg.className = 'savemsg ok'; msg.textContent = 'Live on your tables now.';
   } catch(e){
@@ -851,12 +869,12 @@ function renderGameToggles(list){
     if (Array.isArray(d) && d.length){
       const box = $('gameToggles');
       d.forEach(x => { const row = box.querySelector('.gamerow[data-id="' + x.id + '"]'); if(row){ row.querySelector('input').checked = !!x.on; box.appendChild(row); } });
-      markDirty('games', 'gamesSave', 'Save games', 'gamesMsg');
+      markDirty('games', 'gamesSave', 'Save', 'gamesMsg');
     }
   } catch(e){}
   const gamesChanged = ()=>{
     try { localStorage.setItem('st_owner_games_' + V, JSON.stringify([...document.querySelectorAll('#gameToggles .gamerow')].map(r => ({ id: r.dataset.id, on: r.querySelector('input').checked })))); } catch(e){}
-    markDirty('games', 'gamesSave', 'Save games', 'gamesMsg');
+    markDirty('games', 'gamesSave', 'Save', 'gamesMsg');
   };
   document.querySelectorAll('#gameToggles input[type=checkbox]').forEach(i => i.addEventListener('change', gamesChanged));
   document.querySelectorAll('#gameToggles .gmove button').forEach(b => b.onclick = ()=>{
@@ -865,7 +883,7 @@ function renderGameToggles(list){
     if (b.dataset.mv === '1'  && row.nextElementSibling)     row.parentNode.insertBefore(row.nextElementSibling, row);
     gamesChanged();
   });
-  setSaveState('games', 'gamesSave', 'Save games');
+  setSaveState('games', 'gamesSave', 'Save');
 }
 $('gamesSave').onclick = async () => {
   const ids = [...document.querySelectorAll('#gameToggles input:checked')].map(i=>i.value);
@@ -880,7 +898,7 @@ $('gamesSave').onclick = async () => {
     const { data, error } = await db.rpc('set_venue_games', { p_venue_id: V, p_key: K, p_games: ids, p_pass: P });
     if (error || data !== true) throw new Error();
     try { localStorage.removeItem('st_owner_games_' + V); } catch(e){}
-    DIRTY.games = false; setSaveState('games', 'gamesSave', 'Save games');
+    DIRTY.games = false; setSaveState('games', 'gamesSave', 'Save');
     msg.className='savemsg ok'; msg.textContent='Live on your tables now.';
   } catch(e){
     msg.className='savemsg err'; msg.textContent='Could not save. Check your connection and try again.';
