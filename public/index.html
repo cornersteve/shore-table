@@ -20,9 +20,6 @@ const REPORT_IMAGE_URL = "images/report.png";
 const SCREENSHOT_URL_1 = "images/screenshot-1-landing.png";
 const SCREENSHOT_URL_2 = "images/screenshot-2-hotseat.png";
 const SCREENSHOT_URL_3 = "images/screenshot-3-survey.png";
-/* Optional. Leave empty and its figure is removed from the page entirely,
-   so nothing looks half finished. Paste images/owner-dashboard.png here. */
-const DASHBOARD_IMAGE_URL = "";
 </script>
 <style>
   /* ============================================================
@@ -146,8 +143,7 @@ const DASHBOARD_IMAGE_URL = "";
   .phone-frame .ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--ink-faint);font-size:13px;text-align:center;padding:16px}
   .phone-frame .ph .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
   /* captions are prize tags on a string */
-  .phone-caption{position:relative;margin-top:22px;background:var(--stock);border:1px solid var(--line-2);border-radius:10px;padding:9px 14px 9px 30px;font-family:var(--font-d);font-weight:500;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
-  .phone-caption::before{content:"";position:absolute;left:11px;top:50%;width:9px;height:9px;margin-top:-5px;border-radius:50%;border:1.5px solid var(--line-2);background:#fff}
+  .phone-caption{position:relative;margin-top:22px;background:var(--stock);border:1px solid var(--line-2);border-radius:10px;padding:9px 14px;font-family:var(--font-d);font-weight:500;font-size:11.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink)}
   .phone-caption::after{content:"";position:absolute;left:50%;top:-22px;width:1.5px;height:22px;background:var(--line-2)}
   @media(min-width:760px){
     .phones{margin-top:72px}
@@ -179,14 +175,13 @@ const DASHBOARD_IMAGE_URL = "";
   .games-grid{display:grid;gap:18px 16px}
   @media(min-width:600px){.games-grid{grid-template-columns:repeat(2,1fr)}}
   @media(min-width:900px){.games-grid{grid-template-columns:repeat(3,1fr);gap:26px 22px}}
-  .game{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;padding:30px 22px 22px;box-shadow:var(--shadow-sm);transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
-  /* only the top row hangs from the rail; the rows below carry the punched
-     hole alone, so no string ever runs into the tag above it */
+  .game{position:relative;background:#fff;border:1px solid var(--line);border-radius:14px;padding:24px 22px 22px;box-shadow:var(--shadow-sm);transition:transform .2s var(--ease),box-shadow .2s var(--ease)}
+  /* only the top row hangs from the rail, so no string ever runs into
+     the tag above it */
   .game::before{content:none;position:absolute;left:50%;top:-34px;width:1.5px;height:34px;background:var(--ink);opacity:.55}
   .game:nth-child(1)::before{content:""}
   @media(min-width:600px){.game:nth-child(2)::before{content:""}}
   @media(min-width:900px){.game:nth-child(3)::before{content:""}}
-  .game::after{content:"";position:absolute;left:50%;top:10px;width:11px;height:11px;margin-left:-6px;border-radius:50%;border:1.5px solid var(--line-2);background:var(--accent-tint)}
   .game:hover{transform:translateY(-3px) rotate(-.6deg);box-shadow:var(--shadow)}
   .game-tag{font-family:var(--font-d);font-weight:700;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent-deep);margin-bottom:10px}
   .game h3{font-family:var(--font-d);font-weight:700;font-size:17px;margin-bottom:8px;letter-spacing:-.005em}
@@ -197,18 +192,15 @@ const DASHBOARD_IMAGE_URL = "";
   /* ---------- the counter board: what owners get ----------
      One board, rows like a price board behind the counter: big
      lettered title on the left, the plain-words explanation on the
-     right, hairlines between. Not a card grid. */
-  .board{border-top:3px solid var(--ink)}
-  .board-row{display:grid;gap:12px;padding:28px 0;border-bottom:1px solid var(--line-2)}
+     right, hairlines between rows. Not a card grid. */
+  .board-row{display:grid;gap:12px;padding:28px 0}
+  .board-row+.board-row{border-top:1px solid var(--line-2)}
   @media(min-width:760px){.board-row{grid-template-columns:minmax(0,.9fr) minmax(0,1.5fr);gap:40px;padding:34px 0}}
   .board-row h3{font-family:var(--font-d);font-weight:700;font-size:clamp(19px,2.4vw,24px);line-height:1.15;letter-spacing:-.01em;display:flex;align-items:flex-start;gap:14px}
   .board-icon{width:38px;height:38px;border-radius:10px;background:var(--accent);display:inline-flex;align-items:center;justify-content:center;flex:none;margin-top:-4px}
   .board-icon svg{width:20px;height:20px;stroke:#fff}
   .board-row p{color:var(--ink-dim);font-size:16.5px;max-width:64ch}
 
-  /* Owner dashboard shot. Removed from the DOM entirely when no URL is set. */
-  .dash-shot{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:12px;box-shadow:var(--shadow);margin:40px auto 0;max-width:860px}
-  .dash-shot img{border-radius:10px;margin:0 auto}
 
   /* ---------- the tally: monthly report ---------- */
   .section-report{background:var(--accent-tint)}
@@ -412,7 +404,6 @@ const DASHBOARD_IMAGE_URL = "";
     <div class="wrap">
       <div class="section-head">
         <h2>How it helps your restaurant</h2>
-        <p>Four things it changes, none of which need anything from you or your staff after setup.</p>
       </div>
 
       <div class="board">
@@ -425,12 +416,12 @@ const DASHBOARD_IMAGE_URL = "";
           <p>The suggestion box is anonymous, so people are honest. The music is too loud, the menu is confusing, the bathroom needs attention. You read it in private while you can still fix it, instead of in a public review two weeks later. Asking also says something on its own: guests notice a restaurant that wants to know.</p>
         </div>
         <div class="board-row">
-          <h3><span class="board-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span><span>More Google reviews</span></h3>
-          <p>Everyone who uses the card sees the same simple, neutral prompt. More of your happy guests actually reach the review page instead of just meaning to.</p>
+          <h3><span class="board-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></span><span>Your own line to every table</span></h3>
+          <p>Post a message and it shows up on the first screen your guests see. Live music Friday. The new brunch. Add a link and it becomes a button to your menu, tickets, or Instagram. No algorithm decides who sees it: this is on your own tables, in front of guests already sitting in your restaurant, and you can change it in seconds.</p>
         </div>
         <div class="board-row">
-          <h3><span class="board-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></span><span>What diners around here want</span></h3>
-          <p>Your ratings and your comments are yours alone and never leave your dashboard. Alongside them the survey asks a few general questions about what people look for when they go out, and only those answers get pooled across venues, with nobody's name and no restaurant attached. Chains spend millions on data teams to learn this. You get it from every <span class="cfg-brand">network</span> venue in <span class="cfg-regionshort">the county</span>.</p>
+          <h3><span class="board-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg></span><span>More Google reviews</span></h3>
+          <p>Everyone who uses the card sees the same simple, neutral prompt. More of your happy guests actually reach the review page instead of just meaning to.</p>
         </div>
       </div>
     </div>
@@ -450,31 +441,6 @@ const DASHBOARD_IMAGE_URL = "";
           </div>
           <div class="phone-caption">Sample report, example numbers</div>
         </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- ============ THE CHANNEL ============ -->
-  <section id="reach">
-    <div class="wrap">
-      <div class="section-head">
-        <h2>A channel to your guests that you own</h2>
-        <p>Social decides who sees your posts. Ads find people who are not hungry yet. This one is on your own tables, in front of someone sitting in your restaurant right now.</p>
-      </div>
-
-      <div class="board">
-        <div class="board-row">
-          <h3><span class="board-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l19-9-9 19-2-8-8-2z"/></svg></span><span>Tell every table something</span></h3>
-          <p>Write a message and it appears on the first screen your guests see. Live music Friday. The new brunch. Add a link and the message becomes a button that opens your menu, your tickets, your reservations, or your Instagram. Change it in seconds, any day you want.</p>
-        </div>
-        <div class="board-row">
-          <h3><span class="board-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg></span><span>See what happened</span></h3>
-          <p>You get a private live dashboard. See ratings this month against last, comments as they come in, which games got played, and how many guests tapped the message you posted. No login and nothing to install.</p>
-        </div>
-      </div>
-
-      <div class="dash-shot" data-img="DASHBOARD_IMAGE_URL" data-optional="1">
-        <div class="ph"><span class="dot"></span>Owner dashboard</div>
       </div>
     </div>
   </section>
@@ -518,14 +484,10 @@ const IMAGES = {
   SCREENSHOT_URL_1,
   SCREENSHOT_URL_2,
   SCREENSHOT_URL_3,
-  DASHBOARD_IMAGE_URL,
 };
 
 document.querySelectorAll("[data-img]").forEach(el => {
   const url = IMAGES[el.dataset.img];
-  // data-optional means "no image, no slot": the figure is removed rather than
-  // left showing a placeholder, so an unset one never looks half finished.
-  if((!url || url.startsWith("PASTE_")) && el.dataset.optional){ el.remove(); return; }
   if(!url || url.startsWith("PASTE_")) return;   // keep the placeholder
   const img = new Image();
   // NOTE: no loading="lazy" here; a detached lazy image never loads, so

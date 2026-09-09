@@ -229,17 +229,17 @@ Two inks (ink and white) plus one operator accent, with every accent variant der
 ### Primary
 - **Operator Accent** (`--accent`, reference `#3a6ea5`): The enamel paint. Fills the hero booth panel and the closing offer panel edge to edge, the primary button, the board icon squares, the wordmark mark, the ticket notches, the placeholder diamonds, and text selection. It is set on `:root` before first paint from `OPERATOR_CONFIG`/`OPERATOR_BRAND`; the value in this file is only the reference brand's.
 - **Accent Deep** (`--accent-deep`, `color-mix(in srgb, var(--accent) 72%, #16110a)`; falls back to the accent where `color-mix` is unsupported): The accent darkened with ink, never a second hue. Used for small lettering that must clear contrast on white or stock (ticket stub lettering, tag category lettering, the footer mail link) and for the focus ring.
-- **Accent Tint** (`--accent-tint`, `color-mix(in srgb, var(--accent) 7%, #fdfcfa)`; falls back to `#f2f5f9`): The lightest wash of the accent on a warm white. Section background for the game library and the monthly report, and the punched-hole fill on game tags. It is the only permitted "tinted" surface and it is flat.
+- **Accent Tint** (`--accent-tint`, `color-mix(in srgb, var(--accent) 7%, #fdfcfa)`; falls back to `#f2f5f9`): The lightest wash of the accent on a warm white. Section background for the game library and the monthly report, and and nothing else. It is the only permitted "tinted" surface and it is flat.
 - **On Accent** (`--on-accent`, white): All text and outlines on accent panels. Prose on accent runs at 94% opacity; headings at full.
 
 ### Neutral
-- **Ink** (`--ink`): Warm near-black. Body text, headings, the night sign section background, the phone frames, the rail bar and its end caps, the counter board's top rule, the ink button, and the header pill. Ink hover on the ink button goes to pure black.
+- **Ink** (`--ink`): Warm near-black. Body text, headings, the night sign section background, the phone frames, the rail bar and its end caps, the ink button, and the header pill. Ink hover on the ink button goes to pure black.
 - **Ink Dim** (`--ink-dim`): Secondary prose: section subheads, board explanations, game descriptions, ticket sub-lines, footer copy.
 - **Ink Faint** (`--ink-faint`): Fineprint and placeholder text only.
 - **On Ink** (`--on-ink`, `#f4f2ee`) and **On Ink Dim** (`#cfc9bf`): Heading and prose colors on the ink panel. Warm whites, never pure white, so the night sign stays in the same warm family as the ticket stock.
-- **Page White** (`--bg`): The counter itself. Body background, header bar, footer, game tags, ghost button, dashboard frame.
+- **Page White** (`--bg`): The counter itself. Body background, header bar, footer, game tags, ghost button.
 - **Ticket Stock** (`--stock`, `#fbf9f4`): The one warm surface. Used only on things printed on ticket paper: the two tickets, the prize-tag captions, and the pinned report. Never a section background.
-- **Line** (`--line`) and **Line 2** (`--line-2`): Ink at 11% and 20% alpha. Line is the hairline for the header and footer rules and the game tag border; Line 2 is the perforation dash on tickets and the tally, the board row separators, the ghost button border, the caption strings and eyelets.
+- **Line** (`--line`) and **Line 2** (`--line-2`): Ink at 11% and 20% alpha. Line is the hairline for the header and footer rules and the game tag border; Line 2 is the perforation dash on tickets and the tally, the board row separators, the ghost button border, the caption strings.
 
 ### Named Rules
 **The Two Inks Rule.** Ink, white, and the operator accent are the entire palette. No second hue, no success or warning color, no grey that is not a tint of ink. If something needs to be colored and it is not accent, it is ink.
@@ -288,11 +288,11 @@ The three phones are 232px frames in a wrapping flex row with 22px gaps, standin
 
 ## Elevation & Depth
 
-Depth is physical, not atmospheric. Panels and sections are perfectly flat; the only things that cast shadows are objects that sit on the counter or hang from the rail: tickets, phone frames, game tags, the dashboard frame, and buttons. Two soft, warm-ink shadows do all of it, and in browsers with `color-mix` the large shadow is tinted 16% with the accent so a ticket on the enamel panel throws a shadow in the panel's own color. The pinned report uses `filter: drop-shadow` instead of `box-shadow` so the shadow follows its dashed edge. Loose objects also tilt: the hero ticket at -1.2 degrees (at 760px and up), the offer ticket at 1.4, the report at 0.8, and a game tag rotates -0.6 degrees as it lifts on hover.
+Depth is physical, not atmospheric. Panels and sections are perfectly flat; the only things that cast shadows are objects that sit on the counter or hang from the rail: tickets, phone frames, game tags, and buttons. Two soft, warm-ink shadows do all of it, and in browsers with `color-mix` the large shadow is tinted 16% with the accent so a ticket on the enamel panel throws a shadow in the panel's own color. The pinned report uses `filter: drop-shadow` instead of `box-shadow` so the shadow follows its dashed edge. Loose objects also tilt: the hero ticket at -1.2 degrees (at 760px and up), the offer ticket at 1.4, the report at 0.8, and a game tag rotates -0.6 degrees as it lifts on hover.
 
 ### Shadow Vocabulary
 - **Resting object** (`--shadow-sm`: `0 1px 2px rgba(22,17,10,.06), 0 6px 16px rgba(22,17,10,.07)`): Game tags and buttons at rest.
-- **Lifted object** (`--shadow`: `0 2px 4px rgba(22,17,10,.04), 0 18px 44px color-mix(in srgb, var(--accent) 16%, rgba(22,17,10,.08))`; fallback `0 2px 4px rgba(22,17,10,.05), 0 18px 44px rgba(22,17,10,.12)`): Tickets, phone frames, the dashboard frame, and any object on hover.
+- **Lifted object** (`--shadow`: `0 2px 4px rgba(22,17,10,.04), 0 18px 44px color-mix(in srgb, var(--accent) 16%, rgba(22,17,10,.08))`; fallback `0 2px 4px rgba(22,17,10,.05), 0 18px 44px rgba(22,17,10,.12)`): Tickets, phone frames, and any object on hover.
 - **Pinned sheet** (`filter: drop-shadow(0 2px 3px rgba(22,17,10,.05)) drop-shadow(0 16px 30px rgba(22,17,10,.1))`): The report, whose dashed edge needs a shape-following shadow.
 
 ### Named Rules
@@ -302,9 +302,9 @@ Depth is physical, not atmospheric. Panels and sections are perfectly flat; the 
 
 ## Shapes
 
-Rounded, cut-paper geometry. Buttons and the header CTA are full pills (999px). Tickets are 20px, game tags and the pinned report 14px, board icon squares, captions, and dashboard images 10px, the wordmark mark and focus ring 8px, the dashboard frame 18px (`--radius`). Phone frames are 34px with a 26px screen inside 10px of ink bezel. The rail and placeholder diamonds use a 2px radius so they stay crisp.
+Rounded, cut-paper geometry. Buttons and the header CTA are full pills (999px). Tickets are 20px, game tags and the pinned report 14px, board icon squares and captions 10px, the wordmark mark and focus ring 8px. Phone frames are 34px with a 26px screen inside 10px of ink bezel. The rail and placeholder diamonds use a 2px radius so they stay crisp.
 
-Perforation is a 2px dashed `--line-2` rule: it separates a ticket's stub from its body (bottom edge stacked, right edge from 1000px in the hero) and outlines the pinned report. The tear is completed by two 28px circular notches painted in the panel accent at each end of the perforation, so the cut reads as a real hole against the enamel. Hanging objects carry a 9 to 11px circular eyelet outlined in `--line-2` (white on captions, tint on game tags) and a 1.5px string in ink or `--line-2`; the rail is a 3px ink bar with 13px ink end caps. Borders elsewhere are 1px `--line` (tags, header, footer, dashboard frame) or 1.5px `--line-2` (ghost button, captions).
+Perforation is a 2px dashed `--line-2` rule: it separates a ticket's stub from its body (bottom edge stacked, right edge from 1000px in the hero) and outlines the pinned report. The tear is completed by two 28px circular notches painted in the panel accent at each end of the perforation, so the cut reads as a real hole against the enamel. Hanging objects carry a 1.5px string in ink or `--line-2` and no eyelet (rejected: the eyelets read as radio buttons); the rail is a 3px ink bar with 13px ink end caps. Borders elsewhere are 1px `--line` (tags, header, footer) or 1.5px `--line-2` (ghost button, captions).
 
 ## Components
 
@@ -326,11 +326,11 @@ White ticket stock with a perforated stub, laid on the accent panel at a slight 
 - **Entrance:** In the hero the ticket slides in 40px from the right over 900ms, 180ms after the copy rises 14px over 700ms in three staggered steps; both are removed under `prefers-reduced-motion`.
 
 ### Game Tag (card)
-A white prize tag hung from the rail, punched at the top.
+A white prize tag hung from the rail by a string.
 - **Corner Style:** 14px.
 - **Background:** Page white, 1px `--line` border, resting shadow.
-- **Punch and string:** An 11px eyelet 10px from the top, outlined `--line-2` and filled `--accent-tint`; only the tags in the top row (one, two, or three depending on the grid) hang a 1.5px ink string 34px up to the rail, so no string ever runs into a tag above it.
-- **Internal Padding:** 30px top (clearing the eyelet), 22px sides, 22px bottom.
+- **String:** No eyelet; only the tags in the top row (one, two, or three depending on the grid) hang a 1.5px ink string 34px up to the rail, so no string ever runs into a tag above it.
+- **Internal Padding:** 24px top, 22px sides, 22px bottom.
 - **Contents:** Tag lettering category (`--accent-deep`), Unbounded 17px title, `--ink-dim` 14.5px description.
 - **Hover:** Lifts 3px, rotates -0.6 degrees, takes the lifted shadow.
 
@@ -338,14 +338,14 @@ A white prize tag hung from the rail, punched at the top.
 A 3px ink bar across the full column width with 13px ink end caps, 34px above the first row of tags. It is the fixture tags hang from; nothing else hangs from it.
 
 ### Counter Board (list)
-A price board behind the counter, not a card grid.
-- **Structure:** 3px ink top rule; rows separated by 1px `--line-2`; title left, explanation right.
+A price board behind the counter, not a card grid. Hairlines between rows only; no rule above the board and no subheading under its title.
+- **Structure:** no top rule; rows separated by 1px `--line-2` hairlines; title left, explanation right.
 - **Row title:** Unbounded 700 title size with a 38px accent icon square (10px radius, 20px white stroke icon, inline SVG) leading it by 14px and pulled up 4px to sit on the cap line.
 - **Row body:** `--ink-dim` 16.5px, max 64ch.
 
 ### Prize-Tag Caption (chip)
 The small label under a phone or the pinned report, hung on a string.
-- **Style:** `--stock` fill, 1.5px `--line-2` border, 10px radius, 9px 14px padding with 30px left for the 9px white eyelet; caption lettering (Unbounded 500 11.5px, 0.06em, uppercase). A 1.5px string rises 22px from its top center. On the accent panel the border goes transparent and the string is white at 60%.
+- **Style:** `--stock` fill, 1.5px `--line-2` border, 10px radius, 9px 14px padding; caption lettering (Unbounded 500 11.5px, 0.06em, uppercase). A 1.5px string rises 22px from its top center. On the accent panel the border goes transparent and the string is white at 60%.
 
 ### Phone Frame
 A 232px ink slab (34px radius, 10px bezel) with a 26px-radius screen at 9:19, lifted shadow. Until a screenshot URL is set the screen shows a `#efece6` placeholder with a small accent diamond and `--ink-faint` text.
