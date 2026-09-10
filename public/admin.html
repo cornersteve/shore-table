@@ -437,9 +437,15 @@ async function ogCardB64(b, pendingFiles){
   wrap('Games while they wait, an anonymous suggestion box, and your own message of the week.', 72, y + 24, 400, 34, "500 24px 'Hanken Grotesk', sans-serif");
   ctx.globalAlpha = 1;
 
-  // the phone: the demo venue's home screen, in this accent
+  // the phone: the demo venue's REAL home screen in this accent, its logo in
+  // the header and its cards under the two pinned rows (the app's rules)
   const demo = venueById(b.demoVenue || 'demo') || {};
   const vname = demo.name || 'Your restaurant';
+  let vlogo = null;
+  if(demo.logo && /^(https?:|images\/|data:image\/)/i.test(demo.logo)){
+    try { vlogo = await new Promise((ok, no)=>{ const i = new Image(); if(/^https?:/i.test(demo.logo)) i.crossOrigin = 'anonymous'; i.onload = ()=> ok(i); i.onerror = no; i.src = demo.logo; }); } catch(e){ vlogo = null; }
+  }
+  const deep = (()=>{ const m2 = /^#(..)(..)(..)$/.exec(accent); const c = k => Math.round(parseInt(m2[k], 16) * .72).toString(16).padStart(2, '0'); return '#' + c(1) + c(2) + c(3); })();
   ctx.save(); ctx.translate(1010, 380); ctx.rotate(-3 * Math.PI / 180); ctx.translate(-150, -310);
   ctx.shadowColor = 'rgba(22,17,10,.35)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 26;
   ctx.fillStyle = '#1b1813'; rr(0, 0, 300, 640, 44); ctx.fill();
@@ -447,15 +453,47 @@ async function ogCardB64(b, pendingFiles){
   ctx.fillStyle = '#f5f6f8'; rr(13, 13, 274, 614, 33); ctx.fill();
   ctx.save(); rr(13, 13, 274, 614, 33); ctx.clip();
   ctx.fillStyle = '#fff'; ctx.fillRect(13, 13, 274, 62); ctx.fillStyle = accent; ctx.fillRect(13, 73, 274, 3);
-  ctx.fillStyle = '#16110a'; ctx.font = "700 14px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = 'center';
-  let vn = vname.toUpperCase(); while(ctx.measureText(vn).width > 240 && vn.length > 4) vn = vn.slice(0, -2) + '…';
-  ctx.fillText(vn, 150, 50); ctx.textAlign = 'left';
-  const row = (yy, title, sub)=>{ ctx.fillStyle = '#fff'; rr(27, yy, 246, 70, 16); ctx.fill(); ctx.fillStyle = accent; rr(39, yy + 17, 36, 36, 10); ctx.fill(); ctx.fillStyle = '#16110a'; ctx.font = "700 15px 'Bricolage Grotesque', sans-serif"; ctx.fillText(title, 86, yy + 30); ctx.fillStyle = '#6d6759'; ctx.font = "500 11px 'Hanken Grotesk', sans-serif"; ctx.fillText(sub, 86, yy + 50); };
-  row(94, 'Play a game', 'Pass the time, solo or together.');
-  row(176, 'Share feedback', 'Anonymous, seen only by the owner.');
-  ctx.fillStyle = accent; rr(27, 258, 246, 78, 16); ctx.fill();
-  ctx.fillStyle = onAccent; ctx.font = "700 12px 'Bricolage Grotesque', sans-serif"; ctx.fillText('LIVE MUSIC FRIDAY', 43, 284);
-  ctx.font = "500 12px 'Hanken Grotesk', sans-serif"; ctx.fillText('Doors at 7, no cover.', 43, 306);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(vlogo){
+    const s = Math.min(200 / vlogo.width, 40 / vlogo.height), lw = vlogo.width * s, lh = vlogo.height * s;
+    try { ctx.drawImage(vlogo, 150 - lw / 2, 44 - lh / 2, lw, lh); } catch(e){ vlogo = null; }
+  }
+  if(!vlogo){
+    ctx.fillStyle = '#16110a'; ctx.font = "700 14px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = 'center';
+    let vn = vname.toUpperCase(); while(ctx.measureText(vn).width > 240 && vn.length > 4) vn = vn.slice(0, -2) + '…';
+    ctx.fillText(vn, 150, 50); ctx.textAlign = 'left';
+  }
+  const clip = (s, maxW, font)=>{ ctx.font = font; let x = String(s || ''); while(ctx.measureText(x).width > maxW && x.length > 3) x = x.slice(0, -2) + '…'; return x; };
+  let py = 94;
+  const row = (title, sub)=>{
+    if(py > 600) return;
+    const h = sub ? 70 : 56;
+    ctx.fillStyle = '#fff'; rr(27, py, 246, h, 16); ctx.fill();
+    ctx.fillStyle = accent; rr(39, py + (sub ? 17 : 10), 36, 36, 10); ctx.fill();
+    ctx.fillStyle = '#16110a'; ctx.fillText(clip(title, 170, "700 14px 'Bricolage Grotesque', sans-serif"), 86, py + (sub ? 30 : 34));
+    if(sub){ ctx.fillStyle = '#6d6759'; ctx.fillText(clip(sub, 170, "500 11px 'Hanken Grotesk', sans-serif"), 86, py + 50); }
+    py += h + 12;
+  };
+  const banner = (title, body, hot)=>{
+    if(py > 600) return;
+    ctx.fillStyle = hot ? accent : '#fff'; rr(27, py, 246, 78, 16); ctx.fill();
+    ctx.fillStyle = hot ? onAccent : deep; ctx.fillText(clip(String(title || '').toUpperCase(), 214, "700 11px 'Bricolage Grotesque', sans-serif"), 43, py + 28);
+    ctx.fillStyle = hot ? onAccent : '#16110a'; ctx.fillText(clip(body, 214, "500 12px 'Hanken Grotesk', sans-serif"), 43, py + 50);
+    py += 90;
+  };
+  const d0 = new Date();
+  const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][d0.getDay()];
+  const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d0.getDay()];
+  const todayYmd = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
+  if(demo.games_enabled !== false) row('Play a game', 'Pass the time, solo or with the whole table.');
+  row('Share feedback', 'Anonymous, and seen only by ' + vname + '.');
+  (Array.isArray(demo.cards) ? demo.cards : []).forEach(c => {
+    if(!c || c.off) return;
+    if(c.t === 'notice' && c.until && c.until < todayYmd) return;
+    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ banner(c.title, c.body, !!c.hot); return; }
+    if(c.t === 'schedule'){ const today = (c.days || {})[dayKey]; if(!today && !c.always) return; row(c.title, today ? dayName + ': ' + today : (c.desc || 'Tap to view the calendar')); return; }
+    row(c.title, c.desc || '');
+  });
   ctx.restore(); ctx.restore();
   try { return cnv.toDataURL('image/png').split(',')[1]; } catch(e){ return null; }
 }

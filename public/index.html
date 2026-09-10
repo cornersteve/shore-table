@@ -380,7 +380,7 @@
         <div class="ticket__stub">
           <div class="k">Admit one</div>
           <div class="n">Money back guarantee</div>
-          <div class="s">30 days to decide. For independent restaurants and bars in <span class="cfg-region">your area</span>.</div>
+          <div class="s">Try it on your tables for 30 days. If you or your guests do not love it, ask for your money back, no questions asked.</div>
           <span class="notch a" aria-hidden="true"></span><span class="notch b" aria-hidden="true"></span>
         </div>
         <div class="ticket__body">
@@ -709,7 +709,7 @@ function mkHome(v){
     if(!v || !v.name) return false;
     document.querySelectorAll('.mk-name').forEach(e => e.textContent = v.name);
     const home = document.querySelector('.mk-home'); if(home) home.innerHTML = mkHome(v);
-    if(v.logo && /^(https?:|images\/)/i.test(v.logo)) document.querySelectorAll('.mk-logo').forEach(e => {
+    if(v.logo && /^(https?:|images\/|data:image\/)/i.test(v.logo)) document.querySelectorAll('.mk-logo').forEach(e => {
       if(e.classList.contains('has-img')) return;
       const i = new Image(); i.alt = '';
       i.onload = ()=>{ e.appendChild(i); e.classList.add('has-img'); };
