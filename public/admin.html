@@ -117,6 +117,13 @@
   .vdot{width:14px;height:14px;border-radius:4px;flex:none}
   .vname{font-family:var(--font-d);font-weight:700;font-size:15.5px}
   .vid{color:var(--ink-dim);font-size:12.5px}
+  .vgroup{font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);margin:18px 0 8px}
+  .vfold{margin-top:18px}
+  .vfold summary{cursor:pointer;font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);padding:10px 0;list-style:none;display:flex;align-items:center;gap:8px;min-height:44px}
+  .vfold summary::-webkit-details-marker{display:none}
+  .vfold summary::before{content:'';width:8px;height:8px;border-right:2px solid currentColor;border-bottom:2px solid currentColor;transform:rotate(-45deg);transition:transform .15s}
+  .vfold[open] summary::before{transform:rotate(45deg)}
+  .vfold[open] summary{margin-bottom:8px}
   .vspacer{margin-left:auto;display:flex;align-items:center;gap:10px}
   .badge{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;border-radius:999px;padding:4px 10px;vertical-align:middle}
   .badge.lead{background:#f3ecd9;color:#7a5a0f}
@@ -1295,12 +1302,18 @@ function extractSwatches(img){
 function home(){
   setView('');
   const sorted = [...VENUES].sort((a,b)=> a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
-  const rows = sorted.map(v=>`
+  const rowHtml = v=>`
     <button class="vrow" data-id="${esc(v.id)}">
       <span class="vdot" style="background:${esc(v.accent)}"></span>
       <span><div class="vname">${esc(v.name)}</div><div class="vid">${esc(v.id)}</div></span>
       <span class="vspacer"><span class="badge ${esc(v.status)}">${esc(v.status)}</span> ›</span>
-    </button>`).join('');
+    </button>`;
+  // grouped by status: the working list on top, inactive venues folded away with their history intact
+  const active = sorted.filter(v => v.status === 'active'), leads = sorted.filter(v => v.status === 'lead'), inactive = sorted.filter(v => v.status === 'inactive');
+  const both = active.length && leads.length;
+  const rows = (both ? '<h2 class="vgroup">Active</h2>' : '') + active.map(rowHtml).join('')
+    + (both ? '<h2 class="vgroup">Leads</h2>' : '') + leads.map(rowHtml).join('')
+    + (inactive.length ? `<details class="vfold"><summary>Inactive (${inactive.length})</summary>${inactive.map(rowHtml).join('')}</details>` : '');
 
   // demo watch: rollup per lead venue + the latest raw events
   const byVenue = {};
