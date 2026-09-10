@@ -628,6 +628,9 @@
   const set = ()=>{ const cw = w.clientWidth; if(cw) w.style.setProperty('--rs', (cw / 820).toFixed(4)); };
   set(); window.addEventListener('resize', set); window.addEventListener('load', set);
   if(window.ResizeObserver) new ResizeObserver(set).observe(w);
+  // a page that loads in a hidden tab has no width yet: keep trying until it does
+  let tries = 0; const tick = ()=>{ if(w.clientWidth || tries++ > 40) return; set(); setTimeout(tick, 250); }; setTimeout(tick, 250);
+  document.addEventListener('visibilitychange', set);
   const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
   const m = document.querySelector('.rp-meta span'); if(m) m.textContent = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' · 23 guests responded';
 })();
