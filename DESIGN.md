@@ -261,7 +261,7 @@ Two inks (ink and white) plus one operator accent, with every accent variant der
 - **Display, offer** (Unbounded 800, `clamp(28px, 4.4vw, 50px)`, line-height 1.04, tracking -0.02em, max 14ch): The closing sign only; the one place the heaviest weight and tightest tracking appear.
 - **Headline** (Unbounded 700, `clamp(24px, 3.6vw, 38px)`, line-height 1.12, tracking -0.015em): Section headings on white and tint sections. The report heading is the same style capped at 36px.
 - **Title** (Unbounded 700, `clamp(19px, 2.4vw, 24px)`, line-height 1.15, tracking -0.01em): Counter board row titles, set with the accent icon square beside them. Game tag titles are the fixed small size (17px, tracking -0.005em).
-- **Ticket number** (Unbounded 800, `clamp(22px, 3vw, 30px)`, line-height 1.05, tracking -0.01em): The big line on a ticket stub ("Free first month"). On the offer ticket it caps at 26px.
+- **Ticket number** (Unbounded 800, `clamp(22px, 3vw, 30px)`, line-height 1.05, tracking -0.01em): The big line on a ticket stub ("30 day money back guarantee"). On the offer ticket it caps at 26px.
 - **Lede** (Hanken 400, `clamp(16px, 1.9vw, 19px)`, line-height 1.5, max 56ch): Hero paragraph under the headline.
 - **Body** (Hanken 400, 17px, line-height 1.55, 48 to 64ch): Section subheads and board explanations. Board explanations run 16.5px; the games note 16px; ticket sub-lines 14px; game descriptions 14.5px; footer 15px.
 - **Button** (Hanken 700, 17px, tracking 0.005em; small 15px; header 14px): All buttons, in the body face so they read as things to press, not signs.
@@ -351,7 +351,7 @@ The small label under a phone or the pinned report, hung on a string.
 A 232px ink slab (34px radius, 10px bezel) with a 26px-radius screen at 9:19, lifted shadow. The screen holds a live mockup of the app (`.mk`): the app's own components at their 390px size, scaled to 0.5436, in the accent, with the demo venue's name and logo filled in at load. No screenshot files.
 
 ### Pinned Report
-Ticket stock sheet, 2px dashed `--line-2` edge, 14px radius, 12px padding around a 6px-radius image, drop-shadow filter, tilted 0.8 degrees, captioned with a prize tag 24px below.
+Ticket stock sheet, 2px dashed `--line-2` edge, 14px radius, 12px padding around a 6px-radius live mockup of the report's first page (its own components at 820px, scaled to the frame), drop-shadow filter, tilted 0.8 degrees, captioned with a prize tag 24px below.
 
 ### Panels
 - **Accent panel** (booth, offer): `--accent` fill, white text, prose at 94% opacity; focus rings switch to white.

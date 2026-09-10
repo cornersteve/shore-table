@@ -7,7 +7,7 @@
 <meta name="description" content="A branded table card for independent restaurants. It gives your guests something to do while they wait and something to talk about after, and gives you the honest, private read on your room that the chains pay analytics teams for." />
 <meta property="og:type" content="website" />
 <meta property="og:title" content="A better experience at the table" />
-<meta property="og:description" content="A card on your table opens a branded app on your guests' phones: games while they wait, an anonymous suggestion box, and your own message of the week. Free first month for independent restaurants." />
+<meta property="og:description" content="A card on your table opens a branded app on your guests' phones: games while they wait, an anonymous suggestion box, and your own message of the week. A 30 day money back guarantee for independent restaurants." />
 <meta property="og:image" content="images/og.png" />
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="theme-color" content="#3a6ea5" />
@@ -17,14 +17,9 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <script>
-/* ================================================================
-   IMAGE URLS. Paste the Supabase Storage PUBLIC URLs between the
-   quotes below. Until a real URL is pasted, the page shows a clean
-   placeholder in that spot, so it is safe to deploy as is.
-   ================================================================ */
-const REPORT_IMAGE_URL = "images/report.png";
-/* The three phones in the hero are live mockups of the app, drawn in your
-   accent with your demo venue's name and logo: nothing to paste for them. */
+/* Nothing to paste here. The three phones in the hero and the report sheet
+   are live mockups of the app and the report, drawn in your accent with
+   your demo venue's name and logo. */
 </script>
 <style>
   /* ============================================================
@@ -264,10 +259,36 @@ const REPORT_IMAGE_URL = "images/report.png";
      hanging tag that says what it is */
   .report-fig{display:flex;flex-direction:column;align-items:center}
   .report-img{width:100%;max-width:520px;background:var(--stock);border:2px dashed var(--line-2);border-radius:14px;padding:12px;filter:drop-shadow(0 2px 3px rgba(22,17,10,.05)) drop-shadow(0 16px 30px rgba(22,17,10,.1));transform:rotate(.8deg)}
-  .report-img img{display:block;width:100%;height:auto;border-radius:6px}
   .report-fig .phone-caption{margin-top:24px}
-  .report-img .ph{min-height:300px;border-radius:6px;background:#efece6;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--ink-faint);font-size:14px;text-align:center;padding:20px}
-  .report-img .ph .dot{width:10px;height:10px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
+  /* the report's first page, its own components at the sheet's 820px width,
+     scaled to the frame (--rs is set from the frame width at load) */
+  .rp-wrap{width:100%;aspect-ratio:820/1040;overflow:hidden;border-radius:6px;background:#fff;position:relative}
+  .rp{width:820px;transform-origin:0 0;transform:scale(var(--rs,.6));background:#fff;color:#1b1813;font-family:var(--font-b);font-size:15px;line-height:1.5;padding:0 48px 40px;pointer-events:none;user-select:none}
+  .rp-head{display:flex;align-items:center;justify-content:space-between;gap:16px;background:#fff;border-bottom:3px solid var(--accent);padding:26px 48px 20px;margin:0 -48px}
+  .rp-head .mk-logo img{max-height:64px;max-width:240px}
+  .rp-head .mk-name{font-family:var(--font-app);font-weight:800;font-size:26px;letter-spacing:-.01em;text-transform:none}
+  .rp-meta{text-align:right}
+  .rp-meta b{display:block;font-family:var(--font-app);font-weight:700;font-size:12px;letter-spacing:.16em;text-transform:uppercase}
+  .rp-meta span{display:block;color:#6f6a61;font-size:14px;margin-top:3px}
+  .rp-sec{margin-top:26px}
+  .rp-sec h4{font-family:var(--font-app);font-weight:700;font-size:12.5px;letter-spacing:.15em;text-transform:uppercase;color:#6f6a61}
+  .rp-cards{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px}
+  .rp-cards.three{grid-template-columns:repeat(3,1fr)}
+  .rp-card{border:1px solid rgba(22,17,10,.10);border-radius:16px;padding:16px 18px}
+  .rp-card b{display:block;font-family:var(--font-app);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#6f6a61}
+  .rp-card .n{font-family:var(--font-app);font-weight:800;font-size:40px;line-height:1.1;margin-top:4px;font-variant-numeric:tabular-nums}
+  .rp-card .n small{font-size:18px;color:#a49d90;font-weight:700}
+  .rp-chip{display:inline-flex;align-items:center;gap:5px;border-radius:999px;padding:4px 10px;font-family:var(--font-app);font-weight:700;font-size:12.5px;margin-top:8px}
+  .rp-chip.up{background:#e7f4ec;color:#2e9e63}
+  .rp-chip.down{background:#f9e9e7;color:#b3372f}
+  .rp-chip i{font-style:normal;font-weight:600;color:#6f6a61}
+  .rp-bars{margin-top:10px}
+  .rp-bars .r{display:flex;align-items:center;gap:10px;margin-top:8px;font-size:14.5px}
+  .rp-bars .lbl{flex:0 0 42%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rp-bars .track{flex:1;height:9px;border-radius:99px;background:#efece6;position:relative}
+  .rp-bars .fill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:var(--accent)}
+  .rp-bars .n{flex:0 0 96px;text-align:right;color:#6f6a61;font-variant-numeric:tabular-nums}
+  .rp-bars .n b{color:#1b1813}
 
   /* ---------- the last ticket: the offer ---------- */
   .section-offer{background:var(--accent);color:var(--on-accent)}
@@ -327,7 +348,7 @@ const REPORT_IMAGE_URL = "images/report.png";
   STORY: An owner sees a boardwalk booth in their own color, understands the
   card and the phone in seconds, is handed a ticket with two stubs (email,
   demo), walks the midway of games, reads the counter board of what they get,
-  sees the tally, and takes the last ticket: a free month.
+  sees the tally, and takes the last ticket: 30 days, money back.
   FIRST VIEWPORT: White header bar; full-bleed accent panel; headline left in
   wide sign lettering with the lede under it; the ticket right, tilted, stub
   reading who it is for and body holding both actions at equal weight; the
@@ -358,8 +379,8 @@ const REPORT_IMAGE_URL = "images/report.png";
       <div class="ticket" aria-label="Get started">
         <div class="ticket__stub">
           <div class="k">Admit one</div>
-          <div class="n">Free first month</div>
-          <div class="s">For independent restaurants and bars in <span class="cfg-region">your area</span>.</div>
+          <div class="n">Money back guarantee</div>
+          <div class="s">30 days to decide. For independent restaurants and bars in <span class="cfg-region">your area</span>.</div>
           <span class="notch a" aria-hidden="true"></span><span class="notch b" aria-hidden="true"></span>
         </div>
         <div class="ticket__body">
@@ -535,10 +556,31 @@ const REPORT_IMAGE_URL = "images/report.png";
           <p>A sample of what lands in your inbox each month. Your feedback, your review activity, and the county picture, in plain English you can read over coffee.</p>
         </div>
         <div class="report-fig">
-          <div class="report-img" data-img="REPORT_IMAGE_URL">
-            <div class="ph"><span class="dot"></span>Sample monthly report</div>
+          <div class="report-img" role="img" aria-label="A sample monthly guest report for the demo restaurant: scores, how guests found it, and activity">
+            <div class="rp-wrap"><div class="rp" aria-hidden="true">
+              <div class="rp-head"><span class="mk-logo"><span class="mk-name">Your restaurant</span></span><div class="rp-meta"><b>Guest report</b><span>Last month · 23 guests responded</span></div></div>
+              <div class="rp-sec"><h4>Your scores · private to you</h4>
+                <div class="rp-cards">
+                  <div class="rp-card"><b>Food</b><div class="n">4.4<small> / 5</small></div><span class="rp-chip up">▲ +0.2 <i>vs prior</i></span></div>
+                  <div class="rp-card"><b>Service</b><div class="n">4.1<small> / 5</small></div><span class="rp-chip down">▼ 0.1 <i>vs prior</i></span></div>
+                </div>
+              </div>
+              <div class="rp-sec"><h4>How they found you</h4>
+                <div class="rp-bars"><div class="r"><span class="lbl">Word of mouth</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="n"><b>39%</b> · 9</span></div><div class="r"><span class="lbl">Walked by</span><span class="track"><span class="fill" style="width:67%"></span></span><span class="n"><b>26%</b> · 6</span></div><div class="r"><span class="lbl">Social media</span><span class="track"><span class="fill" style="width:44%"></span></span><span class="n"><b>17%</b> · 4</span></div><div class="r"><span class="lbl">Maps or search</span><span class="track"><span class="fill" style="width:33%"></span></span><span class="n"><b>13%</b> · 3</span></div><div class="r"><span class="lbl">I'm a regular</span><span class="track"><span class="fill" style="width:11%"></span></span><span class="n"><b>4%</b> · 1</span></div></div>
+              </div>
+              <div class="rp-sec"><h4>Activity</h4>
+                <div class="rp-cards three">
+                  <div class="rp-card"><b>App opens</b><div class="n">188</div><span class="rp-chip up">▲ +31 <i>vs prior</i></span></div>
+                  <div class="rp-card"><b>Sent to Google</b><div class="n">14</div><span class="rp-chip up">▲ +5 <i>vs prior</i></span></div>
+                  <div class="rp-card"><b>Card taps</b><div class="n">37</div><span class="rp-chip up">▲ +12 <i>vs prior</i></span></div>
+                </div>
+              </div>
+              <div class="rp-sec"><h4>Game starts · all time</h4>
+                <div class="rp-bars"><div class="r"><span class="lbl">Trivia</span><span class="track"><span class="fill" style="width:100%"></span></span><span class="n"><b>56%</b> · 610</span></div><div class="r"><span class="lbl">Wordy</span><span class="track"><span class="fill" style="width:35%"></span></span><span class="n"><b>20%</b> · 214</span></div><div class="r"><span class="lbl">Quick Pour</span><span class="track"><span class="fill" style="width:28%"></span></span><span class="n"><b>16%</b> · 171</span></div><div class="r"><span class="lbl">Who Knows Who</span><span class="track"><span class="fill" style="width:16%"></span></span><span class="n"><b>9%</b> · 96</span></div></div>
+              </div>
+            </div></div>
           </div>
-          <div class="phone-caption">Sample report, example numbers</div>
+          <div class="phone-caption">Sample report</div>
         </div>
       </div>
     </div>
@@ -548,13 +590,13 @@ const REPORT_IMAGE_URL = "images/report.png";
   <section class="section-offer on-accent" id="offer">
     <div class="wrap offer-grid">
       <div>
-        <h2>Try it on your tables free for a month.</h2>
-        <p>We set it up with your logo and colors, you put the cards out, and see what your guests think. No contract, and cancel easily at any time.</p>
+        <h2>Try it on your tables. Love it or your money back.</h2>
+        <p>We set it up with your logo and colors, you put the cards out, and see what your guests think. If it is not for you in the first 30 days, you get a full refund. No contract, and cancel easily at any time.</p>
       </div>
-      <div class="ticket" aria-label="Free trial">
+      <div class="ticket" aria-label="Our promise">
         <div class="ticket__stub">
-          <div class="k">Free trial</div>
-          <div class="n">Your first month is on us</div>
+          <div class="k">Our promise</div>
+          <div class="n">30 day money back guarantee</div>
           <div class="s">No contract. Cancel any time.</div>
           <span class="notch a" aria-hidden="true"></span><span class="notch b" aria-hidden="true"></span>
         </div>
@@ -577,21 +619,18 @@ const REPORT_IMAGE_URL = "images/report.png";
 </footer>
 
 <script>
-/* Applies the image URLs set in the <head> block at the top of this file. */
-const IMAGES = { REPORT_IMAGE_URL };
-
-const ALT = { REPORT_IMAGE_URL: "A sample monthly guest report with example numbers" };
-document.querySelectorAll("[data-img]").forEach(el => {
-  const url = IMAGES[el.dataset.img];
-  if(!url || url.startsWith("PASTE_")) return;   // keep the placeholder
-  const img = new Image();
-  // NOTE: no loading="lazy" here; a detached lazy image never loads, so
-  // onload would never fire and the placeholder would never be replaced.
-  img.src = url;
-  img.alt = ALT[el.dataset.img] || "";
-  img.decoding = "async";
-  img.onload = () => { el.innerHTML = ""; el.appendChild(img); };
-});
+/* The report sheet is drawn at the report's own 820px width and scaled to
+   the frame; the month line is always last month. */
+(function(){
+  const w = document.querySelector('.rp-wrap'); if(!w) return;
+  // the frame can be 0 wide while a tab is hidden; never write a zero scale, and
+  // recompute whenever the frame gets a size
+  const set = ()=>{ const cw = w.clientWidth; if(cw) w.style.setProperty('--rs', (cw / 820).toFixed(4)); };
+  set(); window.addEventListener('resize', set); window.addEventListener('load', set);
+  if(window.ResizeObserver) new ResizeObserver(set).observe(w);
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
+  const m = document.querySelector('.rp-meta span'); if(m) m.textContent = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' · 23 guests responded';
+})();
 
 /* ---- the demo venue lands in the phone mockups: its name and logo on all
    three, and its real home screen (cards, games row) on the first ---- */

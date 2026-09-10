@@ -56,7 +56,7 @@ brand.js and must keep working through data attributes and class hooks
   Wordy, Trivia, All Talk, Cornhole, Quick Pour, Fortune Teller); new
   games ship over time. Two more exist as venue exclusives and never
   appear on the homepage.
-- Free first month, no contract, cancel any time. No public price on the
+- 30 day money back guarantee (charged from day one, full refund on request within 30 days), no contract, cancel any time. No public price on the
   page today (undecided; do not invent one).
 - The Google review prompt is shown to everyone and never rating-gated
   (Google policy and FTC rules). Copy must never imply filtering reviews.
@@ -80,9 +80,9 @@ brand.js and must keep working through data attributes and class hooks
 
 - The three hero phones are live mockups of the app's real screens
   (home, a trivia round, the suggestion box), drawn in the operator accent
-  with the demo venue's name and logo; public/images/report.png is a
-  sample monthly report; public/images/og.png is the sharing card, drawn
-  by the dashboard Settings on every publish.
+  with the demo venue's name and logo; the report sheet is a live mockup
+  of the report's first page with example numbers; public/images/og.png is
+  the sharing card, drawn by the dashboard Settings on every publish.
 - A live demo venue at app.html?v=demo.
 - No customer names, counts, testimonials, or quotes may appear yet
   (confirmed 2026-09-07). Leave nothing that reads as a
