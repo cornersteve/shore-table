@@ -274,7 +274,7 @@ function render(d, r){
 
   $('sheet').innerHTML = `
     <div class="rhead">
-      <div class="vlogo">${/^https?:/i.test(d.logo||'') ? `<img src="${esc(d.logo)}" alt="${esc(d.name)}" />` : `<div class="vname">${esc(d.logo || d.name)}</div>`}</div>
+      <div class="vlogo">${/^(https?:|images\/)/i.test(d.logo||'') ? `<img src="${esc(d.logo)}" alt="${esc(d.name)}" />` : `<div class="vname">${esc(d.logo || d.name)}</div>`}</div>
       <div class="rmeta"><div class="k">Guest report</div><div class="d">${esc(r.label)} · ${cur.count||0} guest${cur.count===1?'':'s'} responded</div></div>
     </div>
 

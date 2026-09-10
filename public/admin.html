@@ -383,7 +383,7 @@ async function platformView(){
    committed into the fork as files under public/brand/ and referenced
    by path with a cache-busting stamp.
    ================================================================ */
-const BRAND_KEYS = ['brandName','contactEmail','accent','regionName','regionShort','operatorStory','operatorName','operatorPhone','stripePlans','workerUrl','logoSvg','iconUrl','logoUrl'];
+const BRAND_KEYS = ['brandName','contactEmail','accent','regionName','regionShort','operatorStory','operatorName','operatorPhone','stripePlans','workerUrl','logoSvg','iconUrl','logoUrl','demoVenue'];
 
 // DB copy wins, then the deployed brand.js, then a legacy config.js:
 // a fresh instance sees its config.js values prefilled on first run
@@ -438,7 +438,7 @@ async function ogCardB64(b, pendingFiles){
   ctx.globalAlpha = 1;
 
   // the phone: the demo venue's home screen, in this accent
-  const demo = venueById('demo') || {};
+  const demo = venueById(b.demoVenue || 'demo') || {};
   const vname = demo.name || 'Your restaurant';
   ctx.save(); ctx.translate(1010, 380); ctx.rotate(-3 * Math.PI / 180); ctx.translate(-150, -310);
   ctx.shadowColor = 'rgba(22,17,10,.35)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 26;
@@ -527,6 +527,11 @@ async function settingsView(opts){
       <textarea id="sbSvg" rows="3" placeholder='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">…</svg>' spellcheck="false">${esc(b.logoSvg || '')}</textarea>
     </section>
     <section>
+      <h2>Demo venue</h2>
+      <div class="hint">The venue behind the homepage's Try the demo button, its three phone screens, and the sharing card. Corner & Oak Bar & Grill is a made-up restaurant that platform updates keep current as features ship, so most operators leave it. Pick one of your own venues to show that instead.</div>
+      <select id="sbDemo">${((VENUES && VENUES.length) ? VENUES : [{ id: 'demo', name: 'Corner & Oak Bar & Grill' }]).map(x => `<option value="${esc(x.id)}" ${(b.demoVenue || 'demo') === x.id ? 'selected' : ''}>${esc(x.name)}${x.id === 'demo' ? ' (platform demo)' : ''}</option>`).join('')}</select>
+    </section>
+    <section>
       <h2>Your area</h2>
       <label class="f">Region name</label>
       <input type="text" id="sbRegion" maxlength="60" value="${esc(b.regionName || '')}" placeholder="Ex. Ocean County" />
@@ -564,7 +569,7 @@ async function settingsView(opts){
     <div class="msg" id="setMsg"></div>`;
 
   $('back').onclick = ()=> home();
-  const textIds = ['sbName','sbEmail','sbAccentHex','sbRegion','sbRegionShort','sbStory','sbOpName','sbOpPhone','sbWorker','sbSvg'].concat([0,1,2,3].flatMap(i => ['sbPlanL' + i, 'sbPlanU' + i]));
+  const textIds = ['sbName','sbEmail','sbAccentHex','sbRegion','sbRegionShort','sbStory','sbOpName','sbOpPhone','sbWorker','sbSvg','sbDemo'].concat([0,1,2,3].flatMap(i => ['sbPlanL' + i, 'sbPlanU' + i]));
   draftify('settings', textIds);
   $('sbAccent').oninput = ()=>{ $('sbAccentHex').value = $('sbAccent').value; };
   $('sbAccentHex').addEventListener('input', ()=>{ const v = $('sbAccentHex').value.trim(); if(/^#[0-9a-f]{6}$/i.test(v)) $('sbAccent').value = v; });
@@ -594,6 +599,7 @@ async function settingsView(opts){
       accent: v('sbAccentHex').toLowerCase(), regionName: v('sbRegion'), regionShort: v('sbRegionShort'),
       operatorStory: v('sbStory'), operatorName: v('sbOpName'), operatorPhone: v('sbOpPhone'),
       workerUrl: v('sbWorker'), logoSvg: v('sbSvg'),
+      demoVenue: v('sbDemo') || 'demo',
       stripePlans: [],
       iconUrl: b.iconUrl || '', logoUrl: b.logoUrl || ''
     };
@@ -2794,7 +2800,7 @@ async function renderCard(cnv, v, opts){
   } else {
     ctx.fillStyle = a1;
     ctx.font = '800 58px "Hanken Grotesk", sans-serif';
-    ctx.fillText((v.logo && !/^https?:/i.test(v.logo) ? v.logo : v.name), 110, 188);
+    ctx.fillText((v.logo && !/^(https?:|images\/)/i.test(v.logo) ? v.logo : v.name), 110, 188);
   }
   if(opts.town){
     ctx.fillStyle = TOWN;   // header-aware: light dim on dark headers
@@ -2837,7 +2843,7 @@ async function renderCard(cnv, v, opts){
   ctx.fillText('Takes 30 seconds · 100% anonymous', 110, 1614);
 }
 async function loadCardLogo(v){
-  if(!v.logo || !/^https?:/i.test(v.logo)) return null;
+  if(!v.logo || !/^(https?:|images\/)/i.test(v.logo)) return null;
   try {
     const res = await fetch(v.logo);
     if(!res.ok) return null;

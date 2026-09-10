@@ -185,6 +185,8 @@ const REPORT_IMAGE_URL = "images/report.png";
   .mk-answer.right span{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.05em;color:#1f7a4a}
   .mk-btn{margin-top:8px;background:var(--accent);color:var(--on-accent);border-radius:999px;padding:16px;text-align:center;font-family:var(--font-app);font-weight:700;font-size:15.5px}
   .mk-label{font-weight:700;font-size:15.5px;margin-top:14px}
+  .mk-label small{font-weight:400;font-size:13px;color:#6d6759}
+  .mk-text{margin-top:10px;background:#fff;border:1px solid rgba(22,17,10,.2);border-radius:12px;padding:12px 14px;min-height:72px;font-size:14.5px;line-height:1.45;color:#16110a}
   .mk-rate{display:flex;gap:8px;margin-top:10px}
   .mk-rate span{flex:1;height:44px;border-radius:12px;background:#fff;border:1px solid rgba(22,17,10,.2);display:flex;align-items:center;justify-content:center;font-family:var(--font-app);font-weight:700;color:#a49d90;font-size:14px}
   .mk-rate span.on{background:var(--accent);color:var(--on-accent);border-color:transparent}
@@ -406,7 +408,14 @@ const REPORT_IMAGE_URL = "images/report.png";
               <div class="mk-label">How was the service?</div>
               <div class="mk-rate"><span>1</span><span>2</span><span>3</span><span class="on">4</span><span>5</span></div>
               <div class="mk-label">How'd you end up here tonight?</div>
-              <div class="mk-pills"><span class="on">Word of mouth</span><span>Social media</span><span>Walked by</span><span>Maps or search</span></div>
+              <div class="mk-pills"><span class="on">Word of mouth</span><span>Social media</span><span>Walked by</span><span>I'm a regular</span><span>Maps or search</span></div>
+              <div class="mk-label">In the food itself, what matters most to you? <small>Pick one</small></div>
+              <div class="mk-pills"><span>Quality ingredients</span><span>Healthy options</span><span class="on">Big portions</span><span>Something new to try</span></div>
+              <div class="mk-label">About the visit, what matters most? <small>Pick one</small></div>
+              <div class="mk-pills"><span>Fast service</span><span>Good value</span><span>Friendly staff</span><span class="on">Great atmosphere</span></div>
+              <div class="mk-label">Anything else? <small>(optional)</small></div>
+              <div class="mk-text">Loved the trivia. Music was a little loud by the bar.</div>
+              <div class="mk-btn">Send it</div>
             </div>
           </div></div></div>
           <div class="phone-caption">The suggestion box</div>
@@ -648,14 +657,17 @@ function mkHome(v){
 }
 (function(){
   const C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {});
+  // which venue plays the demo: the platform's Corner & Oak unless Settings picked one
+  const DEMO = /^[a-z0-9_-]{1,40}$/i.test(C.demoVenue || '') ? C.demoVenue : 'demo';
+  document.querySelectorAll('a[href="app.html?v=demo"]').forEach(a => { a.href = 'app.html?v=' + encodeURIComponent(DEMO); });
   const phones = document.querySelector('.phones');
   const show = ()=>{ if(phones) phones.classList.remove('mk-wait'); };
-  const CACHE = 'st_demo_venue';
+  const CACHE = 'st_demo_venue_' + DEMO;
   const fill = v => {
     if(!v || !v.name) return false;
     document.querySelectorAll('.mk-name').forEach(e => e.textContent = v.name);
     const home = document.querySelector('.mk-home'); if(home) home.innerHTML = mkHome(v);
-    if(v.logo && /^https?:/i.test(v.logo)) document.querySelectorAll('.mk-logo').forEach(e => {
+    if(v.logo && /^(https?:|images\/)/i.test(v.logo)) document.querySelectorAll('.mk-logo').forEach(e => {
       if(e.classList.contains('has-img')) return;
       const i = new Image(); i.alt = '';
       i.onload = ()=>{ e.appendChild(i); e.classList.add('has-img'); };
@@ -668,7 +680,7 @@ function mkHome(v){
   if(!C.supabaseUrl || !C.supabaseKey){ show(); return; }
   // never hold the phones for more than a moment on a slow connection
   const t0 = setTimeout(show, 2500);
-  fetch(C.supabaseUrl.replace(/\/$/, '') + '/rest/v1/public_venues?id=eq.demo&select=name,logo,cards,games_enabled', { headers: { apikey: C.supabaseKey, Authorization: 'Bearer ' + C.supabaseKey } })
+  fetch(C.supabaseUrl.replace(/\/$/, '') + '/rest/v1/public_venues?id=eq.' + encodeURIComponent(DEMO) + '&select=name,logo,cards,games_enabled', { headers: { apikey: C.supabaseKey, Authorization: 'Bearer ' + C.supabaseKey } })
     .then(r => r.ok ? r.json() : [])
     .then(rows => {
       const v = rows && rows[0];

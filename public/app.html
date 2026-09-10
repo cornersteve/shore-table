@@ -824,7 +824,7 @@ function applyBranding(){
   if(v.name) document.title = v.name;
   appEl.style.setProperty('--accent', v.accent);
   appEl.style.setProperty('--on-accent', readableOn(v.accent));
-  const isUrl = /^https?:\/\//i.test(v.logo || '');
+  const isUrl = /^(https?:\/\/|images\/)/i.test(v.logo || '');   // a URL, or a file shipped with the platform
   brandLogo.innerHTML = isUrl
     ? `<img class="brand__img" src="${v.logo}" alt="${v.name}" />`
     : `<span class="dot"></span><span>${v.logo || v.name}</span>`;
@@ -1955,7 +1955,7 @@ const CH_WIND_MAX = 0.14;
 
 function chLoadLogo(){
   const l = venue().logo;
-  if(!/^https?:/i.test(l || '')){ ch.logoImg = null; return; }
+  if(!/^(https?:|images\/)/i.test(l || '')){ ch.logoImg = null; return; }
   const img = new Image();
   img.onload = ()=>{ ch.logoImg = img; };
   img.src = l;
@@ -2612,7 +2612,7 @@ let pp = {};
 function ppBest(){ try{ return +(localStorage.getItem('st_qp_best') || 0); }catch(e){ return 0; } }
 function ppLoadLogo(){
   const l = venue().logo;
-  if(!/^https?:/i.test(l || '')){ pp.logoImg = null; return; }
+  if(!/^(https?:|images\/)/i.test(l || '')){ pp.logoImg = null; return; }
   const img = new Image();
   img.onload = ()=>{ pp.logoImg = img; };
   img.src = l;
@@ -3613,7 +3613,7 @@ let rt = {};
 function rtBest(){ try{ return +(localStorage.getItem('st_rt_best') || -1); }catch(e){ return -1; } }
 function rtLoadLogo(){
   const l = venue().logo;
-  if(!/^https?:/i.test(l || '')){ rt.logoImg = null; return; }
+  if(!/^(https?:|images\/)/i.test(l || '')){ rt.logoImg = null; return; }
   const img = new Image();
   img.onload = ()=>{ rt.logoImg = img; };
   img.src = l;

@@ -231,7 +231,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -2233,12 +2233,17 @@ grant execute on function public.admin_get_settings() to authenticated;
 -- ============================================================================
 --  STARTER DATA
 -- ============================================================================
---  One demo venue for your homepage's "Try the demo" button and your sales
---  demos. Rebrand it from the dashboard (name, logo, colors); its id stays
---  'demo'. Status 'lead' renders and plays but saves nothing except
---  app_open events, which is exactly what a demo should do.
-insert into venues (id, name, logo, accent, status)
-values ('demo', 'Demo Restaurant', 'DEMO RESTAURANT', '#3a6ea5', 'lead');
+--  One demo venue for your homepage's "Try the demo" button, the phone
+--  screens on the homepage, and your sales demos: Corner & Oak Bar & Grill,
+--  a made-up restaurant (logo ships in public/images/demo-logo.png). It is
+--  PLATFORM-MAINTAINED: platform updates may rewrite this row (id 'demo')
+--  so the demo shows new features as they ship. Do not rebrand it; to show
+--  your own restaurant instead, pick a venue under Settings > Demo venue.
+--  Status 'lead' renders and plays but saves nothing except app_open
+--  events, which is exactly what a demo should do.
+insert into venues (id, name, logo, accent, status, cards)
+values ('demo', 'Corner & Oak Bar & Grill', 'images/demo-logo.png', '#1f4461', 'lead',
+        public.clean_cards('[{"t":"schedule","title":"Daily specials","icon":"calendar","always":true,"days":{"mon":"Trivia night","tue":"Taco Tuesday","wed":"$3 drafts","thu":"Wine and cheese night","fri":"Live music at 6pm","sat":"Prime rib night","sun":"Brunch starting at 10am"}},{"t":"list","title":"Happy hour bites","icon":"burger","desc":"Available 4 to 6pm, Monday to Thursday","items":[{"n":"Angus sliders","p":"12"},{"n":"Wings","p":"11"},{"n":"Homemade focaccia","p":"9"},{"n":"Pickled veggies","p":"8"}]},{"t":"notice","title":"Live music Friday","icon":"music","mode":"inline","hot":true,"body":"Doors at 7, no cover. Kitchen open late."}]'::jsonb, 4));
 
 -- ============================================================================
 --  OPERATOR ACCOUNT  ·  >>> EDIT THIS LINE <<<

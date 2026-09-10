@@ -1,0 +1,6 @@
+{
+ "version": 5,
+ "statements": [
+  "insert into public.venues (id, name, logo, accent, status, cards, header_bg, dark_mode)\nvalues ('demo', 'Corner & Oak Bar & Grill', 'images/demo-logo.png', '#1f4461', 'lead', public.clean_cards('[{\"t\":\"schedule\",\"title\":\"Daily specials\",\"icon\":\"calendar\",\"always\":true,\"days\":{\"mon\":\"Trivia night\",\"tue\":\"Taco Tuesday\",\"wed\":\"$3 drafts\",\"thu\":\"Wine and cheese night\",\"fri\":\"Live music at 6pm\",\"sat\":\"Prime rib night\",\"sun\":\"Brunch starting at 10am\"}},{\"t\":\"list\",\"title\":\"Happy hour bites\",\"icon\":\"burger\",\"desc\":\"Available 4 to 6pm, Monday to Thursday\",\"items\":[{\"n\":\"Angus sliders\",\"p\":\"12\"},{\"n\":\"Wings\",\"p\":\"11\"},{\"n\":\"Homemade focaccia\",\"p\":\"9\"},{\"n\":\"Pickled veggies\",\"p\":\"8\"}]},{\"t\":\"notice\",\"title\":\"Live music Friday\",\"icon\":\"music\",\"mode\":\"inline\",\"hot\":true,\"body\":\"Doors at 7, no cover. Kitchen open late.\"}]'::jsonb, 4), null, false)\non conflict (id) do update\n   set name = excluded.name, logo = excluded.logo, accent = excluded.accent,\n       cards = excluded.cards, header_bg = null, dark_mode = false"
+ ]
+}

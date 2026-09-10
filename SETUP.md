@@ -79,8 +79,12 @@ Supabase account itself.
    first (step 7) so **Save and publish** can write `public/brand.js`
    into your fork; your pages then carry the brand from their first
    paint. You can change any of it later under Tools > Settings.
-3. Add your first venue (or rebrand the built-in `demo` venue): name,
-   logo upload, accent color, Google review link.
+3. Add your first venue: name, logo upload, accent color, Google review
+   link. Leave the built-in `demo` venue alone: it is Corner & Oak Bar &
+   Grill, a made-up restaurant that powers the homepage's Try the demo
+   button and phone screens, and platform updates keep it current. To
+   show your own restaurant there instead, pick it under Settings > Demo
+   venue.
 4. Open the venue, download its table card PNG, print, scan, play.
 
 ## 7. Staying updated

@@ -29,6 +29,12 @@ protects that button.
 
 ## Hard rules for migrations
 
+- The demo venue (id `demo`, Corner & Oak Bar & Grill) is platform data:
+  a migration may upsert its name, logo, accent, and cards so every
+  instance's demo shows new features. Never write to any other venue row.
+  Operators who want their own restaurant as the demo pick it under
+  Settings > Demo venue (brand key `demoVenue`), so the row stays ours.
+
 - **Additive with a window.** New columns, tables, functions: fine.
   Removing or renaming something the currently-deployed pages read:
   only after a full release cycle in which no shipped page reads it.

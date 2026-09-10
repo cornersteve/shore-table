@@ -372,7 +372,7 @@ function render(s){
   $('msg').style.display = 'none';
   // Venue logo up top when it is a URL; the venue name in text otherwise
   // (same convention as the diner app: venues.logo holds a URL or a wordmark).
-  if (/^https?:\/\//i.test(s.logo || '')) $('vname').innerHTML = `<img class="vlogo" src="${esc(s.logo)}" alt="${esc(s.name)}">`;
+  if (/^(https?:\/\/|images\/)/i.test(s.logo || '')) $('vname').innerHTML = `<img class="vlogo" src="${esc(s.logo)}" alt="${esc(s.name)}">`;
   else $('vname').textContent = s.name;
 
   const tm = s.this_month || {}, lm = s.last_month || {};
@@ -1270,7 +1270,7 @@ async function renderCard(cnv, v, opts){
   } else {
     ctx.fillStyle = a1;
     ctx.font = '800 58px "Hanken Grotesk", sans-serif';
-    ctx.fillText((v.logo && !/^https?:/i.test(v.logo) ? v.logo : v.name), 110, 188);
+    ctx.fillText((v.logo && !/^(https?:|images\/)/i.test(v.logo) ? v.logo : v.name), 110, 188);
   }
   if(opts.town){
     ctx.fillStyle = TOWN;   // header-aware: light dim on dark headers
@@ -1313,7 +1313,7 @@ async function renderCard(cnv, v, opts){
   ctx.fillText('Takes 30 seconds · 100% anonymous', 110, 1614);
 }
 async function loadCardLogo(v){
-  if(!v.logo || !/^https?:/i.test(v.logo)) return null;
+  if(!v.logo || !/^(https?:|images\/)/i.test(v.logo)) return null;
   try {
     const res = await fetch(v.logo);
     if(!res.ok) return null;
