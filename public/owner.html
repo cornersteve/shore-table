@@ -9,7 +9,6 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='10'%20y='10'%20width='44'%20height='44'%20rx='11'%20fill='%233a6ea5'/%3E%3Cpath%20d='M18%2024Q21.5%2020.4%2025%2024T32%2024T39%2024T46%2024M18%2033Q21.5%2029.4%2025%2033T32%2033T39%2033T46%2033M18%2042Q21.5%2038.4%2025%2042T32%2042T39%2042T46%2042'%20fill='none'%20stroke='%23fff'%20stroke-width='3.4'%20stroke-linecap='round'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="preconnect" href="https://wryscqcukjduaodgfmdl.supabase.co" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
 <style>
   :root{
@@ -174,6 +173,8 @@
   body.vd .wordmark, body.vd h1{color:#f2efe9}
   body.vd .ownertag, body.vd .sub{color:rgba(255,255,255,.66)}
   body.vd header{border-bottom-color:rgba(255,255,255,.22)}
+
+  .linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 </style>
 </head>
 <body>
@@ -425,12 +426,17 @@ function render(s){
   // home screen cards (schema 2): a deep copy, so edits stay local until
   // Save; an unsaved draft from an evicted tab wins over the server copy
   const cardDraft = cardLoadDraft();
-  CARDS = cardDraft || (Array.isArray(s.cards) ? JSON.parse(JSON.stringify(s.cards)) : []);
+  CARDS = cardDraft ? cardDraft.cards : (Array.isArray(s.cards) ? JSON.parse(JSON.stringify(s.cards)) : []);
   CARD_CAP = (typeof s.card_cap === 'number') ? s.card_cap : 4;
   DIRTY.cards = !!cardDraft;
   renderCards();
-  // games-off venues (operator-set): the game toggles have nothing to toggle
-  if (s.games_enabled === false) $('gameToggles').closest('section').style.display = 'none';
+  if (cardDraft) cardDraftNote(cardDraft.at, s.cards);
+  // games-off venues (operator-set): the game toggles have nothing to toggle,
+  // and a stale games draft must not hold the page hostage
+  if (s.games_enabled === false){
+    $('gameToggles').closest('section').style.display = 'none';
+    DIRTY.games = false; try { localStorage.removeItem('st_owner_games_' + V); } catch(e){}
+  }
 }
 
 /* ---- custom feedback questions (35_feedback_forms.sql): aggregate this
@@ -640,9 +646,29 @@ let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1, CARD_CONFIRM = -1;
 // a localStorage draft survives tab eviction (phones especially); it clears
 // on a successful save and wins over the server copy until then
 const cardDraftK = ()=> 'st_owner_cards_' + (V || '');
-const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK(), JSON.stringify(CARDS)); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); };
-const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK()); } catch(e){} };
-const cardLoadDraft = ()=>{ try { const d = localStorage.getItem(cardDraftK()); return d ? JSON.parse(d) : null; } catch(e){ return null; } };
+const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK(), JSON.stringify({ cards: CARDS, at: Date.now() })); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); };
+const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK()); } catch(e){} const n = $('cardDraftNote'); if(n) n.remove(); };
+// { cards, at } (build 23); an older plain-array draft still loads
+const cardLoadDraft = ()=>{ try {
+  const d = JSON.parse(localStorage.getItem(cardDraftK()) || 'null');
+  if (Array.isArray(d)) return { cards: d, at: null };
+  if (d && Array.isArray(d.cards)) return d;
+  return null;
+} catch(e){ return null; } };
+// the restored-draft line under the card list: when it was saved, and a way out of it
+function cardDraftNote(at, serverCards){
+  const old = $('cardDraftNote'); if(old) old.remove();
+  const n = document.createElement('div'); n.id = 'cardDraftNote'; n.className = 'hint'; n.style.marginTop = '10px';
+  const when = at ? new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'an earlier visit';
+  n.innerHTML = 'Unsaved card changes from ' + esc(when) + ' were restored. <button type="button" class="linkbtn" id="cardDraftDrop">Discard them</button>';
+  $('cardAddRow').insertAdjacentElement('afterend', n);
+  $('cardDraftDrop').onclick = ()=>{
+    cardClearDraft();
+    CARDS = Array.isArray(serverCards) ? JSON.parse(JSON.stringify(serverCards)) : [];
+    DIRTY.cards = false; CARD_OPEN = -1; CARD_CONFIRM = -1;
+    renderCards();
+  };
+}
 
 function defaultCard(t){
   return t === 'schedule' ? { t, title:'Daily specials', icon:'calendar', days:{} }
@@ -756,10 +782,12 @@ function wireCards(){
     if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
     // the short line mirrors into the card row as it is typed, like the name
     if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + cardSuffix(c); }
-    // the date decides whether the card is hidden, so the row and the note re-render
-    if(i.dataset.f === 'until'){ cardSaveDraft(); renderCards(); return; }
+    // the date decides whether the card is hidden: the row dims in place while
+    // the picker is open, and the full row (with the note) re-renders on commit
+    if(i.dataset.f === 'until'){ cardSaveDraft(); const box = i.closest('.cbox'); if(box) box.classList.toggle('isoff', !!(c.off || cardExpired(c))); return; }
     cardSaveDraft();
   }));
+  L.querySelectorAll('input[data-f="until"]').forEach(i => i.addEventListener('change', ()=> renderCards()));
   L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{
     const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft();
   }));
@@ -798,17 +826,25 @@ $('cardsSave').onclick = async ()=>{
     return d;
   });
   msg.className = 'savemsg'; msg.textContent = 'Saving…';
+  $('cardsSave').disabled = true;
   try {
-    const { data, error } = await db.rpc('set_venue_cards', { p_venue_id: V, p_key: K, p_cards: out.length ? out : null, p_pass: P });
-    if (error || data !== true) throw new Error();
-    CARDS = out;
+    const { data, error } = await withTimeout(db.rpc('set_venue_cards', { p_venue_id: V, p_key: K, p_cards: out.length ? out : null, p_pass: P }), 12000);
+    if (error) throw new Error();
+    // schema 6 answers { ok, cards } with the cleaned set; an older database answers true
+    if (data && data.ok === false) throw new Error(data.error || 'refused');
+    if (data !== true && !(data && data.ok === true)) throw new Error();
+    CARDS = (data && Array.isArray(data.cards)) ? data.cards : out;
     cardClearDraft();
     DIRTY.cards = false;
     CARD_OPEN = -1; CARD_CONFIRM = -1;   // saving closes whatever was open
     renderCards();
     msg.className = 'savemsg ok'; msg.textContent = 'Live on your tables now.';
   } catch(e){
-    msg.className = 'savemsg err'; msg.textContent = 'Could not save. Check your connection and try again.';
+    setSaveState('cards', 'cardsSave', 'Save');
+    msg.className = 'savemsg err';
+    msg.textContent = e.message === 'locked' ? 'Too many passphrase tries. Wait fifteen minutes, then reload this page.'
+      : (e.message === 'need_pass' || e.message === 'bad_key') ? 'Your link or passphrase no longer matches. Reload this page and sign in again.'
+      : 'Could not save. Check your connection and try again.';
   }
 };
 renderCards();  // real values land when the stats call resolves
@@ -896,13 +932,13 @@ $('gamesSave').onclick = async () => {
   }
   msg.className='savemsg'; msg.textContent='Saving…';
   try {
-    const { data, error } = await db.rpc('set_venue_games', { p_venue_id: V, p_key: K, p_games: ids, p_pass: P });
-    if (error || data !== true) throw new Error();
+    const { data, error } = await withTimeout(db.rpc('set_venue_games', { p_venue_id: V, p_key: K, p_games: ids, p_pass: P }), 12000);
+    if (error || data !== true) throw new Error(data === false ? 'refused' : '');
     try { localStorage.removeItem('st_owner_games_' + V); } catch(e){}
     DIRTY.games = false; setSaveState('games', 'gamesSave', 'Save');
     msg.className='savemsg ok'; msg.textContent='Live on your tables now.';
   } catch(e){
-    msg.className='savemsg err'; msg.textContent='Could not save. Check your connection and try again.';
+    msg.className='savemsg err'; msg.textContent = e.message === 'refused' ? 'Saved nothing: your link or passphrase no longer matches. Reload this page and sign in again.' : 'Could not save. Check your connection and try again.';
   }
 };
 
@@ -911,8 +947,27 @@ $('gamesSave').onclick = async () => {
    {"need_pass": true} until the right passphrase arrives; we remember it
    per device so an owner types it roughly once, ever. */
 let P = null;
-try { P = localStorage.getItem('st_opass_' + V) || null; } catch(e){}
-function rememberPass(p){ P = p; try { localStorage.setItem('st_opass_' + V, p); } catch(e){} }
+const PASS_K = 'st_opass_' + V;
+try {
+  P = sessionStorage.getItem(PASS_K) || null;
+  if(!P){
+    const raw = localStorage.getItem(PASS_K);
+    if(raw){
+      let d = null; try { d = JSON.parse(raw); } catch(e){}
+      if(d && d.p && d.exp > Date.now()) P = d.p;          // remembered device, still inside its 30 days
+      else localStorage.removeItem(PASS_K);                  // expired, or the pre-build-23 plain string
+    }
+  }
+} catch(e){}
+function rememberPass(p, device){
+  P = p;
+  try {
+    sessionStorage.setItem(PASS_K, p);
+    if(device) localStorage.setItem(PASS_K, JSON.stringify({ p, exp: Date.now() + 30 * 864e5 }));
+    else localStorage.removeItem(PASS_K);
+  } catch(e){}
+}
+const withTimeout = (p, ms)=> Promise.race([p, new Promise((_, rej)=> setTimeout(()=> rej(new Error('timeout')), ms))]);
 const REPORT_HREF = 'report.html?v=' + encodeURIComponent(V || '') + '&k=' + encodeURIComponent(K || '');
 if($('reportBtn')) $('reportBtn').href = REPORT_HREF;
 if($('reportBtn2')) $('reportBtn2').href = REPORT_HREF;
@@ -934,33 +989,43 @@ showTab(location.hash === '#app' ? 'app' : 'month');
 
 
 
-function showPassGate(wrong){
+function showPassGate(wrong, locked){
   $('page').style.display = 'none';
   $('msg').style.display = 'block';
-  $('msgTitle').textContent = 'One more thing';
+  $('msgTitle').textContent = locked ? 'Take a breather' : 'One more thing';
   $('msgBody').innerHTML = '';
   const wrap = document.createElement('div');
+  if(locked){
+    wrap.innerHTML = '<p>Too many passphrase tries. Wait fifteen minutes, then open this link again. If you forgot the passphrase, ask ' + esc(CFG.brandName) + ' to reset it.</p>';
+    $('msgBody').appendChild(wrap);
+    return;
+  }
+  // a real form, so the phone's password manager offers to save it (keyed by
+  // the venue id in the hidden username field)
   wrap.innerHTML = `
-    <p style="margin-bottom:14px">${wrong ? 'That passphrase did not match. Try again, or ask ${esc(CFG.brandName)} if you forgot it.' : 'This dashboard is protected by a passphrase. Enter it once and this device remembers it.'}</p>
-    <input type="password" id="passInput" autocomplete="current-password" style="width:100%;max-width:280px;padding:12px 14px;font-size:16px;border:1px solid rgba(22,17,10,.2);border-radius:12px" />
-    <div style="margin-top:12px"><button id="passGo" class="btn" style="padding:12px 26px">Open dashboard</button></div>`;
+    <p style="margin-bottom:14px">${wrong ? 'That passphrase did not match. Try again, or ask ' + esc(CFG.brandName) + ' if you forgot it.' : 'This dashboard is protected by a passphrase.'}</p>
+    <form id="passForm" autocomplete="on">
+      <input type="text" name="username" autocomplete="username" value="${esc(V || '')}" readonly tabindex="-1" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0" />
+      <input type="password" id="passInput" name="password" autocomplete="current-password" style="width:100%;max-width:280px;padding:12px 14px;font-size:16px;border:1px solid rgba(22,17,10,.2);border-radius:12px" />
+      <label style="display:flex;align-items:center;gap:8px;margin:12px auto 0;max-width:280px;font-size:14px;color:var(--ink-dim);cursor:pointer"><input type="checkbox" id="passKeep" checked> Remember this device for 30 days</label>
+      <div style="margin-top:12px"><button id="passGo" class="btn" type="submit" style="padding:12px 26px">Open dashboard</button></div>
+    </form>`;
   $('msgBody').appendChild(wrap);
-  const go = ()=>{ const p = $('passInput').value.trim(); if(p) load(p); };
-  $('passGo').onclick = go;
-  $('passInput').addEventListener('keydown', e=>{ if(e.key==='Enter') go(); });
+  $('passForm').onsubmit = e=>{ e.preventDefault(); const p = $('passInput').value.trim(); if(p) load(p, $('passKeep').checked); };
   $('passInput').focus();
 }
 
-async function load(tryPass){
+async function load(tryPass, keepDevice){
   if (!V || !K){ showMsg('Missing link details', 'Open this page using the full owner link you were given.'); return; }
   const pass = tryPass !== undefined ? tryPass : P;
+  showMsg('', tryPass !== undefined ? 'Checking…' : 'Loading your dashboard…');
   let res;
-  try { res = await db.rpc('get_owner_stats', { p_venue_id: V, p_key: K, p_pass: pass }); }
-  catch(e){ showMsg('One sec', 'We could not reach the server. Check your connection and try again.'); return; }
-  if (res.error){ showMsg('One sec', 'We could not reach the server. Check your connection and try again.'); return; }
+  try { res = await withTimeout(db.rpc('get_owner_stats', { p_venue_id: V, p_key: K, p_pass: pass }), 12000); }
+  catch(e){ showMsg('One sec', 'We could not reach the server. Check your connection and reload this page.'); return; }
+  if (res.error){ showMsg('One sec', 'We could not reach the server. Check your connection and reload this page.'); return; }
   if (!res.data){ showMsg('That link is not valid', 'This owner link does not match. Check for a truncated URL, or ask ' + CFG.brandName + ' for a fresh link.'); return; }
-  if (res.data.need_pass){ showPassGate(pass != null); return; }
-  if (tryPass !== undefined) rememberPass(tryPass);
+  if (res.data.need_pass){ showPassGate(pass != null, !!res.data.locked); return; }
+  if (tryPass !== undefined) rememberPass(tryPass, !!keepDevice);
   $('msg').style.display = 'none';
   $('page').style.display = '';
   render(res.data);

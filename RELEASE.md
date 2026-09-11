@@ -10,15 +10,26 @@ protects that button.
 1. Bump `const BUILD = N` in `public/admin.html` **and** `"build": N` in
    `public/version.json` — same number, same commit. The dashboard's
    Platform updates screen compares these to know a deploy landed.
-2. If the release needs database changes, add
-   `public/migrations/NNN.json`:
-   ```json
-   { "version": N, "statements": ["...sql...", "...sql..."] }
+2. If the release needs database changes, write the SQL ONCE under
+   `migrations-src/NNN/*.sql` (files run in name order; several
+   statements in one file are separated by a line that is exactly
+   `-- @@`), then:
    ```
-   one SQL statement per array entry (the runner executes them one by
-   one inside a single call), list it in `public/migrations/index.json`,
-   and bump `"schema": N` in version.json. Version numbers are
-   consecutive integers; the runner refuses gaps and repeats.
+   node tools/build-migration.js NNN
+   ```
+   writes `public/migrations/NNN.json` (`{ "version": NNN+1,
+   "statements": [...] }`, one statement per entry: the runner executes
+   them one by one inside a single call) and rewrites index.json. Put
+   the SAME definitions in `install/install.sql` (fresh installs must
+   land where migrated ones do), bump `"schema"` in version.json and the
+   `insert into schema_migrations` seed line, then run
+   ```
+   node tools/check-migrations.js
+   ```
+   which fails the release if the JSON is stale, the stamps disagree, or
+   a function/table/grant in the newest migration is missing from
+   install.sql. Version numbers are consecutive integers; the runner
+   refuses gaps and repeats.
 3. Merge `dev` -> `release` (a normal merge; **never force-push
    `release`** — a rewritten history strands every operator fork).
 4. Post plain-language release notes in the community; once the notes

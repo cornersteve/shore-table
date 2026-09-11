@@ -9,7 +9,6 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-<link rel="preconnect" href="https://wryscqcukjduaodgfmdl.supabase.co" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
 <style>
   /* ============================================================
@@ -54,6 +53,7 @@
     -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
     display:flex;flex-direction:column;align-items:center;
     min-height:100dvh;height:100dvh;overflow:hidden;
+    overscroll-behavior:none;   /* no rubber-band pull on the shell (the phone scrolls inside) */
   }
 
   /* ---------- the phone (what the diner sees) ---------- */
@@ -826,8 +826,8 @@ function applyBranding(){
   appEl.style.setProperty('--on-accent', readableOn(v.accent));
   const isUrl = /^(https?:\/\/|images\/)/i.test(v.logo || '');   // a URL, or a file shipped with the platform
   brandLogo.innerHTML = isUrl
-    ? `<img class="brand__img" src="${v.logo}" alt="${v.name}" />`
-    : `<span class="dot"></span><span>${v.logo || v.name}</span>`;
+    ? `<img class="brand__img" src="${escHtml(v.logo)}" alt="${escHtml(v.name)}" />`
+    : `<span class="dot"></span><span>${escHtml(v.logo || v.name)}</span>`;
   brandLogo.setAttribute('aria-label', v.name + ', main menu');
   // Optional per-venue header background (23_header_bg.sql). White for
   // everyone by default; when set, the wordmark ink flips for contrast.
@@ -856,7 +856,25 @@ function saveBrandCache(id){
 const screens = {};
 function reg(id, fn){ screens[id] = fn; }
 let current = null;
+// One history entry guards the app while a screen deeper than the landing
+// or the hub is showing: the phone's Back button then acts like our own
+// back arrow (or Quit) instead of leaving the page mid-game. At a root
+// screen the browser is free to leave.
+const ROOTS = new Set(['landing','hub']);
+let popping = false;
+function pushGuard(){ try { history.pushState({ st:1 }, ''); } catch(e){} }
+window.addEventListener('popstate', ()=>{
+  if(!current || ROOTS.has(current)) return;
+  popping = true;
+  try {
+    if(screens[current+'__back']) screens[current+'__back']();
+    else go(exitBtn.style.display === 'block' ? 'hub' : 'landing');
+  } finally { popping = false; }
+  if(current && !ROOTS.has(current)) pushGuard();
+});
 function go(id, opts){
+  const wasRoot = !current || ROOTS.has(current);
+  if(!popping && wasRoot && !ROOTS.has(id)) pushGuard();
   current = id;
   backBtn.style.display = (opts && opts.back) ? 'block' : 'none';
   exitBtn.style.display = (opts && opts.exit) ? 'block' : 'none';
@@ -1254,7 +1272,10 @@ async function castTotVoteOnce(item, side){
   let ca = item.count_a, cb = item.count_b;
   if(!totVoted(item.id)){
     try {
-      const { data, error } = await db.rpc('cast_gts_vote', { p_question_id:item.id, p_side:side, p_venue_id:state.venue });
+      // six seconds, then the split we loaded stands in (the reveal never hangs)
+      const { data, error } = await Promise.race([
+        db.rpc('cast_gts_vote', { p_question_id:item.id, p_side:side, p_venue_id:state.venue }),
+        new Promise(r=> setTimeout(()=> r({ data:null, error:'timeout' }), 6000)) ]);
       if(!error && data && data.length){ ca=data[0].count_a; cb=data[0].count_b; item.count_a=ca; item.count_b=cb; }
     } catch(e){ /* offline: fall back to the counts we loaded */ }
     totMarkVoted(item.id);
@@ -1266,11 +1287,11 @@ async function castTotVoteOnce(item, side){
 function totPickHtml(item){
   return `
     <div class="hsq__sub" style="margin-bottom:10px">First, cast your own vote.</div>
-    <div class="totq">${item.a}<br><span class="orw">or</span><br>${item.b}?</div>
+    <div class="totq">${escHtml(item.a)}<br><span class="orw">or</span><br>${escHtml(item.b)}?</div>
     <div class="split">
-      <button class="choice" data-side="a">${item.a}</button>
+      <button class="choice" data-side="a">${escHtml(item.a)}</button>
       <div class="split__seam">vs</div>
-      <button class="choice" data-side="b">${item.b}</button>
+      <button class="choice" data-side="b">${escHtml(item.b)}</button>
     </div>`;
 }
 
@@ -1303,7 +1324,7 @@ function totGuessUI(box, item, pickedName, cb){
     slider.value=Math.max(0,Math.min(100,(+slider.value)+(+b.dataset.d)));
     paint();
   });
-  box.querySelector('#lockBtn').onclick=()=> cb(aVal());
+  box.querySelector('#lockBtn').onclick=(e)=>{ e.currentTarget.disabled=true; cb(aVal()); };
 }
 
 // Shared reveal: just the two percentages, counting up from 50 to the real
@@ -1505,7 +1526,9 @@ reg('gs_play', (el)=>{
 });
 reg('gs_reveal', async (el)=>{
   const item=gs.item;
+  el.innerHTML='<div class="hsq__sub" style="text-align:center;margin-top:48px">Counting the votes…</div>';
   const [ca,cb] = await (gs.voteP || Promise.resolve([item.count_a,item.count_b]));
+  if(!el.isConnected) return;   // quit while waiting
   const total=(ca+cb)||1;
   const aPct=Math.round(ca/total*100), bPct=100-aPct;
   const majoritySide = aPct>=bPct?'a':'b';
@@ -1637,11 +1660,11 @@ function beginRound(){
   hs.guessers=hs.players.filter(p=>p!==hs.subject);
   const item=HS[hs.deck[hs.turn % hs.deck.length]];
   markSeen('st_seen_wkw', item.id);
-  hs.qtext=item.q.replace('{N}',hs.subject);
+  hs.qtext=escHtml(item.q).replace('{N}',escHtml(hs.subject));   // already markup-safe: qWithName() adds only its <b>
   hs.opts=item.opts; hs.answer=null; hs.guesses={}; hs.gi=0;
   go('hs_pass_subject',{exit:true});
 }
-function qWithName(){ return hs.qtext.replace(hs.subject,'<b>'+hs.subject+'</b>'); }
+function qWithName(){ const s=escHtml(hs.subject); return hs.qtext.replace(s,'<b>'+s+'</b>'); }
 
 reg('hs_pass_subject', (el)=>{
   el.innerHTML=`
@@ -1661,7 +1684,7 @@ reg('hs_subject', (el)=>{
     <div class="optlist" id="opts"></div>`;
   const list=el.querySelector('#opts');
   hs.opts.forEach((o,idx)=>{
-    const b=h(`<button class="opt">${o}</button>`);
+    const b=h(`<button class="opt">${escHtml(o)}</button>`);
     b.onclick=()=>{hs.answer=idx;hs.gi=0;nextGuesser();};
     list.appendChild(b);
   });
@@ -1688,7 +1711,7 @@ reg('hs_guess', (el)=>{
     <div class="optlist" id="opts"></div>`;
   const list=el.querySelector('#opts');
   hs.opts.forEach((o,idx)=>{
-    const b=h(`<button class="opt">${o}</button>`);
+    const b=h(`<button class="opt">${escHtml(o)}</button>`);
     b.onclick=()=>{hs.guesses[g]=idx;hs.gi++;nextGuesser();};
     list.appendChild(b);
   });
@@ -1696,7 +1719,7 @@ reg('hs_guess', (el)=>{
 reg('hs_reveal_intro', (el)=>{
   el.innerHTML=`<div class="revealintro"><div class="revealintro__t">The Reveal</div></div>`;
   let done=false;
-  const adv=()=>{ if(done)return; done=true; clearTimeout(t); go('hs_reveal',{exit:true}); };
+  const adv=()=>{ if(done)return; done=true; clearTimeout(t); if(!el.isConnected) return; go('hs_reveal',{exit:true}); };
   const t=setTimeout(adv,1250);
   el.addEventListener('click',adv);
 });
@@ -1867,10 +1890,10 @@ reg('wiy_card', (el)=>{
     ${fake ? `
     <div class="hsq" style="text-align:center">You were not invited. 🤫</div>
     <div class="hsq" style="text-align:center;margin-top:10px">Everyone else has a secret word. All you get is the category:</div>
-    <div class="handoff__to" style="text-align:center;margin:12px 0">${item.cat}</div>
+    <div class="handoff__to" style="text-align:center;margin:12px 0">${escHtml(item.cat)}</div>
     <div class="hsq__sub" style="text-align:center">Bluff like you know the word. Don't get caught.</div>` : `
     <div class="hsq" style="text-align:center">The secret word:</div>
-    <div class="handoff__to" style="text-align:center;margin:12px 0">${item.word}</div>
+    <div class="handoff__to" style="text-align:center;margin:12px 0">${escHtml(item.word)}</div>
     <div class="hsq__sub" style="text-align:center">Remember the secret word, then press the button below.</div>`}
     <div class="spacer"></div>
     <button class="btn" id="hide">Got it, hide it ›</button>`;
@@ -1915,7 +1938,7 @@ reg('wiy_word', (el)=>{
     <div class="spacer"></div>
     <div class="endcard" style="padding-top:20px">
       <div class="endcard__sub" style="margin-top:0">The secret word was</div>
-      <div class="endcard__line" style="font-size:28px;margin-top:8px">${wiy.item.word}</div>
+      <div class="endcard__line" style="font-size:28px;margin-top:8px">${escHtml(wiy.item.word)}</div>
     </div>
     <div class="howto" style="margin-top:16px">
       <div class="howto__step"><span class="howto__n">1</span><span><b>Fooled the table?</b> ${wiy.fake} wins, and if they also guessed the word, that's a double victory.</span></div>
@@ -2150,8 +2173,11 @@ reg('ch_play', (el)=>{
     bar();
   }
   const pp = (ms, period)=>{ const u = (ms % period)/period; return u < .5 ? u*2 : 2-u*2; };
+  let lastTap = 0;
   cv.addEventListener('pointerdown', ()=>{
     const now = performance.now();
+    if(now - lastTap < 250) return;   // a double-tap is one tap, not power and aim at once
+    lastTap = now;
     if(st === S.POWER){
       bag.power = pp(now - bag.t0, CH_DIFF[ch.diff].power);
       bag.t0 = now; st = S.AIM;
@@ -4129,8 +4155,15 @@ reg('sb_form', (el)=>{
           p_comment:   sb.answers.comment   || null
         };
         if(sb.extra && Object.keys(sb.extra).length) payload.p_extra = sb.extra;
-        await db.rpc('submit_survey', payload);
-      } catch(e){ /* offline: still thank the diner */ }
+        const res = await Promise.race([ db.rpc('submit_survey', payload),
+          new Promise(r=> setTimeout(()=> r({ error:{ message:'timeout' } }), 8000)) ]);
+        if(res && res.error) throw res.error;
+      } catch(e){
+        // not saved: say so and let them send again (never a silent loss)
+        send.disabled=false; send.textContent='Send it';
+        if(!wrap.querySelector('.sb-fail')) wrap.appendChild(h(`<div class="sb-fail hsq__sub" style="text-align:center;margin-top:12px">That did not go through. Check your connection and tap Send again.</div>`));
+        return;
+      }
       surveyMarkDone(venueId);
     }
     go('sb_done',{back:false});
@@ -4139,18 +4172,20 @@ reg('sb_form', (el)=>{
 });
 reg('sb_done', (el)=>{
   const v=venue();
+  // the review link is https or nothing (the server enforces the same rule)
+  const review = /^https:\/\/[^\s"'<>]+$/i.test(v.review || '') ? v.review : null;
   // Review prompt is shown to EVERY diner with a neutral ask (no rating
   // filter). Gating it to happy raters would violate Google/FTC review rules.
   el.innerHTML=`
     <div class="center-col">
       <div class="bigtick">✓</div>
       <h1 class="big">Sent. Thank you.</h1>
-      <p class="lede" style="max-width:30ch">${v.name} sees this privately. It's how we keep improving and making every visit better.</p>
-      ${v.review ? `
+      <p class="lede" style="max-width:30ch">${escHtml(v.name)} sees this privately. It's how we keep improving and making every visit better.</p>
+      ${review ? `
         <div class="reviewcta">
           <div class="reviewcta__t">Share your experience</div>
-          <div class="reviewcta__d">If you've got a minute, a public review on Google really helps ${v.name}.</div>
-          <a class="btn reviewcta__btn" href="${v.review}" target="_blank" rel="noopener">Leave a Google review ↗</a>
+          <div class="reviewcta__d">If you've got a minute, a public review on Google really helps ${escHtml(v.name)}.</div>
+          <a class="btn reviewcta__btn" href="${escHtml(review)}" target="_blank" rel="noopener">Leave a Google review ↗</a>
         </div>` : ''}
     </div>
     ${venue().gamesEnabled === false ? '' : '<button class="btn btn--ghost" id="games">Play a game while you wait ›</button>'}
@@ -4376,7 +4411,7 @@ reg('at_round', (el)=>{
   at.prover=null; at.bid=5;
   el.innerHTML=`
     <div class="eyebrow">All Talk · round ${at.round+1} of ${at.deck.length}</div>
-    <div class="atq">How many ${item.cat} can you name in ${AT_SECONDS} seconds?</div>
+    <div class="atq">How many ${escHtml(item.cat)} can you name in ${AT_SECONDS} seconds?</div>
     <div class="hsq__sub" style="text-align:center;margin-top:10px">Auction it out loud. Highest bidder proves it.</div>
     <div class="at-step">1 · Select the person who bid the highest</div>
     <div class="at-players" id="atWho" style="margin-top:8px"></div>
@@ -4419,7 +4454,7 @@ reg('at_prove', (el)=>{
   const deadline=performance.now()+AT_SECONDS*1000;
   el.innerHTML=`
     <div class="eyebrow">${at.icon[at.prover]||''} ${at.prover} · needs ${at.bid}</div>
-    <div class="hsq" style="text-align:center">${item.cat}</div>
+    <div class="hsq" style="text-align:center">${escHtml(item.cat)}</div>
     <div class="at-clock" id="atClk">${AT_SECONDS}</div>
     <button class="at-tally" id="atTally">
       <div class="n" id="atN">0</div>
@@ -4549,12 +4584,12 @@ reg('trivia', (el)=>{
   const correctIdx=tr.order.indexOf(0);
   el.innerHTML=`
     <div class="eyebrow">Trivia · ${tr.i+1} of ${tr.deck.length}</div>
-    <div class="hsq">${item.q}</div>
+    <div class="hsq">${escHtml(item.q)}</div>
     <div class="optlist" id="opts"></div>
     <div class="progress" id="prog" style="margin-top:auto"></div>`;
   const list=el.querySelector('#opts');
   opts.forEach((o,idx)=>{
-    const b=h(`<button class="opt">${o}</button>`);
+    const b=h(`<button class="opt">${escHtml(o)}</button>`);
     b.onclick=()=>{
       if(tr.answered)return; tr.answered=true;
       const correct = idx===correctIdx;
@@ -4672,12 +4707,12 @@ reg('tv_q', (el)=>{
   const correctIdx=tv.order.indexOf(0);
   el.innerHTML=`
     <div class="eyebrow">${tv.icon[p]} ${p} · ${qi+1} of ${tv.deck.length}</div>
-    <div class="hsq">${item.q}</div>
+    <div class="hsq">${escHtml(item.q)}</div>
     <div class="optlist" id="opts"></div>
     <div class="progress" id="prog" style="margin-top:auto"></div>`;
   const list=el.querySelector('#opts');
   opts.forEach((o,idx)=>{
-    const b=h(`<button class="opt">${o}</button>`);
+    const b=h(`<button class="opt">${escHtml(o)}</button>`);
     b.onclick=()=>{
       if(tv.answered)return; tv.answered=true;
       const correct = idx===correctIdx;
@@ -4808,6 +4843,13 @@ function showMessage(title, body){
   backBtn.style.display='none'; exitBtn.style.display='none';
   stage.innerHTML = `<div class="screen is-active"><div class="center-col">${title?`<h1 class="big">${title}</h1>`:''}${body?`<p class="lede" style="max-width:32ch">${body}</p>`:''}</div></div>`;
 }
+function showRetry(){
+  showMessage('One sec', "We couldn't reach the server. Check your connection and try again.");
+  const b=h('<button class="btn" style="margin-top:18px">Try again</button>');
+  b.onclick=()=> location.reload();
+  stage.querySelector('.center-col').appendChild(b);
+}
+const withTimeout = (p, ms)=> Promise.race([p, new Promise((_, rej)=> setTimeout(()=> rej(new Error('timeout')), ms))]);
 
 /* ---------- BOOT ---------- */
 const params = new URLSearchParams(location.search);
@@ -4824,14 +4866,14 @@ async function boot(){
   const contentP = loadContent();           // runs in PARALLEL with the venues query
   contentP.catch(()=>{});                   // real handling happens at the await below
   try {
-    VENUES = await loadVenues();
+    VENUES = await withTimeout(loadVenues(), 12000);
   } catch(e){
-    showMessage('One sec', "We couldn't reach the server. Check your connection and try again.");
+    showRetry();
     return;
   }
   // Resolve which venue to show.
   if(vParam){
-    if(!VENUES[vParam]){ showMessage('Not available', "This table isn't set up yet. If you're the owner, check the venue's status in Supabase."); return; }
+    if(!VENUES[vParam]){ showMessage('Not available', "This table isn't set up yet. If you're the owner, ask your provider to check that the venue is active."); return; }
     state.venue = vParam;
   } else if(!VENUES[state.venue]){
     const first = Object.keys(VENUES)[0];
@@ -4841,9 +4883,9 @@ async function boot(){
   applyBranding();          // fresh branding (and the logo request) start here,
   saveBrandCache(state.venue);   // not after the content finishes
   try {
-    await contentP;
+    await withTimeout(contentP, 12000);
   } catch(e){
-    showMessage('One sec', "We couldn't reach the server. Check your connection and try again.");
+    showRetry();
     return;
   }
   filterContentForVenue();   // custom rows: this venue's only, and only if paid

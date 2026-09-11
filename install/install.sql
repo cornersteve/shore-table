@@ -66,7 +66,11 @@ create table venues (
   games_enabled      boolean     not null default true,
   form_custom        boolean     not null default false,
   report_county      boolean     not null default true,
-  owner_email        text check (owner_email is null or owner_email ~* '^[^\s@]+@[^\s@]+\.[^\s@]+$')
+  owner_email        text check (owner_email is null or owner_email ~* '^[^\s@]+@[^\s@]+\.[^\s@]+$'),
+  -- the review link is a real link on every diner's thank-you screen: https or nothing
+  constraint venues_review_https check (google_review_link is null or google_review_link ~* '^https://[^\s"''<>]+$'),
+  constraint venues_name_len check (char_length(btrim(name)) between 1 and 80),
+  constraint venues_logo_shape check (logo is null or (char_length(logo) <= 500 and logo !~ '[<>"]'))
 );
 
 comment on table  venues              is 'Per-venue branding + config. id is permanent and encoded in the QR; rebrands edit the other columns.';
@@ -112,7 +116,9 @@ create table gts_questions (            -- Guess the Split
   count_b    integer        not null default 0 check (count_b >= 0),
   status     content_status not null default 'active',
   created_at timestamptz    not null default now(),
-  venue_id   text           references venues(id)
+  venue_id   text           references venues(id),
+  votes_day   date,                                    -- daily vote budget (cast_gts_vote): the day...
+  votes_today integer        not null default 0        -- ...and how many counted votes it has taken
 );
 comment on table gts_questions is 'Binary polls pooled across every venue. Counters, not per-vote rows. Seeded low + lopsided so early demos never read 100%.';
 
@@ -183,6 +189,8 @@ create table game_plays (
     ('guess_the_split','who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss')),
   plays      integer     not null default 0 check (plays >= 0),
   updated_at timestamptz not null default now(),
+  hour_start timestamptz,                              -- hourly flood cap (log_game_play): the hour...
+  plays_hour integer     not null default 0,           -- ...and the plays counted inside it
   primary key (venue_id, game)
 );
 comment on table game_plays is 'Per-venue, per-game play counters. No PII. The public key can only increment via log_game_play(); it cannot read this table.';
@@ -226,12 +234,20 @@ create table operator_settings (
 );
 comment on table operator_settings is 'Operator-only key/value store (e.g. the GitHub token for one-button updates). Sealed: read/written only via the admin functions.';
 
+create table owner_auth_attempts (
+  venue_id      text        primary key references public.venues(id),
+  fails         smallint    not null default 0,
+  first_fail_at timestamptz,
+  locked_until  timestamptz
+);
+comment on table owner_auth_attempts is 'Wrong owner-passphrase attempts per venue, for the lockout in owner_gate(). Sealed: written only by the definer functions. Cleared on a correct passphrase.';
+
 create table schema_migrations (
   version    integer     primary key,
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4), (5);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -251,6 +267,7 @@ alter table feedback_forms    enable row level security;
 alter table operator_users    enable row level security;
 alter table operator_settings enable row level security;
 alter table schema_migrations enable row level security;
+alter table owner_auth_attempts enable row level security;
 
 revoke insert, update, delete on all tables in schema public from anon;
 revoke select on public.venues            from anon;
@@ -260,6 +277,10 @@ revoke select, insert, update, delete on public.events            from anon;
 revoke select, insert, update, delete on public.operator_users    from anon;
 revoke select, insert, update, delete on public.operator_settings from anon;
 revoke select, insert, update, delete on public.schema_migrations from anon;
+revoke all on public.owner_auth_attempts from public, anon, authenticated;
+-- functions created from here on get no execute for PUBLIC; every callable
+-- one below grants anon/authenticated by name (helpers stay sealed)
+alter default privileges in schema public revoke execute on functions from public;
 
 -- game content: anon reads ACTIVE rows only, read-only
 create policy "anon reads active guess-the-split"
@@ -509,12 +530,18 @@ begin
 
   v_country := public.req_country();
 
+  -- daily budget: one question takes at most 2000 counted votes a day
+  -- across the whole instance, so a script cannot tilt a split overnight;
+  -- past the budget the tap still shows the split but counts nothing
   if q_status = 'active' and v_status = 'active'
      and (v_country = '' or v_country = 'US') then
     update public.gts_questions as t
        set count_a = t.count_a + (case when p_side = 'a' then 1 else 0 end),
-           count_b = t.count_b + (case when p_side = 'b' then 1 else 0 end)
-     where t.id = p_question_id;
+           count_b = t.count_b + (case when p_side = 'b' then 1 else 0 end),
+           votes_today = case when t.votes_day = current_date then t.votes_today + 1 else 1 end,
+           votes_day   = current_date
+     where t.id = p_question_id
+       and (t.votes_day is distinct from current_date or t.votes_today < 2000);
   end if;
 
   return query
@@ -533,6 +560,7 @@ set search_path = ''
 as $$
 declare
   v_status public.venue_status;
+  v_hour   timestamptz := date_trunc('hour', now());
 begin
   if p_game not in ('guess_the_split','who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss') then
     return;
@@ -543,11 +571,18 @@ begin
     return;
   end if;
 
-  insert into public.game_plays (venue_id, game, plays)
-  values (p_venue_id, p_game, 1)
+  -- flood cap: at most 600 plays of one game per venue per clock hour
+  -- (a table starting ten games a minute all hour is not a table); the
+  -- extras are dropped silently
+  insert into public.game_plays (venue_id, game, plays, hour_start, plays_hour)
+  values (p_venue_id, p_game, 1, v_hour, 1)
   on conflict (venue_id, game)
-  do update set plays = game_plays.plays + 1,
-                updated_at = now();
+  do update set plays      = game_plays.plays + 1,
+                plays_hour = case when game_plays.hour_start = v_hour then game_plays.plays_hour + 1 else 1 end,
+                hour_start = v_hour,
+                updated_at = now()
+        where game_plays.hour_start is distinct from v_hour
+           or game_plays.plays_hour < 600;
 end;
 $$;
 
@@ -562,8 +597,9 @@ set search_path = ''
 as $$
 declare
   v_status public.venue_status;
+  v_recent integer;
 begin
-  if p_event not in ('app_open','game_start','survey_submit','review_click','promo_click') then
+  if p_event not in ('app_open','game_start','survey_submit','review_click','promo_click','card_open') then
     return;  -- ignore anything unexpected
   end if;
   if p_meta is not null and char_length(p_meta) > 20 then
@@ -575,6 +611,16 @@ begin
     return;  -- unknown or inactive: nothing
   end if;
 
+  -- flood cap: a full house of tables cannot produce more than a few
+  -- hundred events an hour, so past 3000 the extras are dropped silently
+  -- (a script hammering the public key fills nothing)
+  select count(*) into v_recent
+    from public.events
+   where venue_id = p_venue_id and created_at > now() - interval '1 hour';
+  if v_recent >= 3000 then
+    return;
+  end if;
+
   insert into public.events (venue_id, event, meta)
   values (p_venue_id, p_event, p_meta);
 end;
@@ -583,6 +629,7 @@ $$;
 revoke all on function public.log_event(text, text, text) from public;
 grant execute on function public.log_event(text, text, text) to anon, authenticated;
 
+-- (schema 6: superseded by owner_gate() below; kept one release for the additive window)
 create or replace function public.owner_pass_ok(p_hash text, p_pass text)
 returns boolean
 language sql
@@ -596,6 +643,87 @@ $$;
 revoke all on function public.owner_pass_ok(text, text) from public;
 -- (called only from the definer functions below; no direct grants needed)
 
+create or replace function public.owner_gate(p_venue_id text, p_key text, p_pass text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_row   public.venues%rowtype;
+  v_a     public.owner_auth_attempts%rowtype;
+  v_fresh boolean;
+  v_fails integer;
+begin
+  -- one door for every owner-dashboard call. Answers:
+  --   ok        key matches and the passphrase (if the venue has one) matches
+  --   bad_key   no such venue, or the link's key is wrong
+  --   need_pass the venue has a passphrase and none / a wrong one arrived
+  --   locked    ten wrong passphrases inside fifteen minutes: fifteen minutes off
+  select * into v_row from public.venues where id = p_venue_id;
+  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
+    return 'bad_key';
+  end if;
+  if v_row.owner_pass is null then
+    return 'ok';
+  end if;
+
+  select * into v_a from public.owner_auth_attempts where venue_id = p_venue_id;
+  if v_a.locked_until is not null and v_a.locked_until > now() then
+    return 'locked';
+  end if;
+  if p_pass is null then
+    return 'need_pass';   -- first visit: nothing to count
+  end if;
+  if extensions.crypt(p_pass, v_row.owner_pass) = v_row.owner_pass then
+    delete from public.owner_auth_attempts where venue_id = p_venue_id;
+    return 'ok';
+  end if;
+
+  v_fresh := v_a.venue_id is not null and v_a.first_fail_at > now() - interval '15 minutes';
+  v_fails := case when v_fresh then v_a.fails + 1 else 1 end;
+  insert into public.owner_auth_attempts (venue_id, fails, first_fail_at, locked_until)
+  values (p_venue_id, v_fails,
+          case when v_fresh then v_a.first_fail_at else now() end,
+          case when v_fails >= 10 then now() + interval '15 minutes' else null end)
+  on conflict (venue_id) do update
+    set fails = excluded.fails, first_fail_at = excluded.first_fail_at, locked_until = excluded.locked_until;
+  return case when v_fails >= 10 then 'locked' else 'need_pass' end;
+end;
+$$;
+
+revoke all on function public.owner_gate(text, text, text) from public, anon, authenticated;
+
+create or replace function public.operator_tz()
+returns text
+language plpgsql
+stable
+security definer
+set search_path = ''
+as $$
+declare
+  v_tz text;
+  v_t  timestamp;
+begin
+  -- the operator's time zone (Settings > Your area), used wherever a
+  -- report turns a timestamp into a calendar day; anything unset or
+  -- unknown to Postgres falls back to US Eastern
+  select value into v_tz from public.operator_settings where key = 'tz';
+  v_tz := nullif(btrim(coalesce(v_tz, '')), '');
+  if v_tz is null or v_tz !~ '^[A-Za-z0-9_/+-]{1,64}$' then
+    return 'America/New_York';
+  end if;
+  begin
+    v_t := now() at time zone v_tz;
+  exception when others then
+    return 'America/New_York';
+  end;
+  return v_tz;
+end;
+$$;
+
+revoke all on function public.operator_tz() from public, anon, authenticated;
+
 create or replace function public.get_owner_stats(p_venue_id text, p_key text, p_pass text default null)
 returns json
 language plpgsql
@@ -604,18 +732,23 @@ set search_path = ''
 as $$
 declare
   v_row     public.venues%rowtype;
-  v_tz      constant text := 'America/New_York';
+  v_gate    text;
+  v_tz      text := public.operator_tz();
   v_today   date;
   v_m0      date;
   v_m1      date;
 begin
-  select * into v_row from public.venues where id = p_venue_id;
-  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
+  v_gate := public.owner_gate(p_venue_id, p_key, p_pass);
+  if v_gate = 'bad_key' then
     return null;
   end if;
-  if not public.owner_pass_ok(v_row.owner_pass, p_pass) then
+  if v_gate = 'locked' then
+    return json_build_object('need_pass', true, 'locked', true);
+  end if;
+  if v_gate <> 'ok' then
     return json_build_object('need_pass', true);
   end if;
+  select * into v_row from public.venues where id = p_venue_id;
 
   v_today := (now() at time zone v_tz)::date;
   v_m0 := date_trunc('month', v_today)::date;
@@ -722,6 +855,8 @@ begin
 end;
 $$;
 
+revoke all on function public.clean_card_url(text) from public, anon, authenticated;
+
 create or replace function public.set_venue_games(p_venue_id text, p_key text, p_games text[], p_pass text default null)
 returns boolean
 language plpgsql
@@ -734,13 +869,10 @@ declare
   v_allowed constant text[] := array['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour'];
   v_excl    constant text[] := array['horse_racing','ring_toss'];   -- keepable, never addable
 begin
+  if public.owner_gate(p_venue_id, p_key, p_pass) <> 'ok' then
+    return false;
+  end if;
   select * into v_row from public.venues where id = p_venue_id;
-  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
-    return false;
-  end if;
-  if not public.owner_pass_ok(v_row.owner_pass, p_pass) then
-    return false;
-  end if;
 
   select array_agg(g order by ord) into v_clean
     from (select g, min(ord) as ord
@@ -837,27 +969,31 @@ begin
 end;
 $$;
 
+revoke all on function public.clean_cards(jsonb, integer) from public, anon, authenticated;
+
 create or replace function public.set_venue_cards(p_venue_id text, p_key text, p_cards jsonb, p_pass text default null)
-returns boolean
+returns json
 language plpgsql
 security definer
 set search_path = ''
 as $$
 declare
-  v_row public.venues%rowtype;
+  v_row   public.venues%rowtype;
+  v_gate  text;
+  v_cards jsonb;
 begin
+  v_gate := public.owner_gate(p_venue_id, p_key, p_pass);
+  if v_gate <> 'ok' then
+    return json_build_object('ok', false, 'error', v_gate);
+  end if;
   select * into v_row from public.venues where id = p_venue_id;
-  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
-    return false;
-  end if;
-  if not public.owner_pass_ok(v_row.owner_pass, p_pass) then
-    return false;
-  end if;
 
-  update public.venues
-     set cards = public.clean_cards(p_cards, v_row.card_cap)
-   where id = p_venue_id;
-  return true;
+  -- the cleaned set goes back to the dashboard so what the owner sees
+  -- after Save is exactly what the tables show (trimmed, capped, links
+  -- normalized), never a local copy that only looks saved
+  v_cards := public.clean_cards(p_cards, v_row.card_cap);
+  update public.venues set cards = v_cards where id = p_venue_id;
+  return json_build_object('ok', true, 'cards', coalesce(v_cards, '[]'::jsonb));
 end;
 $$;
 
@@ -885,13 +1021,10 @@ declare
   v_o      text;
   v_clean_opts jsonb;
 begin
+  if public.owner_gate(p_venue_id, p_key, p_pass) <> 'ok' then
+    return false;
+  end if;
   select * into v_row from public.venues where id = p_venue_id;
-  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
-    return false;
-  end if;
-  if not public.owner_pass_ok(v_row.owner_pass, p_pass) then
-    return false;
-  end if;
   -- the paid switch stays operator-only; without it this venue's form row
   -- is dormant anyway (the app serves the global form)
   if v_row.form_custom is distinct from true then
@@ -960,16 +1093,21 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_row public.venues%rowtype;
-  v_tz  constant text := 'America/New_York';
+  v_row  public.venues%rowtype;
+  v_gate text;
+  v_tz   text := public.operator_tz();
 begin
-  select * into v_row from public.venues where id = p_venue_id;
-  if v_row.id is null or p_key is null or v_row.owner_key is distinct from p_key then
+  v_gate := public.owner_gate(p_venue_id, p_key, p_pass);
+  if v_gate = 'bad_key' then
     return null;
   end if;
-  if not public.owner_pass_ok(v_row.owner_pass, p_pass) then
+  if v_gate = 'locked' then
+    return json_build_object('need_pass', true, 'locked', true);
+  end if;
+  if v_gate <> 'ok' then
     return json_build_object('need_pass', true);
   end if;
+  select * into v_row from public.venues where id = p_venue_id;
 
   return json_build_object(
     'name',  v_row.name,
@@ -1014,7 +1152,9 @@ begin
               and (p_from is null or (created_at at time zone v_tz)::date >= p_from)
               and (p_to   is null or (created_at at time zone v_tz)::date <  p_to)
             group by visit) d),
-    'county', (
+    -- the cross-venue comparison is computed only for venues that show it
+    -- (four scans of every venue's responses otherwise run for nothing)
+    'county', case when v_row.report_county is distinct from true then null else (
       select json_build_object(
         'food',    round(avg(sr.food)::numeric, 2),
         'service', round(avg(sr.service)::numeric, 2),
@@ -1051,7 +1191,7 @@ begin
       from public.survey_responses sr
       join public.venues vv on vv.id = sr.venue_id and vv.status = 'active'
       where (p_from is null or (sr.created_at at time zone v_tz)::date >= p_from)
-        and (p_to   is null or (sr.created_at at time zone v_tz)::date <  p_to)),
+        and (p_to   is null or (sr.created_at at time zone v_tz)::date <  p_to)) end,
     'events', (
       select json_build_object(
         'opens',         count(*) filter (where event = 'app_open'),
@@ -1120,7 +1260,9 @@ security definer
 set search_path = ''
 as $$
 declare
-  v_key text;
+  v_key    text;
+  v_review text := nullif(btrim(coalesce(p_review,'')),'');
+  v_logo   text := nullif(btrim(coalesce(p_logo,'')),'');
 begin
   if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
 
@@ -1130,7 +1272,7 @@ begin
   if exists (select 1 from public.venues where id = p_id) then
     return json_build_object('ok', false, 'error', 'id_taken');
   end if;
-  if p_name is null or btrim(p_name) = '' then
+  if p_name is null or btrim(p_name) = '' or char_length(btrim(p_name)) > 80 then
     return json_build_object('ok', false, 'error', 'bad_name');
   end if;
   if p_accent is null or p_accent !~* '^#[0-9a-f]{6}$' then
@@ -1139,12 +1281,20 @@ begin
   if p_header_bg is not null and p_header_bg !~* '^#[0-9a-f]{6}$' then
     return json_build_object('ok', false, 'error', 'bad_header_bg');
   end if;
+  -- the review link lands in every diner's thank-you screen as a real
+  -- link, so it is https or nothing (no javascript:, no quotes, no spaces)
+  if v_review is not null and v_review !~* '^https://[^\s"''<>]+$' then
+    return json_build_object('ok', false, 'error', 'bad_review');
+  end if;
+  if v_logo is not null and (char_length(v_logo) > 500 or v_logo ~ '[<>"]') then
+    return json_build_object('ok', false, 'error', 'bad_logo');
+  end if;
 
   v_key := gen_random_uuid()::text;
 
   insert into public.venues (id, name, accent, logo, google_review_link, header_bg, owner_email, owner_key, status)
-  values (p_id, btrim(p_name), lower(p_accent), nullif(btrim(coalesce(p_logo,'')),''),
-          nullif(btrim(coalesce(p_review,'')),''), lower(p_header_bg),
+  values (p_id, btrim(p_name), lower(p_accent), v_logo,
+          v_review, lower(p_header_bg),
           nullif(btrim(coalesce(p_owner_email,'')),''), v_key, 'lead');
 
   return json_build_object('ok', true, 'id', p_id, 'owner_key', v_key);
@@ -1192,10 +1342,16 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_review text := case when p_review is null then null else nullif(btrim(p_review),'') end;
+  v_logo   text := case when p_logo is null then null else nullif(btrim(p_logo),'') end;
 begin
   if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
   if not exists (select 1 from public.venues where id = p_id) then
     return json_build_object('ok', false, 'error', 'no_such_venue');
+  end if;
+  if p_name is not null and char_length(btrim(p_name)) > 80 then
+    return json_build_object('ok', false, 'error', 'bad_name');
   end if;
   if p_accent is not null and p_accent !~* '^#[0-9a-f]{6}$' then
     return json_build_object('ok', false, 'error', 'bad_accent');
@@ -1203,12 +1359,18 @@ begin
   if p_header_bg is not null and p_header_bg <> '' and p_header_bg !~* '^#[0-9a-f]{6}$' then
     return json_build_object('ok', false, 'error', 'bad_header_bg');
   end if;
+  if v_review is not null and v_review !~* '^https://[^\s"''<>]+$' then
+    return json_build_object('ok', false, 'error', 'bad_review');
+  end if;
+  if v_logo is not null and (char_length(v_logo) > 500 or v_logo ~ '[<>"]') then
+    return json_build_object('ok', false, 'error', 'bad_logo');
+  end if;
 
   update public.venues set
     name               = coalesce(nullif(btrim(coalesce(p_name,'')),''), name),
     accent             = coalesce(lower(p_accent), accent),
-    logo               = case when p_logo is null then logo else nullif(btrim(p_logo),'') end,
-    google_review_link = case when p_review is null then google_review_link else nullif(btrim(p_review),'') end,
+    logo               = case when p_logo is null then logo else v_logo end,
+    google_review_link = case when p_review is null then google_review_link else v_review end,
     header_bg          = case when p_header_bg is null then header_bg else lower(nullif(btrim(p_header_bg),'')) end,
     owner_email        = case when p_owner_email is null then owner_email else nullif(btrim(p_owner_email),'') end
   where id = p_id;
@@ -1916,15 +2078,18 @@ declare
   v_pass text := nullif(btrim(coalesce(p_pass, '')), '');
 begin
   if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
-  if v_pass is not null and (char_length(v_pass) < 4 or char_length(v_pass) > 72) then
+  -- eight characters minimum; bcrypt cost 10 (about a tenth of a second
+  -- per check, which is nothing for an owner and everything for a guesser)
+  if v_pass is not null and (char_length(v_pass) < 8 or char_length(v_pass) > 72) then
     return json_build_object('ok', false, 'error', 'bad_length');
   end if;
 
   update public.venues
      set owner_pass = case when v_pass is null then null
-                           else extensions.crypt(v_pass, extensions.gen_salt('bf')) end
+                           else extensions.crypt(v_pass, extensions.gen_salt('bf', 10)) end
    where id = p_id;
   if not found then return json_build_object('ok', false, 'error', 'no_such_venue'); end if;
+  delete from public.owner_auth_attempts where venue_id = p_id;   -- a new passphrase starts clean
   return json_build_object('ok', true, 'has_pass', v_pass is not null);
 end;
 $$;
@@ -2229,6 +2394,46 @@ $$;
 revoke all on function public.admin_get_settings() from public;
 revoke execute on function public.admin_get_settings() from anon;
 grant execute on function public.admin_get_settings() to authenticated;
+
+-- one-file backup of the whole instance (Platform updates > Download a backup)
+create or replace function public.admin_export_all()
+returns json
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  -- one JSON document with everything an operator would need to rebuild
+  -- their instance: venues (owner links and passphrase hashes included,
+  -- so the links keep working after a restore), all feedback, game
+  -- counters, a year of analytics events, forms, content (with each
+  -- row's status), and settings minus the GitHub token
+  if not public.is_operator() then return null; end if;
+  return json_build_object(
+    'format', 'shore-table-backup',
+    'exported_at', now(),
+    'schema', (select coalesce(max(version), 0) from public.schema_migrations),
+    'venues', (select coalesce(json_agg(v order by v.created_at), '[]'::json) from public.venues v),
+    'survey_responses', (select coalesce(json_agg(s order by s.id), '[]'::json) from public.survey_responses s),
+    'game_plays', (select coalesce(json_agg(g order by g.venue_id, g.game), '[]'::json) from public.game_plays g),
+    'events_365d', (select coalesce(json_agg(e order by e.id), '[]'::json) from public.events e where e.created_at > now() - interval '365 days'),
+    'feedback_forms', (select coalesce(json_agg(f order by f.id), '[]'::json) from public.feedback_forms f),
+    'gts_questions', (select coalesce(json_agg(q order by q.id), '[]'::json) from public.gts_questions q),
+    'wkw_questions', (select coalesce(json_agg(q order by q.id), '[]'::json) from public.wkw_questions q),
+    'trivia_questions', (select coalesce(json_agg(q order by q.id), '[]'::json) from public.trivia_questions q),
+    'wordy_words', (select coalesce(json_agg(w order by w.word), '[]'::json) from public.wordy_words w),
+    'wiy_words', (select coalesce(json_agg(w order by w.id), '[]'::json) from public.wiy_words w),
+    'fortunes', (select coalesce(json_agg(f order by f.id), '[]'::json) from public.fortunes f),
+    'at_categories', (select coalesce(json_agg(a order by a.id), '[]'::json) from public.at_categories a),
+    'operator_settings', (select coalesce(json_agg(o order by o.key), '[]'::json) from public.operator_settings o where o.key <> 'gh_token'),
+    'schema_migrations', (select coalesce(json_agg(m order by m.version), '[]'::json) from public.schema_migrations m)
+  );
+end;
+$$;
+
+revoke all on function public.admin_export_all() from public;
+revoke execute on function public.admin_export_all() from anon;
+grant execute on function public.admin_export_all() to authenticated;
 
 -- ============================================================================
 --  STARTER DATA

@@ -156,7 +156,9 @@ async function site(raw, json) {
   //     operator to verify it opens before trusting it).
   //   - plain maps links: returned as googleLinks, display-only helpers.
   const glinks = [];
-  const linkRe = /href=["']([^"']*(?:search\.google\.com\/local\/writereview|g\.page\/|maps\.app\.goo\.gl\/|google\.[a-z.]+\/maps)[^"']*)["']/gi;
+  // host-anchored: only links that really live on Google's own domains
+  // (a page saying "https://evil.example/?x=g.page/" matches nothing)
+  const linkRe = /href=["'](https?:\/\/(?:[a-z0-9-]+\.)*(?:search\.google\.com\/local\/writereview|g\.page\/|maps\.app\.goo\.gl\/|google\.[a-z]{2,3}(?:\.[a-z]{2})?\/maps)[^"'\s<>]*)["']/gi;
   let gm;
   while ((gm = linkRe.exec(html)) !== null) glinks.push(gm[1].replace(/&amp;/g, '&'));
   const uniq = [...new Set(glinks)];

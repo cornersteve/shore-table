@@ -4,6 +4,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
 <title>Guest Report</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2064%2064'%3E%3Crect%20x='10'%20y='10'%20width='44'%20height='44'%20rx='11'%20fill='%233a6ea5'/%3E%3Cpath%20d='M18%2024Q21.5%2020.4%2025%2024T32%2024T39%2024T46%2024M18%2033Q21.5%2029.4%2025%2033T32%2033T39%2033T46%2033M18%2042Q21.5%2038.4%2025%2042T32%2042T39%2042T46%2042'%20fill='none'%20stroke='%23fff'%20stroke-width='3.4'%20stroke-linecap='round'/%3E%3C/svg%3E" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -144,7 +145,14 @@ const V = params.get('v'), K = params.get('k');
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 let P = null;
-try { P = localStorage.getItem('st_opass_' + V) || null; } catch(e){}   // shared with owner.html
+const PASS_K = 'st_opass_' + V;   // shared with owner.html: session first, then a remembered device
+try {
+  P = sessionStorage.getItem(PASS_K) || null;
+  if(!P){
+    const raw = localStorage.getItem(PASS_K);
+    if(raw){ let d = null; try { d = JSON.parse(raw); } catch(e){} if(d && d.p && d.exp > Date.now()) P = d.p; }
+  }
+} catch(e){}
 
 const ACC = /^#[0-9a-f]{6}$/i.test(CFG.accent || '') ? CFG.accent : '#3a6ea5';
 const HOST = location.host;
@@ -374,7 +382,13 @@ async function run(){
   catch(e){ $('gate').style.display='block'; $('gate').querySelector('p').textContent='Could not load the report. Check the link, or try again.'; $('gatePass').style.display='none'; $('gateGo').style.display='none'; return; }
   const d = res.data;
   if(d === null){ $('gate').style.display='block'; $('gate').querySelector('p').textContent='This link is not valid. Ask for a fresh one.'; $('gatePass').style.display='none'; $('gateGo').style.display='none'; return; }
-  if(d && d.need_pass){ $('toolbar').style.display='none'; $('sheet').style.display='none'; $('gate').style.display='block'; return; }
+  if(d && d.need_pass){
+    $('toolbar').style.display='none'; $('sheet').style.display='none'; $('gate').style.display='block';
+    if(d.locked){ $('gate').querySelector('p').textContent='Too many passphrase tries. Wait fifteen minutes, then open this link again.'; $('gatePass').style.display='none'; $('gateGo').style.display='none'; }
+    return;
+  }
+  // the passphrase is kept for this tab only once the server has accepted it
+  if(P){ try { sessionStorage.setItem(PASS_K, P); } catch(e){} }
   if(FORM === null) await loadForm(d.form_custom);
   $('gate').style.display='none';
   $('toolbar').style.display='flex';
@@ -385,7 +399,6 @@ $('gateGo').onclick = async ()=>{
   const p = $('gatePass').value;
   if(!p){ $('gateMsg').textContent = 'Enter the passphrase.'; return; }
   P = p;
-  try { localStorage.setItem('st_opass_' + V, p); } catch(e){}
   $('gateMsg').textContent = '';
   await run();
   if($('gate').style.display !== 'none') $('gateMsg').textContent = 'That passphrase did not work.';
