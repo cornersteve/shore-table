@@ -50,7 +50,7 @@
   .btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;text-decoration:none}
   .linkbtn{background:none;border:0;padding:0;font:inherit;color:var(--accent);text-decoration:underline;cursor:pointer}
   .actions{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 16px}
-  .tabs{display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--line-2);border-radius:14px;padding:4px;margin:0 0 18px;position:sticky;top:8px;z-index:5;box-shadow:var(--shadow-sm)}
+  .tabs{display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--line-2);border-radius:14px;padding:4px;margin:0 0 18px;position:sticky;top:62px;z-index:5;box-shadow:var(--shadow-sm)}
   .tab{flex:1;min-height:44px;border:0;border-radius:10px;background:transparent;font-family:var(--font-d);font-weight:700;font-size:14.5px;color:var(--ink);cursor:pointer;transition:background .15s,color .15s}
   .tab:hover{background:var(--panel-2)}
   .tab.on,.tab.on:hover{background:var(--accent);color:#fff}
@@ -99,8 +99,8 @@
   input[type=color]{width:52px;height:40px;border:1px solid var(--line-2);border-radius:10px;background:var(--bg);padding:2px;cursor:pointer}
   .msg{font-size:13.5px;font-weight:600;min-height:18px;margin-top:8px}
   .msg.ok{color:var(--good)} .msg.err{color:var(--bad)}
-  .back{background:var(--panel);border:1.5px solid var(--accent);border-radius:999px;color:var(--accent);font-family:var(--font-d);font-weight:700;font-size:14px;cursor:pointer;padding:0 18px 0 12px;margin-bottom:14px;min-height:44px;display:inline-flex;align-items:center;gap:6px}
-  .back:hover{background:var(--accent);color:#fff}
+  .back{background:var(--accent);border:0;border-radius:999px;color:#fff;font-family:var(--font-d);font-weight:700;font-size:14px;cursor:pointer;padding:0 18px 0 12px;margin-bottom:14px;min-height:44px;display:inline-flex;align-items:center;gap:6px;position:sticky;top:8px;z-index:6;box-shadow:0 2px 10px rgba(22,17,10,.14)}
+  .back:hover{filter:brightness(.9)}
   .back svg{width:18px;height:18px}
 
   /* venue list */
@@ -277,7 +277,7 @@ async function platformView(){
   } catch(e){}
 
   $('main').innerHTML = `
-    <button class="back" id="back">${ICO_BACK}Home</button>
+    <button class="back" id="back">${ICO_BACK}Back</button>
     <h1>Platform updates</h1>
     <section>
       <h2>Versions</h2>
@@ -564,7 +564,7 @@ async function settingsView(opts){
   const imgPreview = (u, alt) => u ? `<img src="${esc(u)}" alt="${esc(alt)}" style="height:44px;width:auto;max-width:200px;display:block;object-fit:contain;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px" />` : `<span class="hint" style="margin:0">None yet</span>`;
 
   $('main').innerHTML = `
-    <button class="back" id="back">${ICO_BACK}Home</button>
+    <button class="back" id="back">${ICO_BACK}Back</button>
     <h1>${opts.firstRun ? 'Welcome. Let\'s set up your brand.' : 'Settings'}</h1>
     ${opts.firstRun ? '<div class="hint">These fill in from your config file if you had one. Everything here can be changed any time; nothing is one-time. Save publishes it to your site.</div>' : ''}
     ${connected ? '' : '<div class="msg err" style="display:block">GitHub is not connected yet. Saving keeps your settings in your database, but publishing them to your site needs the connection under Tools › Platform updates. Set that up, then come back and Save again.</div>'}
@@ -1535,7 +1535,7 @@ function form(existing){
   const v = existing || { name:'', id:'', accent:'#3a6ea5', logo:'', review:'', header_bg:'', owner_email:'' };
   const editing = !!existing;
   $('main').innerHTML = `
-    <button class="back" id="back">${ICO_BACK}${editing?esc(v.name):'Venues'}</button>
+    <button class="back" id="back">${ICO_BACK}Back</button>
     <h1>${editing?'Edit venue':'Add venue'}</h1>
     <div class="split">
       <section>
@@ -1981,7 +1981,7 @@ const cardExpired = c => c.t === 'notice' && !!c.until && c.until < TODAY_YMD;
    All three wear this so the tabs read as one page. */
 function venueHead(v, tab){
   return `
-    <button class="back" id="back">${ICO_BACK}Venues</button>
+    <button class="back" id="back">${ICO_BACK}Back</button>
     <h1>${esc(v.name)} <span class="badge ${esc(v.status)}">${esc(v.status)}</span></h1>
     <div class="actions"><button class="btn ghost" id="editBtn">Edit venue</button></div>
     <div class="tabs" role="tablist">
@@ -2639,7 +2639,7 @@ ${SIG}`);
 function packs(){
   setView('packs');
   $('main').innerHTML = `
-    <button class="back" id="back">${ICO_BACK}Venues</button>
+    <button class="back" id="back">${ICO_BACK}Back</button>
     <h1>Question packs</h1>
 
     <section>
