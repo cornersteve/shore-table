@@ -149,16 +149,34 @@ window.addEventListener('popstate', ()=>{
   if(!current || ROOTS.has(current)) return;
   popping = true;
   try {
-    if(screens[current+'__back']) screens[current+'__back']();
+    if(backTarget(current)) goBack();
     else go(exitBtn.style.display === 'block' ? 'hub' : 'landing');
   } finally { popping = false; }
   if(current && !ROOTS.has(current)) pushGuard();
 });
+// Where our own back arrow goes from a screen: the screen's registered
+// __back if it has one ('own'); otherwise, inside a game, that game's first
+// screen (a clean restart), and from a game's first screen the hub. A big
+// visible arrow of ours keeps thumbs off the browser's, which would leave.
+const GAME_HOME = { tot:'tot_intro', gs:'tot_intro', hs:'hs_setup', wiy:'wiy_intro', ch:'ch_intro', pp:'pp_intro', hr:'hr_intro', rt:'rt_intro', trivia:'trivia_intro', tv:'trivia_intro', fortune:'fortune_intro', at:'at_intro', wordle:'hub' };
+function backTarget(id){
+  if(!id) return null;
+  if(screens[id+'__back']) return 'own';
+  const home = GAME_HOME[id.split('_')[0]];
+  if(!home) return null;
+  return home === id ? 'hub' : home;
+}
+function goBack(){
+  const bt = backTarget(current);
+  if(bt === 'own') screens[current+'__back']();
+  else if(bt === 'hub') go('hub');
+  else if(bt) go(bt, { exit:true });
+}
 function go(id, opts){
   const wasRoot = !current || ROOTS.has(current);
   if(!popping && wasRoot && !ROOTS.has(id)) pushGuard();
   current = id;
-  backBtn.style.display = (opts && opts.back) ? 'block' : 'none';
+  backBtn.style.display = ((opts && opts.back) || backTarget(id)) ? 'block' : 'none';
   exitBtn.style.display = (opts && opts.exit) ? 'block' : 'none';
   stage.innerHTML = '';
   const el = document.createElement('div');
@@ -166,7 +184,7 @@ function go(id, opts){
   stage.appendChild(el);
   screens[id](el, opts || {});
 }
-backBtn.onclick = ()=> { if (current && screens[current+'__back']) screens[current+'__back'](); };
+backBtn.onclick = ()=> goBack();
 exitBtn.onclick = ()=> go('hub');   // "Quit" always returns to the games hub
 // Tapping the venue logo goes home to the chooser, the way a website header does.
 // Ignored while a message screen is up (loading / offline / venue not set up):
@@ -2134,11 +2152,11 @@ reg('pp_play', (el)=>{
       const bw = Math.min(sh.topW, sh.botW)*0.8, bh = sh.h*0.34;
       const iw = pp.logoImg.naturalWidth || 1, ih = pp.logoImg.naturalHeight || 1;
       const fit = Math.min(bw/iw, bh/ih);
-      ctx.save(); ctx.globalAlpha = alpha*0.4;
+      ctx.save(); ctx.globalAlpha = alpha;   // painted on the glass, like a real pint
       ctx.drawImage(pp.logoImg, cx - iw*fit/2, rimY + sh.h*0.44 - ih*fit/2, iw*fit, ih*fit);
       ctx.restore();
     } else {
-      ctx.save(); ctx.globalAlpha = alpha*0.45;
+      ctx.save(); ctx.globalAlpha = alpha;
       ctx.fillStyle = C.cream;
       ctx.font = '700 11px ' + getComputedStyle(document.body).getPropertyValue('--font-d');
       ctx.textAlign = 'center';
