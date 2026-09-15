@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 25;
+const BUILD = 26;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -951,8 +951,11 @@ function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show
    covered the add/edit FORM). replaceState = no history spam, and the app's
    own back buttons stay the only navigation. */
 let CUR_HASH = location.hash.slice(1), ROUTED = false;
+try { history.scrollRestoration = 'manual'; } catch(e){}   // views decide their own scroll: a new one starts at the top
 function setView(h, replace){
   h = h || '';
+  const changed = h !== location.hash.slice(1);
+  if(changed) window.scrollTo(0, 0);
   try {
     const url = location.pathname + location.search + (h ? '#' + h : '');
     // a new view is a history entry, so the phone's Back button comes back
@@ -984,6 +987,7 @@ window.addEventListener('popstate', ()=>{
     return;
   }
   if(!routeHash()) home();
+  window.scrollTo(0, 0);
 });
 
 /* One Save pattern for every editor: "Save" while something is unsaved,
@@ -2077,7 +2081,7 @@ ${SIG}`);
   let CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : [];
   let hadDraft = false;
   try { const d = localStorage.getItem(cardDraftK); if(d){ CARDS = JSON.parse(d); hadDraft = JSON.stringify(CARDS) !== JSON.stringify(Array.isArray(v.cards) ? v.cards : []); } } catch(e){}
-  let CARD_OPEN = -1, CARD_CONFIRM = -1;
+  let CARD_OPEN = -1, CARD_CONFIRM = -1, CARD_ASK = 'top';
   const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK, JSON.stringify(CARDS)); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); setSaveState('cards', 'cardsSaveInline', 'Save'); };
   const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK); } catch(e){} };
   const defaultCard = t =>
@@ -2090,12 +2094,14 @@ ${SIG}`);
     const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
       <label class="cfl">Short line under the name (optional)</label>
       <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
-    const common = `
+    const nameField = `
       <label class="cfl">Card name</label>
-      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}
+      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
+    const iconField = `
       <label class="cfl">Icon</label>
       <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
       <div class="hint" style="margin:6px 0 0">Icon: ${esc(c.icon || 'star')}</div>`;
+    const common = nameField + iconField;
     if (c.t === 'schedule') return common + `
       <label class="cfl">The week</label>
       <div class="hint" style="margin-bottom:2px">One line per day. Diners see today's line on the home screen and can tap in for the whole week. Blank days show no card that day.</div>
@@ -2117,11 +2123,12 @@ ${SIG}`);
         </div>`).join('')}
       <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" data-additem="${ix}">+ Add a row</button></div>`;
     const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
-    return common + `
+    // announcements: what it does first, then the name, the message, the icon, the date
+    return `
       <label class="cfl">What it does</label>
       <label class="ck"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''}> The message sits right on the app home screen</label>
       <label class="ck"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''}> Tapping it opens a link</label>
-      <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>
+      <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>` + nameField + `
       ${mode === 'inline' ? `
         <label class="cfl">Message</label>
         <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>
@@ -2136,6 +2143,7 @@ ${SIG}`);
         ${urlField}
         <label class="cfl">Button text</label>
         <input type="text" style="max-width:260px" data-f="btn" data-ix="${ix}" maxlength="30" value="${esc(c.btn || '')}" placeholder="Ex. Learn More">` : ''}
+` + iconField + `
       <label class="cfl">Hide message after this date (optional)</label>
       <input type="date" style="max-width:200px" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}">
       <div class="hint" style="margin:4px 0 0">The card hides itself the day after, and stays here to reuse. Blank = shows until you hide or delete it.</div>`;
@@ -2158,13 +2166,13 @@ ${SIG}`);
           <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
           <button type="button" class="iconbtn" data-ask="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button></span>
         </div>
-        ${ix === CARD_CONFIRM && ix !== CARD_OPEN ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
+        ${ix === CARD_CONFIRM && CARD_ASK !== 'bottom' ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
         ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
           <div class="frow" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
             <button type="button" class="btn sm" id="cardsSaveInline" style="min-width:96px">Save</button>
             <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
-            <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
-          </div></div>${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}` : ''}
+            <button type="button" class="btn ghost sm" data-ask="${ix}" data-at="bottom" style="min-width:96px">Delete</button>
+          </div></div>${ix === CARD_CONFIRM && CARD_ASK === 'bottom' ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}` : ''}
       </div>`).join('') : '<div class="hint" style="margin:8px 0 0">No cards yet. Add one below.</div>';
     wireCards();
     setSaveState('cards', 'cardsSaveInline', 'Save');
@@ -2177,7 +2185,7 @@ ${SIG}`);
     L.querySelectorAll('[data-down]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.down; [CARDS[ix], CARDS[ix+1]] = [CARDS[ix+1], CARDS[ix]]; if(CARD_OPEN === ix) CARD_OPEN = ix + 1; else if(CARD_OPEN === ix + 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; CARD_OPEN = -1; CARD_CONFIRM = -1; cardSaveDraft(); renderCards(); });
     const si = $('cardsSaveInline'); if(si) si.onclick = ()=> $('cardsSave').onclick();
-    L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; renderCards(); });
+    L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; CARD_ASK = b.dataset.at || 'top'; renderCards(); });
     L.querySelectorAll('[data-keep]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = -1; renderCards(); });
     L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; CARDS.splice(ix, 1); CARD_CONFIRM = -1; if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-icon]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.ix].icon = b.dataset.icon; cardSaveDraft(); renderCards(); });

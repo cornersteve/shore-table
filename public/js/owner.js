@@ -288,7 +288,7 @@ const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" str
 const ARR_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
 const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
 
-let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1, CARD_CONFIRM = -1;
+let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1, CARD_CONFIRM = -1, CARD_ASK = 'top';
 
 // a localStorage draft survives tab eviction (phones especially); it clears
 // on a successful save and wins over the server copy until then
@@ -329,12 +329,14 @@ function cardBody(c, ix){
   const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
     <label class="cfl">Short line under the name (optional)</label>
     <input type="text" class="promo-head" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
-  const common = `
+  const nameField = `
     <label class="cfl">Card name</label>
-    <input type="text" class="promo-head" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}
+    <input type="text" class="promo-head" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
+  const iconField = `
     <label class="cfl">Icon</label>
     <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
     <div class="mini" style="margin-top:6px">Icon: ${esc(c.icon || 'star')}</div>`;
+  const common = nameField + iconField;
   if (c.t === 'schedule') return common + `
     <label class="cfl">The week</label>
     <div class="hint" style="margin-bottom:2px">One line per day. Diners see today's line on the home screen and can tap in for the whole week. Blank days show no card that day.</div>
@@ -357,11 +359,12 @@ function cardBody(c, ix){
     <div class="promo-row" style="margin-top:10px"><button type="button" class="btn ghost" data-additem="${ix}">+ Add a row</button></div>`;
   // notice
   const urlField = `<input type="url" class="promo-head" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. yourrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
-  return common + `
+  // announcements: what it does first, then the name, the message, the icon, the date
+  return `
     <label class="cfl">What it does</label>
     <label class="ck"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''}> The message sits right on the app home screen</label>
     <label class="ck"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''}> Tapping it opens a link</label>
-    <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>
+    <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>` + nameField + `
     ${mode === 'inline' ? `
       <label class="cfl">Message</label>
       <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>
@@ -376,6 +379,7 @@ function cardBody(c, ix){
       ${urlField}
       <label class="cfl">Button text</label>
       <input type="text" class="promo-head" style="max-width:260px" data-f="btn" data-ix="${ix}" maxlength="30" value="${esc(c.btn || '')}" placeholder="Ex. Learn More">` : ''}
+` + iconField + `
     <label class="cfl">Hide message after this date (optional)</label>
     <input type="date" class="promo-head" style="max-width:200px" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}">
     <div class="hint" style="margin-top:4px">The card hides itself the day after, and stays here so you can reuse it. Blank = shows until you hide or delete it.</div>`;
@@ -398,13 +402,13 @@ function renderCards(){
         <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
         <button type="button" class="iconbtn" data-ask="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button></span>
       </div>
-      ${ix === CARD_CONFIRM && ix !== CARD_OPEN ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
+      ${ix === CARD_CONFIRM && CARD_ASK !== 'bottom' ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
       ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
         <div class="promo-row" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
           <button type="button" class="btn sm" id="cardsSaveInline" style="min-width:96px">Save</button>
           <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
-          <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
-        </div></div>${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}` : ''}
+          <button type="button" class="btn ghost sm" data-ask="${ix}" data-at="bottom" style="min-width:96px">Delete</button>
+        </div></div>${ix === CARD_CONFIRM && CARD_ASK === 'bottom' ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}` : ''}
     </div>`).join('') : '<div class="empty">No cards yet. Add one below.</div>';
   wireCards();
   setSaveState('cards', 'cardsSaveInline', 'Save');
@@ -418,7 +422,7 @@ function wireCards(){
   // hiding or showing collapses the card; both take effect when you save
   L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; CARD_OPEN = -1; CARD_CONFIRM = -1; cardSaveDraft(); renderCards(); });
   const si = $('cardsSaveInline'); if(si) si.onclick = ()=> $('cardsSave').onclick();
-  L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; renderCards(); });
+  L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; CARD_ASK = b.dataset.at || 'top'; renderCards(); });
   L.querySelectorAll('[data-keep]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = -1; renderCards(); });
   L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; CARDS.splice(ix, 1); CARD_CONFIRM = -1; if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
   L.querySelectorAll('[data-icon]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.ix].icon = b.dataset.icon; cardSaveDraft(); renderCards(); });

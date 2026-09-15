@@ -73,7 +73,10 @@
   .brand__logo:focus-visible{outline:2px solid var(--ink);outline-offset:3px;border-radius:4px}
   .brand__logo .dot{width:8px;height:8px;border-radius:2px;background:var(--accent);transform:rotate(45deg)}
   .brand__img{max-height:55px;max-width:200px;object-fit:contain;display:block}
-  .brand__back{position:absolute;left:12px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:var(--accent);font-size:28px;line-height:1;cursor:pointer;padding:6px}
+  .brand__back{position:absolute;left:6px;top:50%;transform:translateY(-50%);background:transparent;border:0;color:var(--accent);cursor:pointer;width:44px;height:44px;padding:0;display:flex;align-items:center;justify-content:center;border-radius:999px}
+  .brand__back svg{width:30px;height:30px;fill:none;stroke:currentColor;stroke-width:2.8;stroke-linecap:round;stroke-linejoin:round}
+  .brand__back:active{transform:translateY(-50%) scale(.92)}
+  .brand__back:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .brand__exit{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:var(--accent);color:var(--on-accent);border:0;border-radius:999px;font-family:var(--font-d);font-weight:700;font-size:12px;letter-spacing:.02em;padding:8px 13px;cursor:pointer;box-shadow:var(--shadow-sm)}
   .brand__exit:active{transform:translateY(-50%) scale(.96)}
   .brand__exit:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
@@ -705,7 +708,7 @@
   <!-- ===== THE DINER'S PHONE VIEW ===== -->
   <div class="phone" id="app">
     <div class="brand">
-      <button class="brand__back" id="backBtn" style="display:none" aria-label="Back">‹</button>
+      <button class="brand__back" id="backBtn" style="display:none" aria-label="Back"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 12H4.5M11 5l-7 7 7 7"/></svg></button>
       <button type="button" class="brand__logo" id="brandLogo"></button>
       <button class="brand__exit" id="exitBtn" style="display:none">Quit</button>
     </div>
@@ -715,7 +718,7 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=25"></script>
-<script src="js/app.js?v=25"></script>
+<script src="js/shared.js?v=26"></script>
+<script src="js/app.js?v=26"></script>
 </body>
 </html>
