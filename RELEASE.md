@@ -7,9 +7,14 @@ protects that button.
 
 ## Every release
 
-1. Bump `const BUILD = N` in `public/admin.html` **and** `"build": N` in
-   `public/version.json` — same number, same commit. The dashboard's
-   Platform updates screen compares these to know a deploy landed.
+1. Stamp the build: `node tools/stamp-build.js N`. That sets `const BUILD`
+   in `public/js/admin.js`, `"build"` in `public/version.json`, and the
+   `?v=N` on every `js/*.js` script tag in the pages, all in one go. The
+   dashboard's Platform updates screen compares the first two to know a
+   deploy landed; the third makes a new build a new script URL, so no
+   browser ever pairs an old script with a new page. Scripts live in
+   `public/js/` (one file per page plus `shared.js`); the pages carry no
+   inline script and the CSP refuses any.
 2. If the release needs database changes, write the SQL ONCE under
    `migrations-src/NNN/*.sql` (files run in name order; several
    statements in one file are separated by a line that is exactly

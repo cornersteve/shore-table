@@ -16,11 +16,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Hanken+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-<script>
-/* Nothing to paste here. The three phones in the hero and the report sheet
-   are live mockups of the app and the report, drawn in your accent with
-   your demo venue's name and logo. */
-</script>
 <style>
   /* ============================================================
      SHORE TABLE  ·  marketing homepage (lead-facing, bare domain).
@@ -319,21 +314,7 @@
 </style>
 <script src="config.js"></script>
 <script src="brand.js"></script>
-<script>
-/* the operator accent lands before first paint, so the panels never flash
-   the default blue on a differently colored instance */
-(function(){
-  var C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {});
-  var m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(C.accent || '');
-  if(!m) return;
-  document.documentElement.style.setProperty('--accent', C.accent);
-  // white text on a light accent fails contrast; ink text takes over past the 4.5:1 line
-  var lin = function(h){ var v = parseInt(h, 16) / 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
-  var L = .2126 * lin(m[1]) + .7152 * lin(m[2]) + .0722 * lin(m[3]);
-  document.documentElement.style.setProperty('--on-accent', (1.05 / (L + .05)) >= 4.5 ? '#ffffff' : '#16110a');
-  var tc = document.querySelector('meta[name="theme-color"]'); if(tc) tc.setAttribute('content', C.accent);
-})();
-</script>
+<script src="js/accent.js?v=25"></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
@@ -618,162 +599,7 @@
   </div>
 </footer>
 
-<script>
-/* The report sheet is drawn at the report's own 820px width and scaled to
-   the frame; the month line is always last month. */
-(function(){
-  const w = document.querySelector('.rp-wrap'); if(!w) return;
-  // the frame can be 0 wide while a tab is hidden; never write a zero scale, and
-  // recompute whenever the frame gets a size
-  const set = ()=>{ const cw = w.clientWidth; if(cw) w.style.setProperty('--rs', (cw / 820).toFixed(4)); };
-  set(); window.addEventListener('resize', set); window.addEventListener('load', set);
-  if(window.ResizeObserver) new ResizeObserver(set).observe(w);
-  // a page that loads in a hidden tab has no width yet: keep trying until it does
-  let tries = 0; const tick = ()=>{ if(w.clientWidth || tries++ > 40) return; set(); setTimeout(tick, 250); }; setTimeout(tick, 250);
-  document.addEventListener('visibilitychange', set);
-  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1);
-  const m = document.querySelector('.rp-meta span'); if(m) m.textContent = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) + ' · 23 guests responded';
-})();
-
-/* ---- the demo venue lands in the phone mockups: its name and logo on all
-   three, and its real home screen (cards, games row) on the first ---- */
-const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
-const CARD_ICONS = {
-  calendar: CI('<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'),
-  clock: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 1.9"/>'),
-  beer: CI('<path d="M7 4.5h8.5v14.5a1.8 1.8 0 0 1-1.8 1.8H8.8A1.8 1.8 0 0 1 7 19z"/><path d="M15.5 8.5h1.9a1.9 1.9 0 0 1 1.9 1.9v2.7a1.9 1.9 0 0 1-1.9 1.9h-1.9M10 8.5V17M12.5 8.5V17"/>'),
-  wine: CI('<path d="M8 3.5h8c0 5.2-1.7 7.8-4 7.8s-4-2.6-4-7.8z"/><path d="M12 11.3v8.2M8.5 20.5h7"/>'),
-  cocktail: CI('<path d="M4.5 4.5h15L12 13.2z"/><path d="M12 13.2v6.3M8.5 20.5h7M8 8h8"/>'),
-  coffee: CI('<path d="M4.5 9.5h12v6.5a3.5 3.5 0 0 1-3.5 3.5H8a3.5 3.5 0 0 1-3.5-3.5z"/><path d="M16.5 11.5h1.3a2.4 2.4 0 0 1 0 4.8h-1.4M8.2 3.5c0 1.3 1 1.4 1 2.7M12.2 3.5c0 1.3 1 1.4 1 2.7"/>'),
-  plate: CI('<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.2"/>'),
-  pizza: CI('<path d="M4 6a18.5 18.5 0 0 1 16 0L12 21z"/><circle cx="9.6" cy="8.6" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.4" cy="8.9" r="1.05" fill="currentColor" stroke="none"/><circle cx="12" cy="12.6" r="1.05" fill="currentColor" stroke="none"/>'),
-  burger: CI('<path d="M4 10a8 8 0 0 1 16 0z"/><path d="M4 13.5h16"/><path d="M4.5 17h15v.8a2.7 2.7 0 0 1-2.7 2.7H7.2a2.7 2.7 0 0 1-2.7-2.7z"/>'),
-  dessert: CI('<path d="M7.5 10.5a4.5 4.5 0 1 1 9 0"/><path d="M7.5 10.5h9L12 21z"/>'),
-  music: CI('<path d="M9 18.5V6.2l10-2.2v12.3"/><circle cx="6.6" cy="18.6" r="2.4"/><circle cx="16.6" cy="16.4" r="2.4"/>'),
-  mic: CI('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21M8.5 21h7"/>'),
-  trophy: CI('<path d="M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a3 3 0 0 0 3.2 4M17 6h3a3 3 0 0 1-3.2 4M12 15v3.5M8 21h8l-.9-2.5H8.9z"/>'),
-  star: CI('<path d="m12 3.5 2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/>'),
-  tag: CI('<path d="M3.5 12.5v-9h9L21 12l-8.5 8.5z"/><circle cx="8" cy="8" r="1.4"/>'),
-  gift: CI('<rect x="4" y="9.5" width="16" height="11" rx="2"/><path d="M12 9.5v11M4 13.5h16M7.5 6.7A2.1 2.1 0 0 1 11.3 5c.7 1 .7 4.5.7 4.5S8 9.7 7.5 6.7zM16.5 6.7A2.1 2.1 0 0 0 12.7 5c-.7 1-.7 4.5-.7 4.5s4 .2 4.5-2.8z"/>'),
-  dice: CI('<rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/>'),
-  megaphone: CI('<path d="M3.5 10.2v3.6l3.2.6L18.5 19V5L6.7 9.6z"/><path d="M18.5 9.2a3.1 3.1 0 0 1 0 5.6M7.8 14.8l1 5.2h2.9l-.8-4.6"/>'),
-  info: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 11.2v5.3"/><circle cx="12" cy="7.8" r="1.1" fill="currentColor" stroke="none"/>'),
-  pin: CI('<path d="M12 21s-7-6.4-7-11.4a7 7 0 0 1 14 0C19 14.6 12 21 12 21z"/><circle cx="12" cy="9.6" r="2.5"/>'),
-  book: CI('<path d="M12 6.2C10.5 4.5 7.5 4.1 4 4.6V19c3.5-.5 6.5-.1 8 1.6 1.5-1.7 4.5-2.1 8-1.6V4.6c-3.5-.5-6.5-.1-8 1.6z"/><path d="M12 6.2v14.4"/>'),
-  flame: CI('<path d="M12 3.5c.8 2.9-4.7 5.3-4.7 9.9a4.7 4.7 0 0 0 9.4 0c0-1.9-.9-3.4-1.9-4.5-.1 1.4-.7 2.2-1.5 2.5.9-2.4-.6-5.7-1.3-7.9z"/>'),
-  leaf: CI('<path d="M5 19C5 9.5 12 4.5 20 4.5c0 8-5 14.5-15 14.5z"/><path d="M5 19c3-6 7-9 11-11"/>'),
-  heart: CI('<path d="M12 20.5S3.5 15 3.5 8.9A4.4 4.4 0 0 1 12 7.3a4.4 4.4 0 0 1 8.5 1.6C20.5 15 12 20.5 12 20.5z"/>'),
-  sun: CI('<circle cx="12" cy="12" r="4.4"/><path d="M12 2.5v2.6M12 18.9v2.6M2.5 12h2.6M18.9 12h2.6M5.2 5.2 7 7M17 17l1.8 1.8M18.8 5.2 17 7M7 17l-1.8 1.8"/>'),
-  moon: CI('<path d="M20 13.6A8.5 8.5 0 1 1 10.4 4 7 7 0 0 0 20 13.6z"/>'),
-  sparkle: CI('<path d="M11 3.5l1.6 4.9 4.9 1.6-4.9 1.6L11 16.5l-1.6-4.9-4.9-1.6 4.9-1.6z"/><path d="M18 14.5l.9 2.6 2.6.9-2.6.9-.9 2.6-.9-2.6-2.6-.9 2.6-.9z"/>')
-};
-function mkHome(v){
-  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  const d0 = new Date();
-  const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][d0.getDay()];
-  const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d0.getDay()];
-  const todayYmd = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
-  const row = (ic, title, sub) => '<div class="mk-opt"><span class="mk-ic">' + ic + '</span><span><b>' + esc(title) + '</b>' + (sub ? '<i' + (sub.special ? ' class="special"' : '') + '>' + (sub.special ? '<b>' + esc(dayName) + ':</b> ' + esc(sub.text) : esc(sub.text)) + '</i>' : '') + '</span><em>›</em></div>';
-  let out = '';
-  if(v.games_enabled !== false) out += row(CARD_ICONS.dice, 'Play a game', { text: 'Pass the time, solo or with the whole table.' });
-  out += '<div class="mk-opt"><span class="mk-ic"><svg viewBox="0 0 24 24"><path d="M21 11.5c0 4.14-4.03 7.5-9 7.5-1.02 0-2-.14-2.91-.4L4 20l1.18-3.53C3.83 15.15 3 13.4 3 11.5 3 7.36 7.03 4 12 4s9 3.36 9 7.5z"/></svg></span><span><b>Share feedback</b><i>Anonymous, and seen only by ' + esc(v.name) + '.</i></span><em>›</em></div>';
-  (Array.isArray(v.cards) ? v.cards : []).forEach(c => {
-    if(!c || c.off) return;
-    if(c.t === 'notice' && c.until && c.until < todayYmd) return;
-    const ic = CARD_ICONS[c.icon] || CARD_ICONS.star;
-    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){
-      out += c.hot
-        ? '<div class="mk-promo"><b>' + esc(c.title) + '</b>' + (c.body ? '<i>' + esc(c.body) + '</i>' : '') + '</div>'
-        : '<div class="mk-note"><b>' + esc(c.title) + '</b>' + (c.body ? '<i>' + esc(c.body) + '</i>' : '') + '</div>';
-      return;
-    }
-    if(c.t === 'schedule'){
-      const today = (c.days || {})[dayKey];
-      if(!today && !c.always) return;
-      out += row(ic, c.title, today ? { text: today, special: true } : { text: c.desc || 'Tap to view the calendar' });
-      return;
-    }
-    out += row(ic, c.title, c.desc ? { text: c.desc } : null);
-  });
-  return out;
-}
-(function(){
-  const C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {});
-  // which venue plays the demo: the platform's Corner & Oak unless Settings picked one
-  const DEMO = /^[a-z0-9_-]{1,40}$/i.test(C.demoVenue || '') ? C.demoVenue : 'demo';
-  document.querySelectorAll('a[href="app.html?v=demo"]').forEach(a => { a.href = 'app.html?v=' + encodeURIComponent(DEMO); });
-  const phones = document.querySelector('.phones');
-  const show = ()=>{ if(phones) phones.classList.remove('mk-wait'); };
-  const CACHE = 'st_demo_venue_' + DEMO;
-  const fill = v => {
-    if(!v || !v.name) return false;
-    document.querySelectorAll('.mk-name').forEach(e => e.textContent = v.name);
-    const home = document.querySelector('.mk-home'); if(home) home.innerHTML = mkHome(v);
-    if(v.logo && /^(https?:|images\/|data:image\/)/i.test(v.logo)) document.querySelectorAll('.mk-logo').forEach(e => {
-      if(e.classList.contains('has-img')) return;
-      const i = new Image(); i.alt = '';
-      i.onload = ()=>{ e.appendChild(i); e.classList.add('has-img'); };
-      i.src = v.logo;
-    });
-    return true;
-  };
-  // the last answer, before the first paint: no placeholder flash on a repeat visit
-  try { if(fill(JSON.parse(localStorage.getItem(CACHE) || 'null'))) show(); } catch(e){}
-  if(!C.supabaseUrl || !C.supabaseKey){ show(); return; }
-  // never hold the phones for more than a moment on a slow connection
-  const t0 = setTimeout(show, 2500);
-  fetch(C.supabaseUrl.replace(/\/$/, '') + '/rest/v1/public_venues?id=eq.' + encodeURIComponent(DEMO) + '&select=name,logo,cards,games_enabled', { headers: { apikey: C.supabaseKey, Authorization: 'Bearer ' + C.supabaseKey } })
-    .then(r => r.ok ? r.json() : [])
-    .then(rows => {
-      const v = rows && rows[0];
-      if(fill(v)){ try { localStorage.setItem(CACHE, JSON.stringify({ name: v.name, logo: v.logo || null, cards: v.cards || null, games_enabled: v.games_enabled })); } catch(e){} }
-    })
-    .catch(()=>{})
-    .finally(()=>{ clearTimeout(t0); show(); });
-})();
-
-/* ---- operator config fill (config.js + brand.js) ---- */
-(function(){
-  const C = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {});
-  const brand = C.brandName || 'This platform';
-  const email = C.contactEmail || '';
-  const region = C.regionName || 'your area';
-  const regionShort = C.regionShort || 'the county';
-  const acc = /^#[0-9a-f]{6}$/i.test(C.accent || '') ? C.accent : '#3a6ea5';
-  document.title = brand + ': a better experience at the table';
-  const initial = brand.trim().charAt(0).toUpperCase();
-  const logoSvg = (typeof C.logoSvg === 'string' && C.logoSvg.trim().startsWith('<svg')) ? C.logoSvg : '';
-  const iconUrl = (typeof C.iconUrl === 'string' && C.iconUrl) ? C.iconUrl : '';
-  const logoUrl = (typeof C.logoUrl === 'string' && C.logoUrl) ? C.logoUrl : '';
-  if (logoUrl) {
-    // a full logo image replaces the mark+name pair everywhere it appears
-    document.querySelectorAll('.wordmark').forEach(w => { w.innerHTML = '<img class="wm-img" src="' + logoUrl.replace(/"/g, '&quot;') + '" alt="' + brand.replace(/"/g, '&quot;') + '">'; });
-  } else {
-    document.querySelectorAll('.wm-mark').forEach(m => {
-      if (logoSvg) { m.innerHTML = logoSvg; m.style.background = 'transparent'; }
-      else if (iconUrl) { m.innerHTML = '<img src="' + iconUrl.replace(/"/g, '&quot;') + '" alt="">'; m.style.background = 'transparent'; }
-      else { m.textContent = initial; m.style.background = acc; }
-    });
-    document.querySelectorAll('.wm-name').forEach(m => { m.textContent = brand; });
-  }
-  document.querySelectorAll('.cfg-region').forEach(m => { m.textContent = region; });
-  document.querySelectorAll('.cfg-regionshort').forEach(m => { m.textContent = regionShort; });
-  document.querySelectorAll('.cfg-brand').forEach(m => { m.textContent = brand; });
-  document.querySelectorAll('.cfg-email').forEach(m => { m.textContent = email; });
-  document.querySelectorAll('.cfg-gname-quick-pour').forEach(m => { m.textContent = (C.gameNames || {}).quick_pour || 'Quick Pour'; });
-  if (C.operatorStory) {
-    const s = document.querySelector('.cfg-story');
-    if (s) s.textContent = C.operatorStory;
-  }
-  document.querySelectorAll('[data-mailto]').forEach(a => {
-    if (!email) return;
-    a.href = 'mailto:' + email + (a.dataset.mailto === 'game-idea' ? '?subject=' + encodeURIComponent('Game idea for ' + brand) : '');
-  });
-  const fav = document.querySelector('link[rel="icon"]');
-  if (fav) fav.href = iconUrl || 'data:image/svg+xml,' + encodeURIComponent(logoSvg || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + initial + '</text></svg>');
-  const ati = document.querySelector('link[rel="apple-touch-icon"]');
-  if (ati && iconUrl) ati.href = iconUrl;
-})();
-</script>
+<script src="js/shared.js?v=25"></script>
+<script src="js/index.js?v=25"></script>
 </body>
 </html>

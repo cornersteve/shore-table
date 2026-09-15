@@ -1,6 +1,7 @@
 # Cloudflare Pages security headers (served with every response).
-# CSP notes: inline scripts are how these single-file pages work, so
-# 'unsafe-inline' stays; the win is pinning WHICH HOSTS can be talked to.
+# CSP notes: since build 25 every script is a file under /js, so inline
+# script is refused outright (an injected <script> or onclick= cannot run);
+# inline STYLE stays allowed. connect-src pins which hosts can be talked to.
 # connect-src *.supabase.co keeps the file operator-generic (each operator
 # has their own project host).
 
@@ -9,7 +10,7 @@
   X-Frame-Options: DENY
   Referrer-Policy: no-referrer
   Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
-  Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' https://api.github.com https://*.supabase.co https://*.workers.dev https://fonts.googleapis.com https://fonts.gstatic.com https://cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src 'self' https: data: blob:; connect-src 'self' https://api.github.com https://*.supabase.co https://*.workers.dev https://fonts.googleapis.com https://fonts.gstatic.com https://cloudflareinsights.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'
 
 # The two files the dashboard rewrites on a rebrand (Settings > Save). Five
 # minutes instead of Pages' default four hours, so a new logo or sharing
@@ -19,3 +20,8 @@
 
 /images/og.png
   Cache-Control: public, max-age=300, must-revalidate
+
+# Script files carry the build number in their URL (?v=N), so a new build is
+# a new URL: safe to cache for a year.
+/js/*
+  Cache-Control: public, max-age=31536000, immutable
