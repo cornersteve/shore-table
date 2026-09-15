@@ -299,7 +299,7 @@ async function platformView(){
     </section>
     <section>
       <h2>GitHub connection</h2>
-      <div class="hint">For the one-button update. Repo is your fork as owner/name, e.g. jane/my-table-app. The token is a GitHub <b>fine-grained</b> personal access token from the account that owns your fork: Repository access = only that fork; Permissions = Contents, Read and write; expiration up to a year. It is stored in your database, never in git, and never shown again after you save it.</div>
+      <div class="hint">For the one-button update. Repo is your fork as owner/name, e.g. jane/my-table-app. The token is a GitHub <b>fine-grained</b> personal access token from the account that owns your fork: Repository access = only that fork; Permissions = Contents, Read and write; expiration up to a year. It is stored in your database, never in git, and never shown again after you save it. (A classic token with the repo scope also works; fine-grained is just narrower.)</div>
       <label class="f">Your fork (owner/repo)</label>
       <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
       <label class="f">GitHub token</label>

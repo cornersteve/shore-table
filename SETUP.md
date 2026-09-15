@@ -102,7 +102,9 @@ Dashboard > Tools > **Platform updates**:
   in the dashboard's "Token expires" field and it reminds you a month
   out. The token is stored in your database, never in git, and the
   dashboard never shows it again after you save it. It can do nothing to
-  any other repository you own.
+  any other repository you own. (If GitHub ever refuses the update with a
+  fine-grained token, a classic token with the `repo` scope also works;
+  it is simply broader than needed.)
 - When an update ships, press **Sync fork from upstream**. Pages
   redeploys; the page reloads itself; if the update needs database
   changes, an **Apply pending migrations** button appears — press it.
