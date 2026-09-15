@@ -7,10 +7,9 @@ hosting). Everything is free tier to start except Supabase Pro
 
 ## 1. Fork the repository
 
-- On GitHub, fork the public release repository
-  `shore-table-platform/shore-table` to your own account (Fork > Create
-  fork). That repository carries the `release` branch only; it is the one
-  your fork updates from.
+- On GitHub, fork `shore-table-platform/shore-table-platform` to your own
+  account (Fork > Create fork). Your fork updates from its `release`
+  branch.
 - Your fork is where your site deploys from. You never edit code in it;
   the only file you ever add is your config (step 5).
 

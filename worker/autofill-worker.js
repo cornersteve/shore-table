@@ -28,7 +28,7 @@
         shore-autofill), Deploy the hello-world it offers, then Edit code,
         delete the boilerplate, paste THIS ENTIRE file, Deploy again.
      2. Settings > Variables and Secrets, add:
-          SUPABASE_URL       https://wryscqcukjduaodgfmdl.supabase.co
+          SUPABASE_URL       https://<your-project>.supabase.co
           SUPABASE_ANON_KEY  (the publishable key from app.html)
           OPERATOR_EMAIL     you@yourdomain.com   (your operator login email)
      3. Copy the worker URL (https://shore-autofill.<account>.workers.dev)

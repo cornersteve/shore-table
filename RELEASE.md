@@ -32,13 +32,9 @@ protects that button.
    refuses gaps and repeats.
 3. Merge `dev` -> `release` (a normal merge; **never force-push
    `release`** — a rewritten history strands every operator fork). The
-   push to `release` triggers `.github/workflows/mirror.yml`, which
-   copies the branch to the public mirror `shore-table-platform/
-   shore-table` (the repository operators fork). It needs the
-   `MIRROR_TOKEN` Actions secret in the private repo: a fine-grained
-   token with Contents read and write on the mirror only. If the Actions
-   run fails, the mirror is stale and operators see no update: fix the
-   secret and re-run the job.
+   repository is public on purpose: operators fork it directly and use
+   a fine-grained token scoped to their own fork. Sales assets, the
+   venue agreement, and premium packs live in the community, never here.
 4. Post plain-language release notes in the community; once the notes
    page exists, point NOTES_URL in admin.html at it (the dashboard
    shows a What's-new link when it is set).
