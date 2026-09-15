@@ -1,0 +1,28 @@
+# Copies the release branch to the public mirror (shore-table-platform/
+# shore-table) on every release push, so shipping stays one push from the
+# founder's machine. Operators fork the mirror and update from it with a
+# fine-grained token scoped to their own fork.
+#
+# Runs ONLY in the private platform repository; in the mirror and in every
+# operator fork the repository check fails and the job is skipped.
+# Secret needed once, in the private repo: MIRROR_TOKEN, a fine-grained
+# token with Contents read and write on the mirror repository only.
+name: Mirror release
+on:
+  push:
+    branches: [release]
+jobs:
+  mirror:
+    if: github.repository == 'shore-table-platform/shore-table-platform'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: release
+      - name: Push release to the public mirror
+        env:
+          MIRROR_TOKEN: ${{ secrets.MIRROR_TOKEN }}
+        run: |
+          if [ -z "$MIRROR_TOKEN" ]; then echo "MIRROR_TOKEN is not set; nothing mirrored"; exit 1; fi
+          git push "https://x-access-token:${MIRROR_TOKEN}@github.com/shore-table-platform/shore-table.git" release:release

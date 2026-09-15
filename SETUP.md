@@ -7,7 +7,10 @@ hosting). Everything is free tier to start except Supabase Pro
 
 ## 1. Fork the repository
 
-- On GitHub, fork this repo to your own account (Fork > Create fork).
+- On GitHub, fork the public release repository
+  `shore-table-platform/shore-table` to your own account (Fork > Create
+  fork). That repository carries the `release` branch only; it is the one
+  your fork updates from.
 - Your fork is where your site deploys from. You never edit code in it;
   the only file you ever add is your config (step 5).
 
@@ -91,12 +94,15 @@ Supabase account itself.
 
 Dashboard > Tools > **Platform updates**:
 
-- Connect it once: your fork as `owner/repo`, branch `release`, and a
-  GitHub personal access token (CLASSIC, scope `repo`, from the same
-  account that owns your fork). Classic on purpose: syncing must READ
-  the private upstream repository, which your collaborator account can
-  but a fork-scoped fine-grained token cannot. The token is stored in
-  your database, never in git.
+- Connect it once: your fork as `owner/repo` and a GitHub
+  **fine-grained** personal access token from the account that owns your
+  fork (GitHub > Settings > Developer settings > Personal access tokens >
+  Fine-grained). Repository access: **only your fork**. Permissions:
+  **Contents, Read and write**. Expiration: up to one year; put the date
+  in the dashboard's "Token expires" field and it reminds you a month
+  out. The token is stored in your database, never in git, and the
+  dashboard never shows it again after you save it. It can do nothing to
+  any other repository you own.
 - When an update ships, press **Sync fork from upstream**. Pages
   redeploys; the page reloads itself; if the update needs database
   changes, an **Apply pending migrations** button appears — press it.

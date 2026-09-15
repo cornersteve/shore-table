@@ -260,9 +260,21 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 23;
+const BUILD = 24;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
+// a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
+function tokenWarn(d){
+  if(!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return '';
+  const days = Math.round((new Date(d + 'T12:00:00') - Date.now()) / 864e5);
+  if(days < 0) return '<div class="msg err">This token expired ' + (-days) + ' day' + (days === -1 ? '' : 's') + ' ago. Make a new one on GitHub and paste it above.</div>';
+  if(days <= 30) return '<div class="msg err">This token expires in ' + days + ' day' + (days === 1 ? '' : 's') + '. Make a new one on GitHub and paste it above before then.</div>';
+  return '';
+}
+// the token itself, fetched only when a button needs it
+async function ghSecret(){
+  try { const { data } = await rpc('admin_get_secret', { p_key: 'gh_token' }); return (data || '').trim(); } catch(e){ return ''; }
+}
 async function platformView(){
   setView('platform');
   $('main').innerHTML = '<div class="hint">Loading…</div>';
@@ -287,12 +299,15 @@ async function platformView(){
     </section>
     <section>
       <h2>GitHub connection</h2>
-      <div class="hint">For the one-button fork sync. The token is a GitHub personal access token (CLASSIC, scope "repo", created on the account that owns your fork - classic on purpose: updating must read the private upstream repository, which your account can but a fork-limited token cannot). It is stored in your database, never in git. Repo is your fork as owner/name, e.g. jane/my-table-app.</div>
+      <div class="hint">For the one-button update. Repo is your fork as owner/name, e.g. jane/my-table-app. The token is a GitHub <b>fine-grained</b> personal access token from the account that owns your fork: Repository access = only that fork; Permissions = Contents, Read and write; expiration up to a year. It is stored in your database, never in git, and never shown again after you save it.</div>
       <label class="f">Your fork (owner/repo)</label>
       <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
-      <label class="f">GitHub token (classic)</label>
-      <input type="password" id="ghToken" value="${esc(settings.gh_token || '')}" placeholder="ghp_..." autocapitalize="off" spellcheck="false" />
-      <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button></div>
+      <label class="f">GitHub token</label>
+      <input type="password" id="ghToken" value="" placeholder="${settings.gh_token_set ? 'Saved (ends in ' + esc(settings.gh_token_hint || '') + '). Paste a new one only to replace it.' : 'github_pat_...'}" autocapitalize="off" spellcheck="false" autocomplete="off" />
+      <label class="f">Token expires (optional)</label>
+      <input type="date" id="ghExpires" value="${esc(settings.gh_token_expires || '')}" style="max-width:200px" />
+      ${tokenWarn(settings.gh_token_expires)}
+      <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button>${settings.gh_token_set ? '<button class="btn sm ghost" id="ghForget">Remove token</button>' : ''}</div>
       <div class="msg" id="ghMsg"></div>
     </section>
     <section>
@@ -331,25 +346,38 @@ async function platformView(){
     $('bkBtn').disabled = false;
   };
   $('back').onclick = ()=> home();
-  draftify('platform', ['ghRepo','ghToken']);
+  draftify('platform', ['ghRepo']);   // never the token
 
   $('ghSave').onclick = async ()=>{
     const m = $('ghMsg'); m.className = 'msg'; m.textContent = 'Saving…';
-    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim();
+    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), exp = $('ghExpires').value;
     if(repo && !/^[\w.-]+\/[\w.-]+$/.test(repo)){ m.className = 'msg err'; m.textContent = 'Repo must look like owner/name.'; return; }
-    for(const [k, v] of [['gh_repo', repo], ['gh_token', tok]]){
+    if(tok && !/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(tok)){ m.className = 'msg err'; m.textContent = 'That does not look like a GitHub token.'; return; }
+    // an empty token field keeps the saved token; only a pasted value replaces it
+    const writes = [['gh_repo', repo], ['gh_token_expires', exp]];
+    if(tok) writes.push(['gh_token', tok]);
+    for(const [k, v] of writes){
       const { data, error } = await rpc('admin_set_setting', { p_key: k, p_value: v });
       if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save.'; return; }
     }
-    m.className = 'msg ok'; m.textContent = 'Saved.';
     draftClear('platform');
+    toast('Saved');
+    platformView();   // repaint: the token field shows "Saved" and never the value
   };
+  const forget = $('ghForget');
+  if(forget) forget.onclick = ()=> askInline($('ghMsg'), 'Remove the saved GitHub token? Updates and publishing stop working until you paste a new one.', 'Remove', async ()=>{
+    const { data, error } = await rpc('admin_set_setting', { p_key: 'gh_token', p_value: '' });
+    if(error || !data || data.ok !== true){ toast('Could not remove it.'); return; }
+    platformView();
+  }, true, null, 'Keep');
 
   $('syncBtn').onclick = async ()=>{
     const m = $('platMsg');
-    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), br = 'release';
-    if(!repo || !tok){ m.className = 'msg err'; m.textContent = 'Save your fork + token first.'; return; }
+    const repo = $('ghRepo').value.trim(), br = 'release';
+    if($('ghToken').value.trim()){ m.className = 'msg err'; m.textContent = 'Save the connection first (the token you pasted is not saved yet).'; return; }
     m.className = 'msg'; m.textContent = 'Asking GitHub to sync your fork…';
+    const tok = repo ? await ghSecret() : '';
+    if(!repo || !tok){ m.className = 'msg err'; m.textContent = 'Save your fork + token first.'; return; }
     let r;
     try {
       r = await fetch('https://api.github.com/repos/' + repo + '/merge-upstream', {
@@ -559,7 +587,7 @@ async function settingsView(opts){
   const b = brandNow(settings);
   const plans = (Array.isArray(b.stripePlans) ? b.stripePlans : []).slice(0, 4).map(p => ({ label: p.label || p.name || '', url: p.url || '' }));
   while(plans.length < 4) plans.push({ label: '', url: '' });
-  const connected = !!(settings.gh_repo && settings.gh_token);
+  const connected = !!(settings.gh_repo && settings.gh_token_set);
   const acc = /^#[0-9a-f]{6}$/i.test(b.accent || '') ? b.accent : '#3a6ea5';
   const imgPreview = (u, alt) => u ? `<img src="${esc(u)}" alt="${esc(alt)}" style="height:44px;width:auto;max-width:200px;display:block;object-fit:contain;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px" />` : `<span class="hint" style="margin:0">None yet</span>`;
 
@@ -691,8 +719,10 @@ async function settingsView(opts){
     if(out.stripePlans.some(p => !/^https:\/\//i.test(p.url))) return bad('Plan links must start with https://');
     if(out.logoSvg && !/^<svg[\s>]/i.test(out.logoSvg)) return bad('The inline SVG must start with <svg.');
 
+    if(JSON.stringify(out).length > 4000) return bad('These settings are too long to save. The inline SVG is the usual reason: upload the icon as an image instead.');
     m.className = 'msg'; m.textContent = 'Saving…';
-    const repo = (settings.gh_repo || '').trim(), tok = (settings.gh_token || '').trim();
+    const repo = (settings.gh_repo || '').trim();
+    const tok = (repo && settings.gh_token_set) ? await ghSecret() : '';
     const stamp = Date.now();
     try {
       // images first (they need a path before brand.js can point at them)
@@ -709,7 +739,7 @@ async function settingsView(opts){
         }
       }
       const { data, error } = await rpc('admin_set_setting', { p_key: 'brand', p_value: JSON.stringify(out) });
-      if(error || !data || data.ok !== true) throw new Error('Could not save to your database.');
+      if(error || !data || data.ok !== true) throw new Error(data && data.error === 'too_long' ? 'These settings are too long to save. Upload the icon as an image instead of inline SVG.' : 'Could not save to your database.');
       if(TZ_OPTIONS.some(([z]) => z === v('sbTz'))){
         const tz = await rpc('admin_set_setting', { p_key: 'tz', p_value: v('sbTz') });
         if(tz.error || !tz.data || tz.data.ok !== true) throw new Error('Could not save the time zone.');
@@ -1115,7 +1145,11 @@ $('pwSave').onclick = async ()=>{
   if(error){ m.className='msg err'; m.textContent='Could not save. Open a fresh reset link and try again.'; }
   else { recovering = false; m.textContent=''; showPwPanel(false); showLogin(false); start(); }
 };
-$('signOut').onclick = async ()=>{ await db.auth.signOut(); location.reload(); };
+$('signOut').onclick = async ()=>{
+  // drafts can hold half-typed venue details; none of it belongs to the next person at this keyboard
+  try { Object.keys(localStorage).filter(k => k.startsWith('st_draft_') || k.startsWith('st_admin_')).forEach(k => localStorage.removeItem(k)); } catch(e){}
+  await db.auth.signOut(); location.reload();
+};
 
 /* ---------------- data ---------------- */
 let SETTINGS = {};     // admin_get_settings cache (brand + GitHub connection)

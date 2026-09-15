@@ -18,5 +18,6 @@ operator) run the whole territory from an operator dashboard.
   the dashboard's Platform updates tool, never by hand.
 
 Licensed, not sold: see [LICENSE.txt](LICENSE.txt). Updates ship to the
-`release` branch; your fork syncs them with one button from the
-dashboard.
+`release` branch and are mirrored to the public repository
+`shore-table-platform/shore-table`, which operators fork; a fork syncs
+them with one button from the dashboard.

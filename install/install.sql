@@ -247,7 +247,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -2356,6 +2356,8 @@ language plpgsql
 security definer
 set search_path = ''
 as $$
+declare
+  v_json jsonb;
 begin
   if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
   if p_key is null or p_key !~ '^[a-z0-9_.-]{1,64}$' then
@@ -2363,11 +2365,26 @@ begin
   end if;
   if p_value is null or btrim(p_value) = '' then
     delete from public.operator_settings where key = p_key;
-  else
-    insert into public.operator_settings (key, value, updated_at)
-    values (p_key, left(btrim(p_value), 2000), now())
-    on conflict (key) do update set value = excluded.value, updated_at = now();
+    return json_build_object('ok', true);
   end if;
+  -- over-long values are refused, never silently cut (a truncated brand
+  -- JSON used to save as garbage); the brand must parse as a JSON object
+  if char_length(p_value) > 4000 then
+    return json_build_object('ok', false, 'error', 'too_long');
+  end if;
+  if p_key = 'brand' then
+    begin
+      v_json := p_value::jsonb;
+    exception when others then
+      return json_build_object('ok', false, 'error', 'bad_json');
+    end;
+    if jsonb_typeof(v_json) <> 'object' then
+      return json_build_object('ok', false, 'error', 'bad_json');
+    end if;
+  end if;
+  insert into public.operator_settings (key, value, updated_at)
+  values (p_key, btrim(p_value), now())
+  on conflict (key) do update set value = excluded.value, updated_at = now();
   return json_build_object('ok', true);
 end;
 $$;
@@ -2383,17 +2400,44 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- the GitHub token never leaves the database on a page load: the
+  -- dashboard learns only that one is set (and its last four characters,
+  -- so the operator can tell which token it is); admin_get_secret hands
+  -- the full value over at the moment a sync or publish needs it
   if not public.is_operator() then return null; end if;
   return (
     select coalesce(json_object_agg(key, value), '{}'::json)
     from public.operator_settings
-  );
+    where key <> 'gh_token'
+  )::jsonb
+  || jsonb_build_object(
+       'gh_token_set', exists (select 1 from public.operator_settings where key = 'gh_token' and nullif(value, '') is not null),
+       'gh_token_hint', (select right(value, 4) from public.operator_settings where key = 'gh_token'));
 end;
 $$;
 
 revoke all on function public.admin_get_settings() from public;
 revoke execute on function public.admin_get_settings() from anon;
 grant execute on function public.admin_get_settings() to authenticated;
+
+create or replace function public.admin_get_secret(p_key text)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  -- one secret at a time, only the keys that are secrets, only for an
+  -- operator, only when a button that needs it is pressed
+  if not public.is_operator() then return null; end if;
+  if p_key is null or p_key not in ('gh_token') then return null; end if;
+  return (select value from public.operator_settings where key = p_key);
+end;
+$$;
+
+revoke all on function public.admin_get_secret(text) from public;
+revoke execute on function public.admin_get_secret(text) from anon;
+grant execute on function public.admin_get_secret(text) to authenticated;
 
 -- one-file backup of the whole instance (Platform updates > Download a backup)
 create or replace function public.admin_export_all()
