@@ -1,0 +1,2841 @@
+
+/* =====================================================================
+   PLATFORM UPDATES. This build's number is BUILD below; version.json is
+   what the connected Pages deploy is serving; the database's schema
+   version comes from admin_schema_version(). The one-button flow:
+   sync your fork from upstream (GitHub API, classic token stored
+   in YOUR database via admin_set_setting, never in git), wait for the
+   deploy to serve the new build, reload, then apply any pending
+   database migrations through admin_run_migration (strictly ordered,
+   each exactly once, transactional per migration).
+   Token scope: classic token with "repo" (must read the private upstream).
+   ===================================================================== */
+const BUILD = 25;
+const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
+
+// a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
+function tokenWarn(d){
+  if(!d || !/^\d{4}-\d{2}-\d{2}$/.test(d)) return '';
+  const days = Math.round((new Date(d + 'T12:00:00') - Date.now()) / 864e5);
+  if(days < 0) return '<div class="msg err">This token expired ' + (-days) + ' day' + (days === -1 ? '' : 's') + ' ago. Make a new one on GitHub and paste it above.</div>';
+  if(days <= 30) return '<div class="msg err">This token expires in ' + days + ' day' + (days === 1 ? '' : 's') + '. Make a new one on GitHub and paste it above before then.</div>';
+  return '';
+}
+// the token itself, fetched only when a button needs it
+async function ghSecret(){
+  try { const { data } = await rpc('admin_get_secret', { p_key: 'gh_token' }); return (data || '').trim(); } catch(e){ return ''; }
+}
+async function platformView(){
+  setView('platform');
+  $('main').innerHTML = '<div class="hint">Loading…</div>';
+  let deployed = null, schema = null, settings = {};
+  try { const r = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' }); if(r.ok) deployed = await r.json(); } catch(e){}
+  try { const { data } = await rpc('admin_schema_version'); schema = data; } catch(e){}
+  try { const { data } = await rpc('admin_get_settings'); settings = data || {}; } catch(e){}
+  let pending = [];
+  try {
+    const r = await fetch('migrations/index.json?ts=' + Date.now(), { cache: 'no-store' });
+    if(r.ok){ const ix = await r.json(); pending = (ix.migrations || []).filter(m => schema !== null && m.version > schema); }
+  } catch(e){}
+
+  $('main').innerHTML = `
+    <button class="back" id="back">${ICO_BACK}Back</button>
+    <h1>Platform updates</h1>
+    <section>
+      <h2>Versions</h2>
+      <div class="hint">This page: build ${BUILD} · Deployed: ${deployed ? 'build ' + esc(String(deployed.build)) : 'unknown'} · Database: ${schema === null ? 'unknown (run install.sql?)' : 'schema ' + esc(String(schema))}</div>
+      ${deployed && deployed.build > BUILD ? '<div class="msg ok">A newer build is deployed. Reload this page to get it.</div>' : ''}
+      ${pending.length ? '<div class="msg err">' + pending.length + ' database migration(s) pending. Apply them below.</div>' : ''}
+    </section>
+    <section>
+      <h2>GitHub connection</h2>
+      <div class="hint">For the one-button update. Repo is your fork as owner/name, e.g. jane/my-table-app. The token is a GitHub <b>fine-grained</b> personal access token from the account that owns your fork: Repository access = only that fork; Permissions = Contents, Read and write; expiration up to a year. It is stored in your database, never in git, and never shown again after you save it. (A classic token with the repo scope also works; fine-grained is just narrower.)</div>
+      <label class="f">Your fork (owner/repo)</label>
+      <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
+      <label class="f">GitHub token</label>
+      <input type="password" id="ghToken" value="" placeholder="${settings.gh_token_set ? 'Saved (ends in ' + esc(settings.gh_token_hint || '') + '). Paste a new one only to replace it.' : 'github_pat_...'}" autocapitalize="off" spellcheck="false" autocomplete="off" />
+      <label class="f">Token expires (optional)</label>
+      <input type="date" id="ghExpires" value="${esc(settings.gh_token_expires || '')}" style="max-width:200px" />
+      ${tokenWarn(settings.gh_token_expires)}
+      <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button>${settings.gh_token_set ? '<button class="btn sm ghost" id="ghForget">Remove token</button>' : ''}</div>
+      <div class="msg" id="ghMsg"></div>
+    </section>
+    <section>
+      <h2>Update</h2>
+      <div class="hint">The update button pulls the latest version into your fork; your site redeploys automatically (usually under two minutes) and this page reloads itself. The second button lights up when an update needs database changes.</div>
+      <div class="frow" style="margin-top:8px">
+        <button class="btn sm" id="syncBtn">Update to the latest version</button>
+        <button class="btn sm ${pending.length ? '' : 'ghost'}" id="migBtn" ${pending.length ? '' : 'disabled'}>${pending.length ? 'Apply ' + pending.length + ' pending update' + (pending.length === 1 ? '' : 's') : 'No pending updates'}</button>
+      <div id="migConfirm"></div>
+      </div>
+      <div class="msg" id="platMsg"></div>
+      ${NOTES_URL ? '<div class="hint" style="margin-top:8px"><a href="' + esc(NOTES_URL) + '" target="_blank" rel="noopener">What\'s new in this version &rsaquo;</a></div>' : ''}
+    </section>
+    <section>
+      <h2>Backup</h2>
+      <div class="hint">Supabase keeps its own database backups on the paid plans; this is an extra copy in your hands. One file with your venues, every piece of feedback, game counters, a year of analytics, forms, content and settings (the GitHub token is left out). It contains your venues' owner links, so keep it somewhere private.</div>
+      <div class="frow" style="margin-top:8px"><button class="btn sm ghost" id="bkBtn">Download a backup</button></div>
+      <div class="msg" id="bkMsg"></div>
+    </section>`;
+  $('bkBtn').onclick = async ()=>{
+    const m = $('bkMsg'); m.className = 'msg'; m.textContent = 'Gathering everything…';
+    $('bkBtn').disabled = true;
+    try {
+      const { data, error } = await rpc('admin_export_all');
+      if(error || !data || data.format !== 'shore-table-backup') throw new Error();
+      const stamp = new Date().toISOString().slice(0, 10);
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+      a.download = 'shore-table-backup-' + stamp + '.json';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=> URL.revokeObjectURL(a.href), 4000);
+      m.className = 'msg ok'; m.textContent = 'Saved as ' + a.download + ' (' + (data.venues || []).length + ' venues, ' + (data.survey_responses || []).length + ' pieces of feedback).';
+    } catch(e){
+      m.className = 'msg err'; m.textContent = 'Could not build the backup. If the database is behind, apply the pending update first.';
+    }
+    $('bkBtn').disabled = false;
+  };
+  $('back').onclick = ()=> home();
+  draftify('platform', ['ghRepo']);   // never the token
+
+  $('ghSave').onclick = async ()=>{
+    const m = $('ghMsg'); m.className = 'msg'; m.textContent = 'Saving…';
+    const repo = $('ghRepo').value.trim(), tok = $('ghToken').value.trim(), exp = $('ghExpires').value;
+    if(repo && !/^[\w.-]+\/[\w.-]+$/.test(repo)){ m.className = 'msg err'; m.textContent = 'Repo must look like owner/name.'; return; }
+    if(tok && !/^(github_pat_|ghp_)[A-Za-z0-9_]{20,}$/.test(tok)){ m.className = 'msg err'; m.textContent = 'That does not look like a GitHub token.'; return; }
+    // an empty token field keeps the saved token; only a pasted value replaces it
+    const writes = [['gh_repo', repo], ['gh_token_expires', exp]];
+    if(tok) writes.push(['gh_token', tok]);
+    for(const [k, v] of writes){
+      const { data, error } = await rpc('admin_set_setting', { p_key: k, p_value: v });
+      if(error || !data || data.ok !== true){ m.className = 'msg err'; m.textContent = 'Could not save.'; return; }
+    }
+    draftClear('platform');
+    toast('Saved');
+    platformView();   // repaint: the token field shows "Saved" and never the value
+  };
+  const forget = $('ghForget');
+  if(forget) forget.onclick = ()=> askInline($('ghMsg'), 'Remove the saved GitHub token? Updates and publishing stop working until you paste a new one.', 'Remove', async ()=>{
+    const { data, error } = await rpc('admin_set_setting', { p_key: 'gh_token', p_value: '' });
+    if(error || !data || data.ok !== true){ toast('Could not remove it.'); return; }
+    platformView();
+  }, true, null, 'Keep');
+
+  $('syncBtn').onclick = async ()=>{
+    const m = $('platMsg');
+    const repo = $('ghRepo').value.trim(), br = 'release';
+    if($('ghToken').value.trim()){ m.className = 'msg err'; m.textContent = 'Save the connection first (the token you pasted is not saved yet).'; return; }
+    m.className = 'msg'; m.textContent = 'Asking GitHub to sync your fork…';
+    const tok = repo ? await ghSecret() : '';
+    if(!repo || !tok){ m.className = 'msg err'; m.textContent = 'Save your fork + token first.'; return; }
+    let r;
+    try {
+      r = await fetch('https://api.github.com/repos/' + repo + '/merge-upstream', {
+        method: 'POST',
+        headers: { 'Authorization': 'Bearer ' + tok, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ branch: br })
+      });
+    } catch(e){ m.className = 'msg err'; m.textContent = 'Could not reach GitHub.'; return; }
+    if(r.status === 409){ m.className = 'msg err'; m.textContent = 'GitHub reports a conflict; your fork has diverged. Resolve it on GitHub once, then sync again.'; return; }
+    if(!r.ok){ const b = await r.json().catch(()=> ({})); m.className = 'msg err'; m.textContent = 'GitHub said no (' + r.status + (b.message ? ': ' + b.message : '') + '). Check the repo name, the branch, and the token scope.'; return; }
+    const body = await r.json().catch(()=> ({}));
+    if(body && /already up to date|not behind/i.test(body.message || '')){ m.className = 'msg ok'; m.textContent = 'Already up to date.'; return; }
+    m.className = 'msg'; m.textContent = 'Synced. Waiting for the new deploy…';
+    // poll version.json until the served build moves past this page's build
+    const t0 = Date.now();
+    const poll = async ()=>{
+      if(Date.now() - t0 > 5 * 60 * 1000){ m.className = 'msg err'; m.textContent = 'Deploy is taking a while. Give it a minute and reload this page.'; return; }
+      try {
+        const vr = await fetch('version.json?ts=' + Date.now(), { cache: 'no-store' });
+        if(vr.ok){ const v = await vr.json(); if(v.build > BUILD){ m.className = 'msg ok'; m.textContent = 'New build deployed. Reloading…'; setTimeout(()=> location.reload(), 1200); return; } }
+      } catch(e){}
+      setTimeout(poll, 8000);
+    };
+    poll();
+  };
+
+  $('migBtn').onclick = ()=>{
+    if(!pending.length) return;
+    askInline($('migConfirm'), 'Apply ' + pending.length + ' pending update' + (pending.length === 1 ? '' : 's') + ' to your database now? They run one at a time, in order. A failed one is rolled back and the rest wait.', 'Apply now', runMigrations);
+  };
+  const runMigrations = async ()=>{
+    const m = $('platMsg');
+    for(const mig of pending.sort((a, b)=> a.version - b.version)){
+      m.className = 'msg'; m.textContent = 'Applying migration ' + mig.version + '…';
+      let stmts;
+      try {
+        const r = await fetch('migrations/' + mig.file + '?ts=' + Date.now(), { cache: 'no-store' });
+        if(!r.ok) throw new Error('fetch');
+        const j = await r.json();
+        if(j.version !== mig.version || !Array.isArray(j.statements)) throw new Error('shape');
+        stmts = j.statements;
+      } catch(e){ m.className = 'msg err'; m.textContent = 'Could not load migration ' + mig.version + '. Nothing was changed by it.'; return; }
+      const { data, error } = await rpc('admin_run_migration', { p_version: mig.version, p_statements: stmts });
+      if(error || !data || data.ok !== true){
+        m.className = 'msg err';
+        m.textContent = 'Migration ' + mig.version + ' failed (' + esc((data && data.error) || (error && error.message) || 'unknown') + '). It was rolled back; later ones were not attempted.';
+        return;
+      }
+    }
+    m.className = 'msg ok'; m.textContent = 'All migrations applied.';
+    setTimeout(()=> platformView(), 1200);
+  };
+}
+
+/* ================================================================
+   SETTINGS (release 4). The operator's brand lives in two places on
+   purpose: the DATABASE (operator_settings.brand, what this form
+   edits) and public/brand.js IN THE FORK, a generated static file this
+   page commits through the GitHub API on Save. Every page loads
+   brand.js before its first paint, so branding is never fetched at
+   runtime and no visitor ever sees a wrong-brand flash. config.js only
+   has to carry the Supabase keys. Images (icon, full logo) are
+   committed into the fork as files under public/brand/ and referenced
+   by path with a cache-busting stamp.
+   ================================================================ */
+const BRAND_KEYS = ['brandName','contactEmail','accent','regionName','regionShort','operatorStory','operatorName','operatorPhone','stripePlans','workerUrl','logoSvg','iconUrl','logoUrl','demoVenue'];
+
+// DB copy wins, then the deployed brand.js, then a legacy config.js:
+// a fresh instance sees its config.js values prefilled on first run
+function brandNow(settings){
+  let saved = null;
+  try { saved = settings && settings.brand ? JSON.parse(settings.brand) : null; } catch(e){}
+  const merged = Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {}, saved || {});
+  const b = {};
+  BRAND_KEYS.forEach(k => { if(merged[k] !== undefined && merged[k] !== null) b[k] = merged[k]; });
+  return b;
+}
+const b64utf8 = s => btoa(unescape(encodeURIComponent(s)));
+const fileToB64 = f => new Promise((res, rej) => { const r = new FileReader(); r.onload = ()=> res(String(r.result).split(',')[1]); r.onerror = rej; r.readAsDataURL(f); });
+/* The sharing card (og:image) for the homepage: the same objects as the
+   page, drawn on a canvas so it always wears the current brand. Returns
+   base64 PNG, or null when the fonts or canvas are unavailable. */
+async function ogCardB64(b, pendingFiles){
+  const W = 1200, H = 630;
+  const cnv = document.createElement('canvas'); cnv.width = W; cnv.height = H;
+  const ctx = cnv.getContext('2d'); if(!ctx) return null;
+  // the homepage's display face, loaded on demand for this one drawing
+  if(!document.getElementById('ogFonts')){
+    const l = document.createElement('link'); l.id = 'ogFonts'; l.rel = 'stylesheet';
+    l.href = 'https://fonts.googleapis.com/css2?family=Unbounded:wght@700&family=Bricolage+Grotesque:opsz,wght@12..96,700&family=Hanken+Grotesk:wght@500&display=swap';
+    document.head.appendChild(l);
+  }
+  try { await Promise.all([document.fonts.load("700 52px 'Unbounded'"), document.fonts.load("500 24px 'Hanken Grotesk'"), document.fonts.load("700 22px 'Unbounded'"), document.fonts.load("700 14px 'Bricolage Grotesque'")]); } catch(e){}
+  const accent = /^#[0-9a-f]{6}$/i.test(b.accent) ? b.accent : '#3a6ea5';
+  const lin = h => { const v = parseInt(h, 16) / 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); };
+  const mm = /^#(..)(..)(..)$/.exec(accent);
+  const L = .2126 * lin(mm[1]) + .7152 * lin(mm[2]) + .0722 * lin(mm[3]);
+  const onAccent = (1.05 / (L + .05)) >= 4.5 ? '#ffffff' : '#16110a';
+  ctx.fillStyle = accent; ctx.fillRect(0, 0, W, H);
+
+  // wordmark: the icon (pending upload, or the deployed file) in a white tile, then the name
+  const iconSrc = pendingFiles && pendingFiles.icon ? URL.createObjectURL(pendingFiles.icon) : (b.iconUrl || '');
+  let icon = null;
+  if(iconSrc){ try { icon = await new Promise((ok, no)=>{ const i = new Image(); i.onload = ()=> ok(i); i.onerror = no; i.src = iconSrc; }); } catch(e){ icon = null; } }
+  const rr = (x, y, w, h, r)=>{ ctx.beginPath(); ctx.moveTo(x + r, y); ctx.arcTo(x + w, y, x + w, y + h, r); ctx.arcTo(x + w, y + h, x, y + h, r); ctx.arcTo(x, y + h, x, y, r); ctx.arcTo(x, y, x + w, y, r); ctx.closePath(); };
+  ctx.fillStyle = '#fff'; rr(72, 72, 40, 40, 11); ctx.fill();
+  if(icon){ try { ctx.drawImage(icon, 75, 75, 34, 34); } catch(e){} }
+  else { ctx.fillStyle = accent; ctx.font = "800 20px 'Unbounded', sans-serif"; ctx.textBaseline = 'middle'; ctx.textAlign = 'center'; ctx.fillText((b.brandName || 'S')[0].toUpperCase(), 92, 93); }
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  ctx.fillStyle = onAccent; ctx.font = "700 22px 'Unbounded', sans-serif";
+  ctx.fillText((b.brandName || '').toUpperCase(), 126, 100);
+
+  // headline and the one line under it
+  const wrap = (text, x, y, maxW, lh, font)=>{ ctx.font = font; const words = text.split(' '); let line = '', yy = y; for(const w of words){ const test = line ? line + ' ' + w : w; if(ctx.measureText(test).width > maxW && line){ ctx.fillText(line, x, yy); line = w; yy += lh; } else line = test; } if(line){ ctx.fillText(line, x, yy); yy += lh; } return yy; };
+  let y = wrap('A better experience at the table.', 72, 214, 620, 60, "700 52px 'Unbounded', sans-serif");
+  ctx.globalAlpha = .94;
+  wrap('Games while they wait, an anonymous suggestion box, and your own message of the week.', 72, y + 24, 400, 34, "500 24px 'Hanken Grotesk', sans-serif");
+  ctx.globalAlpha = 1;
+
+  // the phone: the demo venue's REAL home screen in this accent, its logo in
+  // the header and its cards under the two pinned rows (the app's rules)
+  const demo = venueById(b.demoVenue || 'demo') || {};
+  const vname = demo.name || 'Your restaurant';
+  let vlogo = null;
+  if(demo.logo && /^(https?:|images\/|data:image\/)/i.test(demo.logo)){
+    try { vlogo = await new Promise((ok, no)=>{ const i = new Image(); if(/^https?:/i.test(demo.logo)) i.crossOrigin = 'anonymous'; i.onload = ()=> ok(i); i.onerror = no; i.src = demo.logo; }); } catch(e){ vlogo = null; }
+  }
+  const deep = (()=>{ const m2 = /^#(..)(..)(..)$/.exec(accent); const c = k => Math.round(parseInt(m2[k], 16) * .72).toString(16).padStart(2, '0'); return '#' + c(1) + c(2) + c(3); })();
+  ctx.save(); ctx.translate(1010, 380); ctx.rotate(-3 * Math.PI / 180); ctx.translate(-150, -310);
+  ctx.shadowColor = 'rgba(22,17,10,.35)'; ctx.shadowBlur = 60; ctx.shadowOffsetY = 26;
+  ctx.fillStyle = '#1b1813'; rr(0, 0, 300, 640, 44); ctx.fill();
+  ctx.shadowColor = 'transparent';
+  ctx.fillStyle = '#f5f6f8'; rr(13, 13, 274, 614, 33); ctx.fill();
+  ctx.save(); rr(13, 13, 274, 614, 33); ctx.clip();
+  ctx.fillStyle = '#fff'; ctx.fillRect(13, 13, 274, 62); ctx.fillStyle = accent; ctx.fillRect(13, 73, 274, 3);
+  ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
+  if(vlogo){
+    const s = Math.min(200 / vlogo.width, 40 / vlogo.height), lw = vlogo.width * s, lh = vlogo.height * s;
+    try { ctx.drawImage(vlogo, 150 - lw / 2, 44 - lh / 2, lw, lh); } catch(e){ vlogo = null; }
+  }
+  if(!vlogo){
+    ctx.fillStyle = '#16110a'; ctx.font = "700 14px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = 'center';
+    let vn = vname.toUpperCase(); while(ctx.measureText(vn).width > 240 && vn.length > 4) vn = vn.slice(0, -2) + '…';
+    ctx.fillText(vn, 150, 50); ctx.textAlign = 'left';
+  }
+  const clip = (s, maxW, font)=>{ ctx.font = font; let x = String(s || ''); while(ctx.measureText(x).width > maxW && x.length > 3) x = x.slice(0, -2) + '…'; return x; };
+  let py = 94;
+  const row = (title, sub)=>{
+    if(py > 600) return;
+    const h = sub ? 70 : 56;
+    ctx.fillStyle = '#fff'; rr(27, py, 246, h, 16); ctx.fill();
+    ctx.fillStyle = accent; rr(39, py + (sub ? 17 : 10), 36, 36, 10); ctx.fill();
+    ctx.fillStyle = '#16110a'; ctx.fillText(clip(title, 170, "700 14px 'Bricolage Grotesque', sans-serif"), 86, py + (sub ? 30 : 34));
+    if(sub){ ctx.fillStyle = '#6d6759'; ctx.fillText(clip(sub, 170, "500 11px 'Hanken Grotesk', sans-serif"), 86, py + 50); }
+    py += h + 12;
+  };
+  const banner = (title, body, hot)=>{
+    if(py > 600) return;
+    ctx.fillStyle = hot ? accent : '#fff'; rr(27, py, 246, 78, 16); ctx.fill();
+    ctx.fillStyle = hot ? onAccent : deep; ctx.fillText(clip(String(title || '').toUpperCase(), 214, "700 11px 'Bricolage Grotesque', sans-serif"), 43, py + 28);
+    ctx.fillStyle = hot ? onAccent : '#16110a'; ctx.fillText(clip(body, 214, "500 12px 'Hanken Grotesk', sans-serif"), 43, py + 50);
+    py += 90;
+  };
+  const d0 = new Date();
+  const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][d0.getDay()];
+  const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d0.getDay()];
+  const todayYmd = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
+  if(demo.games_enabled !== false) row('Play a game', 'Pass the time, solo or with the whole table.');
+  row('Share feedback', 'Anonymous, and seen only by ' + vname + '.');
+  (Array.isArray(demo.cards) ? demo.cards : []).forEach(c => {
+    if(!c || c.off) return;
+    if(c.t === 'notice' && c.until && c.until < todayYmd) return;
+    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ banner(c.title, c.body, !!c.hot); return; }
+    if(c.t === 'schedule'){ const today = (c.days || {})[dayKey]; if(!today && !c.always) return; row(c.title, today ? dayName + ': ' + today : (c.desc || 'Tap to view the calendar')); return; }
+    row(c.title, c.desc || '');
+  });
+  ctx.restore(); ctx.restore();
+  try { return cnv.toDataURL('image/png').split(',')[1]; } catch(e){ return null; }
+}
+function brandFileText(b){
+  return '/* Generated by the operator dashboard (Settings) on ' + new Date().toISOString() + '.\n   Do not edit by hand: the dashboard overwrites this file on every Save. */\nwindow.OPERATOR_BRAND = ' + JSON.stringify(b, null, 2) + ';\n';
+}
+// GitHub Contents API: a PUT needs the file's current sha when it exists
+async function ghPutFile(repo, tok, path, base64, message){
+  const H = { 'Authorization': 'Bearer ' + tok, 'Accept': 'application/vnd.github+json' };
+  const url = 'https://api.github.com/repos/' + repo + '/contents/' + path;
+  let sha = null;
+  const g = await fetch(url + '?ref=release&ts=' + Date.now(), { headers: H, cache: 'no-store' });
+  if(g.ok){ const j = await g.json().catch(()=> null); if(j && j.sha) sha = j.sha; }
+  const body = { message, content: base64, branch: 'release' };
+  if(sha) body.sha = sha;
+  const p = await fetch(url, { method: 'PUT', headers: Object.assign({ 'Content-Type': 'application/json' }, H), body: JSON.stringify(body) });
+  if(!p.ok){ const b = await p.json().catch(()=> ({})); throw new Error('GitHub said no (' + p.status + (b.message ? ': ' + b.message : '') + ')'); }
+}
+
+const TZ_OPTIONS = [
+  ['America/New_York', 'Eastern'], ['America/Chicago', 'Central'], ['America/Denver', 'Mountain'],
+  ['America/Phoenix', 'Arizona (no daylight saving)'], ['America/Los_Angeles', 'Pacific'],
+  ['America/Anchorage', 'Alaska'], ['Pacific/Honolulu', 'Hawaii'], ['America/Puerto_Rico', 'Puerto Rico'],
+];
+async function settingsView(opts){
+  opts = opts || {};
+  setView('settings');
+  $('main').innerHTML = '<div class="hint">Loading…</div>';
+  let settings = {};
+  try { const { data } = await rpc('admin_get_settings'); settings = data || {}; } catch(e){}
+  const b = brandNow(settings);
+  const plans = (Array.isArray(b.stripePlans) ? b.stripePlans : []).slice(0, 4).map(p => ({ label: p.label || p.name || '', url: p.url || '' }));
+  while(plans.length < 4) plans.push({ label: '', url: '' });
+  const connected = !!(settings.gh_repo && settings.gh_token_set);
+  const acc = /^#[0-9a-f]{6}$/i.test(b.accent || '') ? b.accent : '#3a6ea5';
+  const imgPreview = (u, alt) => u ? `<img src="${esc(u)}" alt="${esc(alt)}" style="height:44px;width:auto;max-width:200px;display:block;object-fit:contain;background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:4px" />` : `<span class="hint" style="margin:0">None yet</span>`;
+
+  $('main').innerHTML = `
+    <button class="back" id="back">${ICO_BACK}Back</button>
+    <h1>${opts.firstRun ? 'Welcome. Let\'s set up your brand.' : 'Settings'}</h1>
+    ${opts.firstRun ? '<div class="hint">These fill in from your config file if you had one. Everything here can be changed any time; nothing is one-time. Save publishes it to your site.</div>' : ''}
+    ${connected ? '' : '<div class="msg err" style="display:block">GitHub is not connected yet. Saving keeps your settings in your database, but publishing them to your site needs the connection under Tools › Platform updates. Set that up, then come back and Save again.</div>'}
+    <section>
+      <h2>Your brand</h2>
+      <label class="f">Brand name</label>
+      <input type="text" id="sbName" maxlength="40" value="${esc(b.brandName || '')}" placeholder="Ex. Table Time" />
+      <label class="f">Your site address</label>
+      <div class="hint" style="margin-top:2px">${esc(location.origin)} (detected from where this dashboard is running; it is what every QR code and owner link points to).</div>
+      <label class="f">Contact email</label>
+      <input type="email" id="sbEmail" maxlength="120" value="${esc(b.contactEmail || '')}" placeholder="hello@yourdomain.com" autocapitalize="off" spellcheck="false" />
+      <label class="f">Brand color</label>
+      <div class="frow" style="align-items:center">
+        <input type="color" id="sbAccent" value="${esc(acc)}" style="width:52px;height:38px;padding:2px;flex:none" />
+        <input type="text" id="sbAccentHex" maxlength="7" value="${esc(acc)}" style="width:110px;flex:none" autocapitalize="off" spellcheck="false" />
+        <span class="hint" style="margin:0">Homepage accents and the generated mark when there is no icon. Each venue keeps its own accent.</span>
+      </div>
+    </section>
+    <section>
+      <h2>Logo and icon</h2>
+      <div class="hint">The icon is a square mark: browser tab, phone home screen, the small mark beside your name. The full logo is optional and replaces the mark-plus-name pair on the homepage and dashboards. PNG or SVG, under 400 KB each. Advanced: paste inline SVG code instead of uploading an icon.</div>
+      <label class="f">Icon (square)</label>
+      <div class="frow" style="align-items:center">
+        <span id="sbIconPrev">${imgPreview(b.iconUrl, 'icon')}</span>
+        <input type="file" id="sbIconFile" accept="image/png,image/svg+xml,image/jpeg" style="flex:1;min-width:200px" />
+        <button type="button" class="btn sm ghost" id="sbIconClear" ${b.iconUrl ? '' : 'disabled'}>Remove</button>
+      </div>
+      <label class="f">Full logo (optional)</label>
+      <div class="frow" style="align-items:center">
+        <span id="sbLogoPrev">${imgPreview(b.logoUrl, 'logo')}</span>
+        <input type="file" id="sbLogoFile" accept="image/png,image/svg+xml,image/jpeg" style="flex:1;min-width:200px" />
+        <button type="button" class="btn sm ghost" id="sbLogoClear" ${b.logoUrl ? '' : 'disabled'}>Remove</button>
+      </div>
+      <label class="f">Inline SVG icon code (advanced, optional)</label>
+      <textarea id="sbSvg" rows="3" placeholder='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">…</svg>' spellcheck="false">${esc(b.logoSvg || '')}</textarea>
+    </section>
+    <section>
+      <h2>Demo venue</h2>
+      <div class="hint">The venue behind the homepage's Try the demo button, its three phone screens, and the sharing card. Corner & Oak Bar & Grill is a made-up restaurant that platform updates keep current as features ship, so most operators leave it. Pick one of your own venues to show that instead.</div>
+      <select id="sbDemo">${((VENUES && VENUES.length) ? VENUES : [{ id: 'demo', name: 'Corner & Oak Bar & Grill' }]).map(x => `<option value="${esc(x.id)}" ${(b.demoVenue || 'demo') === x.id ? 'selected' : ''}>${esc(x.name)}${x.id === 'demo' ? ' (platform demo)' : ''}</option>`).join('')}</select>
+    </section>
+    <section>
+      <h2>Your area</h2>
+      <label class="f">Region name</label>
+      <input type="text" id="sbRegion" maxlength="60" value="${esc(b.regionName || '')}" placeholder="Ex. Ocean County" />
+      <div class="hint">As it reads in a sentence on the homepage: "restaurants across Ocean County".</div>
+      <label class="f">How copy refers to the area</label>
+      <input type="text" id="sbRegionShort" maxlength="40" value="${esc(b.regionShort || '')}" placeholder="the county" />
+      <div class="hint">"the county pulse", "the area", "the neighborhood": whatever reads right where you are.</div>
+      <label class="f">Your story (optional)</label>
+      <textarea id="sbStory" rows="3" maxlength="400" placeholder="One or two first-person sentences for the homepage's local section.">${esc(b.operatorStory || '')}</textarea>
+      <label class="f">Time zone</label>
+      <select id="sbTz">${TZ_OPTIONS.map(([z, l]) => `<option value="${z}" ${(settings.tz || 'America/New_York') === z ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <div class="hint">Decides which calendar day a piece of feedback lands on in reports.</div>
+    </section>
+    <section>
+      <h2>You</h2>
+      <div class="hint">Used in the email templates this dashboard writes for you.</div>
+      <label class="f">Your name</label>
+      <input type="text" id="sbOpName" maxlength="60" value="${esc(b.operatorName || '')}" />
+      <label class="f">Your phone (optional)</label>
+      <input type="text" id="sbOpPhone" maxlength="40" value="${esc(b.operatorPhone || '')}" />
+    </section>
+    <section>
+      <h2>Plans</h2>
+      <div class="hint">Stripe payment links (created in your Stripe dashboard). Empty rows simply do not appear in the plan dropdown.</div>
+      ${plans.map((p, i) => `
+      <div class="frow" style="margin-top:6px">
+        <input type="text" id="sbPlanL${i}" maxlength="40" value="${esc(p.label)}" placeholder="Standard monthly" style="flex:1;min-width:140px" />
+        <input type="url" id="sbPlanU${i}" maxlength="300" value="${esc(p.url)}" placeholder="https://buy.stripe.com/…" style="flex:2;min-width:200px" autocapitalize="off" spellcheck="false" />
+      </div>`).join('')}
+    </section>
+    <section>
+      <h2>Advanced</h2>
+      <label class="f">Website autofill Worker URL (optional)</label>
+      <input type="url" id="sbWorker" maxlength="300" value="${esc(b.workerUrl || '')}" placeholder="https://….workers.dev/" autocapitalize="off" spellcheck="false" />
+      <div class="hint">Optional. Blank hides the autofill button on the Add venue form.</div>
+    </section>
+    <div class="frow"><button class="btn" id="setSave">Save and publish</button></div>
+    <div class="msg" id="setMsg"></div>`;
+
+  $('back').onclick = ()=> home();
+  const textIds = ['sbName','sbEmail','sbAccentHex','sbRegion','sbRegionShort','sbStory','sbOpName','sbOpPhone','sbWorker','sbSvg','sbDemo','sbTz'].concat([0,1,2,3].flatMap(i => ['sbPlanL' + i, 'sbPlanU' + i]));
+  draftify('settings', textIds);
+  $('sbAccent').oninput = ()=>{ $('sbAccentHex').value = $('sbAccent').value; };
+  $('sbAccentHex').addEventListener('input', ()=>{ const v = $('sbAccentHex').value.trim(); if(/^#[0-9a-f]{6}$/i.test(v)) $('sbAccent').value = v; });
+
+  // pending image changes: a File to upload, or '' to clear; null = untouched
+  const pending = { icon: null, logo: null };
+  const pickImage = (key, fileId, prevId, clearId) => {
+    $(fileId).onchange = ()=>{
+      const f = $(fileId).files[0]; if(!f) return;
+      if(!/^image\/(png|svg\+xml|jpeg)$/.test(f.type)){ $('setMsg').className = 'msg err'; $('setMsg').textContent = 'PNG, SVG, or JPEG only.'; $(fileId).value = ''; return; }
+      if(f.size > 400 * 1024){ $('setMsg').className = 'msg err'; $('setMsg').textContent = 'That image is over 400 KB. Export a smaller one.'; $(fileId).value = ''; return; }
+      pending[key] = f;
+      $(prevId).innerHTML = imgPreview(URL.createObjectURL(f), key);
+      $(clearId).disabled = false;
+      $('setMsg').textContent = '';
+    };
+    $(clearId).onclick = ()=>{ pending[key] = ''; $(fileId).value = ''; $(prevId).innerHTML = imgPreview('', key); $(clearId).disabled = true; };
+  };
+  pickImage('icon', 'sbIconFile', 'sbIconPrev', 'sbIconClear');
+  pickImage('logo', 'sbLogoFile', 'sbLogoPrev', 'sbLogoClear');
+
+  $('setSave').onclick = async ()=>{
+    const m = $('setMsg');
+    const v = id => $(id).value.trim();
+    const out = {
+      brandName: v('sbName'), contactEmail: v('sbEmail'),
+      accent: v('sbAccentHex').toLowerCase(), regionName: v('sbRegion'), regionShort: v('sbRegionShort'),
+      operatorStory: v('sbStory'), operatorName: v('sbOpName'), operatorPhone: v('sbOpPhone'),
+      workerUrl: v('sbWorker'), logoSvg: v('sbSvg'),
+      demoVenue: v('sbDemo') || 'demo',
+      stripePlans: [],
+      iconUrl: b.iconUrl || '', logoUrl: b.logoUrl || ''
+    };
+    for(let i = 0; i < 4; i++){ const l = v('sbPlanL' + i), u = v('sbPlanU' + i); if(l && u) out.stripePlans.push({ label: l, url: u }); }
+    // validation, in the order an operator would read the form
+    const bad = t => { m.className = 'msg err'; m.textContent = t; };
+    if(!out.brandName) return bad('Brand name is required.');
+    if(out.contactEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(out.contactEmail)) return bad('That contact email does not look right.');
+    if(!/^#[0-9a-f]{6}$/i.test(out.accent)) return bad('Brand color must be a 6-digit hex like #3a6ea5.');
+    if(out.workerUrl && !/^https:\/\//i.test(out.workerUrl)) return bad('The Worker URL must start with https://');
+    if(out.stripePlans.some(p => !/^https:\/\//i.test(p.url))) return bad('Plan links must start with https://');
+    if(out.logoSvg && !/^<svg[\s>]/i.test(out.logoSvg)) return bad('The inline SVG must start with <svg.');
+
+    if(JSON.stringify(out).length > 4000) return bad('These settings are too long to save. The inline SVG is the usual reason: upload the icon as an image instead.');
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const repo = (settings.gh_repo || '').trim();
+    const tok = (repo && settings.gh_token_set) ? await ghSecret() : '';
+    const stamp = Date.now();
+    try {
+      // images first (they need a path before brand.js can point at them)
+      if(repo && tok){
+        for(const key of ['icon', 'logo']){
+          const f = pending[key];
+          if(f === '') out[key + 'Url'] = '';
+          else if(f){
+            const ext = f.type === 'image/png' ? 'png' : f.type === 'image/jpeg' ? 'jpg' : 'svg';
+            m.textContent = 'Uploading the ' + key + '…';
+            await ghPutFile(repo, tok, 'public/brand/' + key + '.' + ext, await fileToB64(f), 'Brand ' + key);
+            out[key + 'Url'] = 'brand/' + key + '.' + ext + '?v=' + stamp;
+          }
+        }
+      }
+      const { data, error } = await rpc('admin_set_setting', { p_key: 'brand', p_value: JSON.stringify(out) });
+      if(error || !data || data.ok !== true) throw new Error(data && data.error === 'too_long' ? 'These settings are too long to save. Upload the icon as an image instead of inline SVG.' : 'Could not save to your database.');
+      if(TZ_OPTIONS.some(([z]) => z === v('sbTz'))){
+        const tz = await rpc('admin_set_setting', { p_key: 'tz', p_value: v('sbTz') });
+        if(tz.error || !tz.data || tz.data.ok !== true) throw new Error('Could not save the time zone.');
+      }
+      draftClear('settings');
+      if(!repo || !tok){
+        m.className = 'msg ok'; m.textContent = 'Saved to your database. Connect GitHub under Platform updates, then Save again to publish it to your site.';
+        return;
+      }
+      m.textContent = 'Drawing your sharing card…';
+      try {
+        const og = await ogCardB64(out, pending);
+        if(og) await ghPutFile(repo, tok, 'public/images/og.png', og, 'Sharing card');
+      } catch(e){ console.warn('sharing card skipped', e); }
+      m.textContent = 'Publishing to your site…';
+      out.stamp = stamp;
+      await ghPutFile(repo, tok, 'public/brand.js', b64utf8(brandFileText(out)), 'Brand settings');
+      m.textContent = 'Published. Your site is redeploying (usually under two minutes)…';
+      // poll the served brand.js for this save's stamp, then reload so this
+      // page wears the new brand too
+      const t0 = Date.now();
+      const poll = async ()=>{
+        if(Date.now() - t0 > 5 * 60 * 1000){ m.className = 'msg ok'; m.textContent = 'Published. The deploy is taking a while; it will land on its own. Reload later to see it here.'; return; }
+        try {
+          const r = await fetch('brand.js?ts=' + Date.now(), { cache: 'no-store' });
+          if(r.ok){ const txt = await r.text(); if(txt.includes('"stamp": ' + stamp)){ m.className = 'msg ok'; m.textContent = 'Live on your site. Reloading…'; setTimeout(()=> { location.hash = ''; location.reload(); }, 1200); return; } }
+        } catch(e){}
+        setTimeout(poll, 8000);
+      };
+      poll();
+    } catch(e){
+      m.className = 'msg err'; m.textContent = (e && e.message) || 'Something went wrong. Nothing else was changed.';
+    }
+  };
+}
+
+/* ================================================================
+   CONFIG. Stripe payment links are created in the Stripe dashboard
+   (charged on signup, 30 day money back guarantee, promotion codes on); paste them
+   here. Empty entries simply do not appear in the plan dropdown.
+   ================================================================ */
+/* brand.js is generated by the dashboard Settings and committed into the
+   fork; its keys override config.js one by one, so config.js only has to
+   carry the Supabase keys (a full legacy config keeps working as fallback). */
+const CFG = (window.OPERATOR_CONFIG || window.OPERATOR_BRAND) ? Object.assign({}, window.OPERATOR_CONFIG || {}, window.OPERATOR_BRAND || {}) : null;
+if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
+  document.body.innerHTML = '<div style="max-width:540px;margin:80px auto;font-family:system-ui,sans-serif;line-height:1.5;padding:0 20px"><h2>Almost there</h2><p>This page needs its operator config. In your fork, copy <code>public/config.example.js</code> to <code>public/config.js</code> and fill in your values. SETUP.md walks through it.</p></div>';
+  throw new Error('missing config.js');
+}
+const SUPABASE_URL = CFG.supabaseUrl;
+const SUPABASE_KEY = CFG.supabaseKey;
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+// The site address is wherever these pages are served from, never typed:
+// QR payloads, owner links, and signatures all derive from it.
+const DOMAIN       = location.origin;
+const ON_PREVIEW   = /\.pages\.dev$/i.test(location.hostname);
+const LOGO_BUCKET  = "restaurant logos";
+// The autofill worker (worker/autofill-worker.js, deployed once in the
+// Cloudflare dashboard). Blank hides the whole autofill UI; the form works
+// fully manual without it.
+let WORKER_URL     = CFG.workerUrl || "";
+const STRIPE_PLANS = (CFG.stripePlans || []).map(p => ({ name: p.label || p.name || "Plan", url: p.url || "" }));
+
+const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+/* Long-open tabs: the auth token expires while the refresh timer is
+   suspended, so the FIRST call after returning fails. Two defenses:
+   refresh proactively when the tab regains focus, and give every RPC
+   one transparent retry after a forced refresh. */
+addEventListener('focus', ()=>{ try{ db.auth.getSession(); }catch(e){} });
+/* Draft persistence for form fields: browsers (iOS especially) evict
+   backgrounded tabs, and the reload wipes unsaved form state. Any view
+   calls draftify(key, [ids]) after painting: values restore on repaint
+   (only into empty fields, so DB prefills win) and clear via
+   draftClear(key) on a successful save. RELEASE RULE: every new admin
+   view with a form gets this. */
+function draftify(key, ids){
+  const K = 'st_draft_' + key;
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(K) || '{}'); } catch(e){}
+  ids.forEach(id => {
+    const el = $(id); if(!el) return;
+    if(saved[id] !== undefined && !el.value) el.value = saved[id];
+    el.addEventListener('input', ()=>{
+      try {
+        const cur = JSON.parse(localStorage.getItem(K) || '{}');
+        cur[id] = el.value;
+        localStorage.setItem(K, JSON.stringify(cur));
+      } catch(e){}
+    });
+  });
+}
+function draftClear(key){ try { localStorage.removeItem('st_draft_' + key); } catch(e){} }
+const rpcRaw = (fn, args) => db.rpc(fn, args);
+async function rpc(fn, args){
+  let r = await rpcRaw(fn, args);
+  if(r && r.error && /jwt|expired|token|401/i.test(String(r.error.message||'') + ' ' + String(r.error.code||''))){
+    try{ await db.auth.refreshSession(); }catch(e){}
+    r = await rpcRaw(fn, args);
+  }
+  return r;
+}
+/* operator signature for the prefilled email templates */
+const SIG = (CFG.operatorName || 'The team') + '\n' + CFG.brandName + ' · ' + location.host + (CFG.operatorPhone ? ' · ' + CFG.operatorPhone : '');
+/* platform branding from config: tab title, wordmark, favicon */
+addEventListener('DOMContentLoaded', ()=>{
+  document.title = CFG.brandName + ' · Operator';
+  const mk = document.querySelector('.wm-mark'), nm = document.querySelector('.wm-name');
+  const initial = (CFG.brandName || '?').trim().charAt(0).toUpperCase();
+  const logoSvg = (typeof CFG.logoSvg === 'string' && CFG.logoSvg.trim().startsWith('<svg')) ? CFG.logoSvg : '';
+  const iconUrl = (typeof CFG.iconUrl === 'string' && CFG.iconUrl) ? CFG.iconUrl : '';
+  const logoUrl = (typeof CFG.logoUrl === 'string' && CFG.logoUrl) ? CFG.logoUrl : '';
+  const wm = mk && mk.closest('.wordmark');
+  // a full logo image replaces the mark+name pair; an icon image stands in
+  // for the mark; inline SVG and the generated initial remain the fallbacks
+  if(logoUrl && wm){ wm.innerHTML = '<img class="wm-img" src="' + logoUrl.replace(/"/g, '&quot;') + '" alt="' + String(CFG.brandName || '').replace(/"/g, '&quot;') + '">'; }
+  else {
+    if(mk){ if(logoSvg){ mk.innerHTML = logoSvg; mk.style.background = 'transparent'; } else if(iconUrl){ mk.innerHTML = '<img src="' + iconUrl.replace(/"/g, '&quot;') + '" alt="">'; mk.style.background = 'transparent'; } else { mk.textContent = initial; if(/^#[0-9a-f]{6}$/i.test(CFG.accent || '')) mk.style.background = CFG.accent; } }
+    if(nm) nm.textContent = CFG.brandName;
+  }
+  const fav = document.querySelector('link[rel="icon"]');
+  const acc = /^#[0-9a-f]{6}$/i.test(CFG.accent || '') ? CFG.accent : '#3a6ea5';
+  if(fav) fav.href = iconUrl || 'data:image/svg+xml,' + encodeURIComponent(logoSvg || '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="6" width="52" height="52" rx="12" fill="' + acc + '"/><text x="32" y="44" font-family="sans-serif" font-size="34" font-weight="800" fill="#fff" text-anchor="middle">' + initial + '</text></svg>');
+});
+let VENUES = [];      // admin_list_venues cache
+let WATCH  = [];      // admin_demo_watch cache
+
+/* Add-venue DRAFT persistence. iOS Safari evicts background tabs, so the
+   normal flow (hop to the Place ID finder tab, come back) reloaded the page
+   and wiped the form. Every keystroke saves a draft (the processed logo too,
+   as a data URL); a reload within 6 hours resumes the form instead of
+   landing on home. Cleared on successful save or an explicit Back. */
+const DRAFT_KEY = 'st_admin_add_draft';
+function saveDraftObj(d){ try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ ...d, at: Date.now() })); } catch(e){} }
+function loadDraft(){
+  try {
+    const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    if(!d) return null;
+    if(Date.now() - d.at > 6*3600*1000){ localStorage.removeItem(DRAFT_KEY); return null; }
+    return d;
+  } catch(e){ return null; }
+}
+function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} }
+
+/* ============================================================
+   Self-contained QR encoder (ISO/IEC 18004), byte mode, ECC
+   level Q, versions 1..10. Ported VERBATIM from the verified
+   encoder in tools/qr-maker.html (output machine-decode
+   checked there); only the export differs, exposing the raw
+   module matrix for canvas drawing. Do not edit the algorithm.
+   ============================================================ */
+const QR = (() => {
+  const EXP = new Array(256), LOG = new Array(256);
+  for (let i = 0, x = 1; i < 256; i++) { EXP[i] = x; LOG[x] = i; x <<= 1; if (x & 0x100) x ^= 0x11D; }
+  LOG[1] = 0;
+  const gmul = (a, b) => (a === 0 || b === 0) ? 0 : EXP[(LOG[a] + LOG[b]) % 255];
+  const BLOCKS = {
+    1:[13,[[1,13]]], 2:[22,[[1,22]]], 3:[18,[[2,17]]], 4:[26,[[2,24]]],
+    5:[18,[[2,15],[2,16]]], 6:[24,[[4,19]]], 7:[18,[[2,14],[4,15]]],
+    8:[22,[[4,18],[2,19]]], 9:[20,[[4,16],[4,17]]], 10:[24,[[6,19],[2,20]]],
+  };
+  const ALIGN = {2:[6,18],3:[6,22],4:[6,26],5:[6,30],6:[6,34],7:[6,22,38],8:[6,24,42],9:[6,26,46],10:[6,28,50]};
+  function dataCapacity(v){ const [,bl] = BLOCKS[v]; return bl.reduce((s,[n,d]) => s + n*d, 0); }
+  function pickVersion(len){
+    for (let v = 1; v <= 10; v++){
+      const countBits = v <= 9 ? 8 : 16;
+      const bits = 4 + countBits + 8*len;
+      if (bits <= dataCapacity(v)*8) return v;
+    }
+    throw new Error("URL too long for this generator (version 10 max)");
+  }
+  function makeCodewords(bytes, v){
+    const capacity = dataCapacity(v);
+    const countBits = v <= 9 ? 8 : 16;
+    const bits = [];
+    const push = (val, n) => { for (let i = n-1; i >= 0; i--) bits.push((val >> i) & 1); };
+    push(0b0100, 4);
+    push(bytes.length, countBits);
+    bytes.forEach(b => push(b, 8));
+    for (let i = 0; i < 4 && bits.length < capacity*8; i++) bits.push(0);
+    while (bits.length % 8) bits.push(0);
+    const cw = [];
+    for (let i = 0; i < bits.length; i += 8){
+      let b = 0; for (let j = 0; j < 8; j++) b = (b<<1) | bits[i+j];
+      cw.push(b);
+    }
+    const pads = [0xEC, 0x11];
+    for (let i = 0; cw.length < capacity; i++) cw.push(pads[i % 2]);
+    return cw;
+  }
+  function eccForBlock(data, ecCount){
+    let gen = [1];
+    for (let i = 0; i < ecCount; i++){
+      const next = new Array(gen.length + 1).fill(0);
+      for (let j = 0; j < gen.length; j++){
+        next[j] ^= gmul(gen[j], EXP[i]);
+        next[j+1] ^= gen[j];
+      }
+      gen = next;
+    }
+    gen.reverse();
+    const res = data.concat(new Array(ecCount).fill(0));
+    for (let i = 0; i < data.length; i++){
+      const f = res[i];
+      if (f === 0) continue;
+      for (let j = 0; j < gen.length; j++) res[i+j] ^= gmul(gen[j], f);
+    }
+    return res.slice(data.length);
+  }
+  function interleave(cw, v){
+    const [ec, layout] = BLOCKS[v];
+    const blocks = [];
+    let pos = 0;
+    layout.forEach(([n, dlen]) => {
+      for (let i = 0; i < n; i++){
+        const d = cw.slice(pos, pos + dlen); pos += dlen;
+        blocks.push({ d, e: eccForBlock(d, ec) });
+      }
+    });
+    const out = [];
+    const maxD = Math.max(...blocks.map(b => b.d.length));
+    for (let i = 0; i < maxD; i++) blocks.forEach(b => { if (i < b.d.length) out.push(b.d[i]); });
+    for (let i = 0; i < ec; i++) blocks.forEach(b => out.push(b.e[i]));
+    return out;
+  }
+  const bchDigit = n => { let d = 0; while (n){ d++; n >>>= 1; } return d; };
+  const G15 = 0b10100110111, G15M = 0b101010000010010, G18 = 0b1111100100101;
+  function bch15(data){
+    let d = data << 10;
+    while (bchDigit(d) - bchDigit(G15) >= 0) d ^= G15 << (bchDigit(d) - bchDigit(G15));
+    return ((data << 10) | d) ^ G15M;
+  }
+  function bch18(data){
+    let d = data << 12;
+    while (bchDigit(d) - bchDigit(G18) >= 0) d ^= G18 << (bchDigit(d) - bchDigit(G18));
+    return (data << 12) | d;
+  }
+  const MASKS = [
+    (i,j) => (i+j) % 2 === 0,
+    (i,j) => i % 2 === 0,
+    (i,j) => j % 3 === 0,
+    (i,j) => (i+j) % 3 === 0,
+    (i,j) => (Math.floor(i/2) + Math.floor(j/3)) % 2 === 0,
+    (i,j) => (i*j) % 2 + (i*j) % 3 === 0,
+    (i,j) => ((i*j) % 2 + (i*j) % 3) % 2 === 0,
+    (i,j) => ((i*j) % 3 + (i+j) % 2) % 2 === 0,
+  ];
+  function build(v, dataCw, mask){
+    const mc = v*4 + 17;
+    const m = Array.from({length: mc}, () => new Array(mc).fill(null));
+    const setFinder = (r, c) => {
+      for (let i = -1; i <= 7; i++) for (let j = -1; j <= 7; j++){
+        const rr = r+i, cc = c+j;
+        if (rr < 0 || rr >= mc || cc < 0 || cc >= mc) continue;
+        m[rr][cc] = (i >= 0 && i <= 6 && (j === 0 || j === 6)) ||
+                    (j >= 0 && j <= 6 && (i === 0 || i === 6)) ||
+                    (i >= 2 && i <= 4 && j >= 2 && j <= 4);
+      }
+    };
+    setFinder(0, 0); setFinder(0, mc-7); setFinder(mc-7, 0);
+    const ap = ALIGN[v] || [];
+    ap.forEach(r => ap.forEach(c => {
+      if (m[r][c] !== null) return;
+      for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++)
+        m[r+i][c+j] = Math.max(Math.abs(i), Math.abs(j)) !== 1;
+    }));
+    for (let i = 8; i < mc-8; i++){
+      if (m[i][6] === null) m[i][6] = i % 2 === 0;
+      if (m[6][i] === null) m[6][i] = i % 2 === 0;
+    }
+    const f = bch15((0b11 << 3) | mask);
+    for (let i = 0; i < 15; i++){
+      const bit = ((f >> i) & 1) === 1;
+      if (i < 6) m[i][8] = bit;
+      else if (i < 8) m[i+1][8] = bit;
+      else m[mc-15+i][8] = bit;
+      if (i < 8) m[8][mc-i-1] = bit;
+      else if (i < 9) m[8][15-i-1+1] = bit;
+      else m[8][15-i-1] = bit;
+    }
+    m[mc-8][8] = true;
+    if (v >= 7){
+      const vi = bch18(v);
+      for (let i = 0; i < 18; i++){
+        const bit = ((vi >> i) & 1) === 1;
+        m[Math.floor(i/3)][i%3 + mc - 8 - 3] = bit;
+        m[i%3 + mc - 8 - 3][Math.floor(i/3)] = bit;
+      }
+    }
+    let inc = -1, row = mc-1, bitIdx = 7, byteIdx = 0;
+    for (let col = mc-1; col > 0; col -= 2){
+      if (col === 6) col--;
+      while (true){
+        for (let c = 0; c < 2; c++){
+          if (m[row][col-c] === null){
+            let dark = false;
+            if (byteIdx < dataCw.length) dark = ((dataCw[byteIdx] >>> bitIdx) & 1) === 1;
+            if (MASKS[mask](row, col-c)) dark = !dark;
+            m[row][col-c] = dark;
+            bitIdx--; if (bitIdx === -1){ byteIdx++; bitIdx = 7; }
+          }
+        }
+        row += inc;
+        if (row < 0 || row >= mc){ row -= inc; inc = -inc; break; }
+      }
+    }
+    return m;
+  }
+  function penalty(m){
+    const mc = m.length;
+    let p = 0;
+    for (let pass = 0; pass < 2; pass++){
+      for (let i = 0; i < mc; i++){
+        let run = 1;
+        for (let j = 1; j < mc; j++){
+          const cur = pass ? m[j][i] : m[i][j], prev = pass ? m[j-1][i] : m[i][j-1];
+          if (cur === prev) run++;
+          else { if (run >= 5) p += 3 + (run - 5); run = 1; }
+        }
+        if (run >= 5) p += 3 + (run - 5);
+      }
+    }
+    for (let i = 0; i < mc-1; i++) for (let j = 0; j < mc-1; j++)
+      if (m[i][j] === m[i][j+1] && m[i][j] === m[i+1][j] && m[i][j] === m[i+1][j+1]) p += 3;
+    const pat = [true,false,true,true,true,false,true];
+    const light4 = (arr, s) => s >= 0 && s+3 < arr.length && !arr[s] && !arr[s+1] && !arr[s+2] && !arr[s+3];
+    for (let pass = 0; pass < 2; pass++){
+      for (let i = 0; i < mc; i++){
+        const line = [];
+        for (let j = 0; j < mc; j++) line.push(pass ? m[j][i] : m[i][j]);
+        for (let j = 0; j <= mc-7; j++){
+          let ok = true;
+          for (let k = 0; k < 7; k++) if (line[j+k] !== pat[k]){ ok = false; break; }
+          if (ok && (light4(line, j-4) || light4(line, j+7))) p += 40;
+        }
+      }
+    }
+    let dark = 0;
+    for (let i = 0; i < mc; i++) for (let j = 0; j < mc; j++) if (m[i][j]) dark++;
+    p += Math.floor(Math.abs(dark*100/(mc*mc) - 50) / 5) * 10;
+    return p;
+  }
+  function encode(text){
+    const bytes = Array.from(new TextEncoder().encode(text));
+    const v = pickVersion(bytes.length);
+    const cw = interleave(makeCodewords(bytes, v), v);
+    let best = null, bestP = Infinity;
+    for (let mask = 0; mask < 8; mask++){
+      const m = build(v, cw, mask);
+      const p = penalty(m);
+      if (p < bestP){ bestP = p; best = m; }
+    }
+    return best;
+  }
+  return { encode };
+})();
+
+/* ---------------- auth (email + password; the reset email covers both
+   first-time setup and forgotten passwords) ---------------- */
+let recovering = /type=recovery/.test(location.hash);
+async function init(){
+  const { data:{ session } } = await db.auth.getSession();
+  if(recovering){ showLogin(true); showPwPanel(true); return; }
+  session ? start() : showLogin();
+}
+db.auth.onAuthStateChange((ev)=>{
+  if(ev === 'PASSWORD_RECOVERY'){ recovering = true; showLogin(true); showPwPanel(true); return; }
+  if(ev === 'SIGNED_IN' && !recovering){ showLogin(false); start(); }
+});
+
+function showLogin(show=true){
+  $('login').style.display = show?'block':'none';
+  $('page').style.display  = show?'none':'block';
+}
+function showPwPanel(on){
+  $('pwPanel').style.display   = on?'block':'none';
+  $('loginForm').style.display = on?'none':'block';
+}
+$('loginBtn').onclick = async ()=>{
+  const email = $('loginEmail').value.trim(), pass = $('loginPass').value;
+  const m = $('loginMsg');
+  if(!email || !pass){ m.className='msg err'; m.textContent='Enter the email and password.'; return; }
+  m.className='msg'; m.textContent='Signing in…';
+  const { error } = await db.auth.signInWithPassword({ email, password: pass });
+  if(error){ m.className='msg err'; m.textContent='Wrong email or password.'; }
+  else m.textContent='';
+};
+$('loginPass').addEventListener('keydown', e=>{ if(e.key==='Enter') $('loginBtn').click(); });
+$('pwForgot').onclick = async ()=>{
+  const email = $('loginEmail').value.trim();
+  const m = $('loginMsg');
+  if(!email){ m.className='msg err'; m.textContent='Enter the operator email above first.'; return; }
+  m.className='msg'; m.textContent='Sending…';
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+  if(error){ m.className='msg err'; m.textContent='Could not send. Try again.'; }
+  else { m.className='msg ok'; m.textContent='Sent. Open the link from this device to set the password.'; }
+};
+$('pwSave').onclick = async ()=>{
+  const p = $('pwNew').value, m = $('loginMsg');
+  if(p.length < 8){ m.className='msg err'; m.textContent='8 characters minimum.'; return; }
+  m.className='msg'; m.textContent='Saving…';
+  const { error } = await db.auth.updateUser({ password: p });
+  if(error){ m.className='msg err'; m.textContent='Could not save. Open a fresh reset link and try again.'; }
+  else { recovering = false; m.textContent=''; showPwPanel(false); showLogin(false); start(); }
+};
+$('signOut').onclick = async ()=>{
+  // drafts can hold half-typed venue details; none of it belongs to the next person at this keyboard
+  try { Object.keys(localStorage).filter(k => k.startsWith('st_draft_') || k.startsWith('st_admin_')).forEach(k => localStorage.removeItem(k)); } catch(e){}
+  await db.auth.signOut(); location.reload();
+};
+
+/* ---------------- data ---------------- */
+let SETTINGS = {};     // admin_get_settings cache (brand + GitHub connection)
+async function loadAll(){
+  const [v, w, s] = await Promise.all([ rpc('admin_list_venues'), rpc('admin_demo_watch'), rpc('admin_get_settings') ]);
+  if(v.error || v.data === null){ VENUES = null; return; }   // null = not an operator (or 25 not run)
+  VENUES = v.data; WATCH = (w.data || []); SETTINGS = (s && s.data) || {};
+}
+const venueById = id => (VENUES||[]).find(x=>x.id===id);
+
+async function start(){
+  $('main').innerHTML = '<p style="color:var(--ink-dim)">Loading…</p>';
+  await loadAll();
+  // the preview address serves this same dashboard; anything generated here
+  // (table cards, owner links) would point at it, so say so, every visit
+  if(ON_PREVIEW && !$('previewWarn')){
+    const w = document.createElement('div');
+    w.id = 'previewWarn'; w.className = 'msg err'; w.style.cssText = 'display:block;margin-bottom:14px';
+    w.textContent = 'You are on the preview address (' + location.host + '). Cards and links you generate here will point to it. Open the dashboard from your real domain before printing anything.';
+    $('page').insertBefore(w, $('page').firstChild);
+  }
+  if(VENUES === null){
+    $('main').innerHTML = `<section><h2>Not an operator</h2>
+      <div class="hint">This login is not set up as an operator. Check the operator account in your database, then reload.</div></section>`;
+    return;
+  }
+  // resume an interrupted form: add drafts reopen Add, edit drafts reopen
+  // that venue's Edit (a stale edit draft for a deleted venue is dropped)
+  const d = loadDraft();
+  if(d){
+    if(d.mode === 'edit'){
+      const ve = venueById(d.vid);
+      if(ve){ form(ve); return; }
+      clearDraft();
+    } else { form(null); return; }
+  }
+  // no interrupted form: restore the view the hash remembers (tab evictions)
+  ROUTED = true;
+  if(routeHash()) return;
+  // first run: no brand saved yet = the setup wizard, unless the operator is
+  // heading to Platform updates to connect GitHub first
+  if(!SETTINGS.brand && location.hash.slice(1) !== 'platform'){ settingsView({ firstRun: true }); return; }
+  home();
+}
+
+/* ---------------- helpers ---------------- */
+function toast(t){ const el=$('toast'); el.textContent=t; el.classList.add('show'); setTimeout(()=>el.classList.remove('show'), 2200); }
+/* View memory in the URL hash: iOS evicts background tabs and the reload was
+   landing on home even mid-venue (the drafts fix only
+   covered the add/edit FORM). replaceState = no history spam, and the app's
+   own back buttons stay the only navigation. */
+let CUR_HASH = location.hash.slice(1), ROUTED = false;
+function setView(h, replace){
+  h = h || '';
+  try {
+    const url = location.pathname + location.search + (h ? '#' + h : '');
+    // a new view is a history entry, so the phone's Back button comes back
+    // here instead of leaving the dashboard; a repaint of the same view,
+    // or a tab switch inside a venue, only rewrites the address
+    if(!replace && h !== location.hash.slice(1)) history.pushState(null, '', url);
+    else history.replaceState(null, '', url);
+  } catch(e){}
+  CUR_HASH = h;
+}
+// what the hash names; false when it names nothing (home decides)
+function routeHash(){
+  const h = location.hash.slice(1);
+  if(h.startsWith('v=')){ const ve = venueById(h.slice(2)); if(ve){ detail(ve.id); return true; } }
+  if(h.startsWith('va=')){ const ve = venueById(h.slice(3)); if(ve){ detail(ve.id, 'app'); return true; } }
+  if(h.startsWith('card=')){ const ve = venueById(h.slice(5)); if(ve){ cardView(ve); return true; } }
+  if(h === 'packs'){ packs(); return true; }
+  if(h === 'form'){ formBuilder('global', home); return true; }
+  if(h === 'platform'){ platformView(); return true; }
+  if(h === 'settings'){ settingsView(); return true; }
+  return false;
+}
+window.addEventListener('popstate', ()=>{
+  if(!ROUTED || !Array.isArray(VENUES)) return;   // not signed in / not loaded: nothing to route
+  if(Object.values(DIRTY).some(Boolean) && $('tabConfirm')){
+    // history already moved; put the address back and ask before leaving
+    try { history.pushState(null, '', location.pathname + location.search + (CUR_HASH ? '#' + CUR_HASH : '')); } catch(e){}
+    leaveVenuePage(()=>{ Object.keys(DIRTY).forEach(k => DIRTY[k] = false); history.back(); });
+    return;
+  }
+  if(!routeHash()) home();
+});
+
+/* One Save pattern for every editor: "Save" while something is unsaved,
+   "Saved" (disabled) otherwise, and the browser asks before a tab closes
+   on unsaved work. A view repaint clears the flags (it repaints from data). */
+const DIRTY = {};
+function setSaveState(key, btnId, label){
+  const b = $(btnId); if(!b) return;
+  const dirty = !!DIRTY[key];
+  b.disabled = !dirty; b.classList.toggle('saved', !dirty);
+  b.textContent = dirty ? label : 'Saved';
+}
+function markDirty(key, btnId, label, msgId){
+  DIRTY[key] = true; setSaveState(key, btnId, label);
+  const m = $(msgId); if(m){ m.textContent = ''; m.className = 'msg'; }
+}
+window.addEventListener('beforeunload', e => { if(Object.values(DIRTY).some(Boolean)){ e.preventDefault(); e.returnValue = ''; } });
+const _setView = setView;
+setView = function(h, replace){ Object.keys(DIRTY).forEach(k => DIRTY[k] = false); _setView(h, replace); };
+
+/* Failures say what to do, not which SQL file to run. Most "could not save"
+   cases on a live instance are a database behind the deployed build. */
+const PLAT_LINK = '<button type="button" class="linkbtn" data-plat>open Platform updates</button>';
+function failMsg(m, lead){ m.className = 'msg err'; m.innerHTML = esc(lead || 'Could not save.') + ' Check your connection, or your database may need an update: ' + PLAT_LINK + ' and apply pending changes.'; }
+document.addEventListener('click', e => { const b = e.target.closest('[data-plat]'); if(b) platformView(); });
+
+/* Inline confirm strip: the question and its answer sit where the action is. */
+function askInline(host, html, yesLabel, onYes, danger, onNo, noLabel){
+  host.innerHTML = `<div class="confirm free${danger ? '' : ' calm'}" role="alert"><b>${html}</b><button type="button" class="btn sm${danger ? ' danger' : ''}" data-yes>${esc(yesLabel)}</button><button type="button" class="btn ghost sm" data-no>${esc(noLabel || 'Cancel')}</button></div>`;
+  host.querySelector('[data-yes]').onclick = ()=>{ host.innerHTML = ''; onYes(); };
+  host.querySelector('[data-no]').onclick = ()=>{ host.innerHTML = ''; if(onNo) onNo(); };
+  host.querySelector('[data-yes]').focus();
+}
+/* Save/error lines announce themselves to screen readers. */
+new MutationObserver(()=> document.querySelectorAll('.msg:not([aria-live])').forEach(m => m.setAttribute('aria-live', 'polite'))).observe($('main'), { childList: true, subtree: true });
+
+const ICO_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg>';
+async function copy(t){ try { await navigator.clipboard.writeText(t); toast('Copied'); } catch(e){ toast('Could not copy. Select the link and copy it by hand.'); } }
+function slug(name){ return name.toLowerCase().replace(/&/g,' and ').replace(/[^a-z0-9]+/g,'').slice(0,40); }
+const demoLink   = v => `${DOMAIN}/app.html?v=${v.id}`;
+const ownerLink  = v => `${DOMAIN}/owner.html?v=${v.id}&k=${v.owner_key}`;
+const reportLink = v => `${DOMAIN}/report.html?v=${v.id}&k=${v.owner_key}`;   // shares the owner key: Rotate cycles both
+function stripeLink(url, v){
+  if(!url) return '';
+  const sep = url.includes('?') ? '&' : '?';
+  const email = v.owner_email ? `prefilled_email=${encodeURIComponent(v.owner_email)}&` : '';
+  return `${url}${sep}${email}client_reference_id=${encodeURIComponent(v.id)}`;
+}
+function mailto(v, subject, body){
+  return `mailto:${encodeURIComponent(v.owner_email||'')}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+}
+
+/* ---------------- content: game metadata shared by the pack importer
+   and the custom questions manager. Field names match admin_add_content
+   in 27_admin_content.sql exactly. ---------------- */
+const GAME_ORDER = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss'];
+const GAMES_META = {
+  who_knows_who:        { name:'Who Knows Who',    fields:[['prompt','Prompt (use {N} for the player name)'],['a','Option A'],['b','Option B'],['c','Option C'],['d','Option D']] },
+  guess_the_split:    { name:'Guess the Split',  fields:[['a','Option A'],['b','Option B']] },
+  wordy:           { name:'Wordy',            fields:[['word','Five-letter word']] },
+  trivia:          { name:'Trivia',           fields:[['question','Question'],['correct','Correct answer'],['wrong1','Wrong answer 1'],['wrong2','Wrong answer 2'],['wrong3','Wrong answer 3']] },
+  who_invited_you: { name:'Who Invited You?', fields:[['category','Category'],['word','Secret word']] },
+  fortune_teller:  { name:'Fortune Teller',   fields:[['text','Fortune text']] },
+  all_talk:        { name:'All Talk',         fields:[['category','Category (plural noun, e.g. dog breeds)']] },
+  cornhole:        { name:'Cornhole',         fields:[] },   // content-less: toggles only, no packs/custom/retire
+  quick_pour:      { name:GNAME.quick_pour,       fields:[] },   // content-less, same as cornhole
+  horse_racing:    { name:'Horse Racing',     fields:[] },   // content-less AND venue-exclusive (38): tick it only where it is sold
+  ring_toss:       { name:'Ring Toss',        fields:[] },   // content-less AND venue-exclusive (39): tick it only where it is sold
+};
+/* games that actually carry question content (packs, custom rows, retire) */
+const CONTENT_GAMES = GAME_ORDER.filter(g => GAMES_META[g].fields.length);
+/* One full round per game; the SAME numbers live in content_floor() in
+   28_custom_only_retire.sql and MIN_CUSTOM_ONLY in app.html. */
+const MIN_CUSTOM_ONLY = { guess_the_split:5, who_knows_who:12, trivia:8, wordy:5, who_invited_you:5, fortune_teller:3, all_talk:5 };
+/* Mirrors the server checks so a bad pack is caught before any call. */
+function validateRow(game, row){
+  const meta = GAMES_META[game];
+  for(const [k] of meta.fields){
+    const val = String(row[k] ?? '').trim();
+    if(!val) return `missing "${k}"`;
+    if(val.length > 300) return `"${k}" over 300 characters`;
+    if(/[<>]/.test(val)) return `"${k}" cannot contain < or >`;
+  }
+  if(game === 'wordy' && !/^[a-z]{5}$/i.test(String(row.word).trim())) return 'word must be exactly five letters';
+  if(game === 'who_knows_who' && !String(row.prompt).includes('{N}')) return 'prompt needs the {N} placeholder';
+  return null;
+}
+function validatePack(pack){
+  if(!pack || typeof pack !== 'object' || Array.isArray(pack)) return { error:'Pack must be a JSON object like {"game": "...", "rows": [...]}' };
+  if(!GAMES_META[pack.game] || !GAMES_META[pack.game].fields.length) return { error:`Unknown game "${esc(String(pack.game))}". One of: ${CONTENT_GAMES.join(', ')}` };
+  if(!Array.isArray(pack.rows) || !pack.rows.length) return { error:'"rows" must be a non-empty array' };
+  const bad = [];
+  pack.rows.forEach((r, i)=>{ const e = validateRow(pack.game, r || {}); if(e) bad.push(`row ${i+1}: ${e}`); });
+  return { game: pack.game, rows: pack.rows, bad };
+}
+
+/* Upload straight to the storage REST endpoint with the session token
+   attached EXPLICITLY. The library-managed path produced RLS violations in
+   the field even with correct policies (the request appeared to go out
+   without the session), so nothing here is left to client wiring. Surfaces
+   the server's real status + message on failure. */
+async function uploadLogo(path, blob){
+  const { data:{ session } } = await db.auth.getSession();
+  if(!session) throw new Error('Your sign-in expired. Reload the page and sign in again.');
+  const res = await fetch(`${SUPABASE_URL}/storage/v1/object/${encodeURIComponent(LOGO_BUCKET)}/${encodeURIComponent(path)}`, {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer ' + session.access_token,
+      'apikey': SUPABASE_KEY,
+      'Content-Type': 'image/png',
+      'x-upsert': 'true',
+    },
+    body: blob,
+  });
+  if(!res.ok){
+    let detail = '';
+    try { detail = (await res.json()).message || ''; } catch(e){}
+    throw new Error(`logo upload failed (${res.status}${detail ? ': ' + detail : ''})`);
+  }
+}
+
+/* Normalize any picked image (HEIC photos included, on iOS) into a small
+   transparent-safe PNG: decode via <img>, downscale to max 360px tall,
+   re-encode. Also strips photo metadata for free. */
+async function processLogo(file){
+  const url = URL.createObjectURL(file);
+  const img = new Image();
+  await new Promise((res, rej)=>{ img.onload=res; img.onerror=()=>rej(new Error('bad image')); img.src=url; });
+  const scale = Math.min(1, 360/img.naturalHeight, 1200/img.naturalWidth);
+  const c = document.createElement('canvas');
+  c.width = Math.max(1, Math.round(img.naturalWidth*scale));
+  c.height= Math.max(1, Math.round(img.naturalHeight*scale));
+  c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+  URL.revokeObjectURL(url);
+  return await new Promise(r=>c.toBlob(r, 'image/png'));
+}
+
+/* Top few colors in the logo, offered as accent swatches. Coarse on
+   purpose; the color wheel is right next to it for fine tuning. */
+function extractSwatches(img){
+  const c=document.createElement('canvas'); c.width=40; c.height=40;
+  const x=c.getContext('2d'); x.drawImage(img,0,0,40,40);
+  const d=x.getImageData(0,0,40,40).data, tally={};
+  for(let i=0;i<d.length;i+=4){
+    if(d[i+3]<140) continue;                                  // transparent
+    const r=d[i],g=d[i+1],b=d[i+2];
+    const max=Math.max(r,g,b), min=Math.min(r,g,b);
+    if(max>235&&min>215) continue;                            // near white
+    if(max<35) continue;                                      // near black
+    const k=[r,g,b].map(v=>Math.round(v/32)*32).join(',');
+    tally[k]=(tally[k]||0)+1;
+  }
+  return Object.entries(tally).sort((a,b)=>b[1]-a[1]).slice(0,5)
+    .map(([k])=>'#'+k.split(',').map(v=>(+v).toString(16).padStart(2,'0')).join(''));
+}
+
+/* ---------------- home: list + tools + demo watch ---------------- */
+function home(){
+  setView('');
+  const sorted = [...VENUES].sort((a,b)=> a.name.localeCompare(b.name, undefined, {sensitivity:'base'}));
+  const rowHtml = v=>`
+    <button class="vrow" data-id="${esc(v.id)}">
+      <span class="vdot" style="background:${esc(v.accent)}"></span>
+      <span><div class="vname">${esc(v.name)}</div><div class="vid">${esc(v.id)}</div></span>
+      <span class="vspacer"><span class="badge ${esc(v.status)}">${esc(v.status)}</span> ›</span>
+    </button>`;
+  // grouped by status: the working list on top, inactive venues folded away with their history intact
+  const active = sorted.filter(v => v.status === 'active'), leads = sorted.filter(v => v.status === 'lead'), inactive = sorted.filter(v => v.status === 'inactive');
+  const both = active.length && leads.length;
+  const rows = (both ? '<h2 class="vgroup">Active</h2>' : '') + active.map(rowHtml).join('')
+    + (both ? '<h2 class="vgroup">Leads</h2>' : '') + leads.map(rowHtml).join('')
+    + (inactive.length ? `<details class="vfold"><summary>Inactive (${inactive.length})</summary>${inactive.map(rowHtml).join('')}</details>` : '');
+
+  // demo watch: rollup per lead venue + the latest raw events
+  const byVenue = {};
+  WATCH.forEach(e=>{ (byVenue[e.venue_id]=byVenue[e.venue_id]||[]).push(e); });
+  const dw = Object.entries(byVenue).map(([vid, evs])=>{
+    const opens = evs.filter(e=>e.event==='app_open').length;
+    const last = new Date(evs[0].at);
+    return `<div class="dwrow"><span class="dwv">${esc((venueById(vid)||{name:vid}).name)}</span>
+      <span>${opens} open${opens===1?'':'s'}, ${evs.length} event${evs.length===1?'':'s'}</span>
+      <span class="dwt">${last.toLocaleDateString([], {month:'short', day:'numeric'})} ${last.toLocaleTimeString([], {hour:'numeric', minute:'2-digit'})}</span></div>`;
+  }).join('');
+
+  const TI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
+  const tools = [
+    ['addBtn2', 'Add venue', 'A new restaurant, with a live preview', TI('<path d="M12 5v14M5 12h14"/>'), true],
+    ['setBtn', 'Settings', 'Your name, color, logo, region, plans', TI('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>')],
+    ['platBtn', 'Platform updates', 'Sync your site and apply database updates', TI('<path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/>')],
+    ['formBtn', 'Feedback form editor', 'The questions every venue asks', TI('<path d="M9 11l2 2 4-4"/><rect x="3" y="4" width="18" height="16" rx="3"/>')],
+    ['packsBtn', 'Question packs', 'Game content: import, retire, restore', TI('<path d="M4 7.5 12 3l8 4.5-8 4.5z"/><path d="M4 12l8 4.5 8-4.5M4 16.5 12 21l8-4.5"/>')],
+  ];
+  $('main').innerHTML = `
+    <h2 style="font-family:var(--font-d);font-weight:700;font-size:16px;margin:0 0 10px">Tools</h2>
+    <div class="tools">${tools.map(([id, name, desc, ic, primary]) => `<button type="button" class="tool${primary ? ' primary' : ''}" id="${id}"><span class="tool__ic">${ic}</span><span><span class="tool__t">${name}</span><br><span class="tool__d">${desc}</span></span></button>`).join('')}</div>
+    <h1>Venues</h1>
+    <div style="margin-bottom:14px"><button class="btn" id="addBtn">+ Add venue</button></div>
+    ${rows || '<section><div class="hint">No venues yet. Add the first one.</div></section>'}
+    <section style="margin-top:20px">
+      <h2>Demo watch</h2>
+      <div class="hint">Every scan on a lead venue's demo, last 14 days. This is your follow-up list.</div>
+      ${dw || '<div class="hint">Quiet. No lead venue activity in the last 14 days.</div>'}
+    </section>`;
+  $('addBtn').onclick = ()=> form(null);
+  $('addBtn2').onclick = ()=> form(null);
+  $('packsBtn').onclick = ()=> packs();
+  $('formBtn').onclick = ()=> formBuilder('global', home);
+  $('platBtn').onclick = ()=> platformView();
+  $('setBtn').onclick = ()=> settingsView();
+  document.querySelectorAll('.vrow').forEach(b=> b.onclick = ()=> detail(b.dataset.id));
+}
+
+/* ---------------- feedback form builder (35_feedback_forms.sql) ----------------
+   One builder for the global form (Tools) and any venue's custom form (venue
+   detail). A venue form is seeded as a COPY of global the first time it is
+   opened, so per-venue editing starts from the standard, and later global
+   edits never silently change a paid custom form (replace semantics). */
+const FORM_CORE_META = [
+  ['food',      'How was the food? (1-5 rating)'],
+  ['service',   'How was the service? (1-5 rating)'],
+  ['discovery', "How'd you end up here tonight? (choice)"],
+  ['plate',     'In the food itself, what matters most? (choice)'],
+  ['visit',     'About the visit, what matters most? (choice)'],
+];
+const formQid = ()=> 'x' + Math.random().toString(36).slice(2, 10);
+async function formBuilder(id, backFn){
+  setView(id === 'global' ? 'form' : 'v=' + id);   // a venue form restores to its venue
+  $('main').innerHTML = '<div class="hint">Loading…</div>';
+  const { data, error } = await db.from('feedback_forms').select('*').in('id', id === 'global' ? ['global'] : ['global', id]);
+  if(error){ $('main').innerHTML = '<section><div class="hint">Could not load the form. Check your connection, or your database may need an update (Platform updates).</div><button class="btn sm ghost" id="fbBack" style="margin-top:10px">Back</button></section>'; $('fbBack').onclick = ()=> backFn(); return; }
+  const rows = {}; (data || []).forEach(r=>{ rows[r.id] = r; });
+  // venue form seeds from a copy of global on first open
+  const seed = rows[id] || rows.global || { core:{}, extras:[] };
+  const core = Object.assign({ food:true, service:true, discovery:true, plate:true, visit:true }, seed.core || {});
+  let extras = Array.isArray(seed.extras) ? JSON.parse(JSON.stringify(seed.extras)) : [];
+  const vName = id === 'global' ? null : (venueById(id) || {}).name;
+
+  function paint(){
+    $('main').innerHTML = `
+      <button class="back" id="fbBack">${ICO_BACK}Back</button>
+      <h1>${vName ? esc(vName) + ' · custom form' : 'Feedback form (all venues)'}</h1>
+      <section>
+        <h2>Standard questions</h2>
+        <div class="hint">Untick a question to hide it${vName ? ' at this venue' : ' everywhere the global form applies'} (a venue that does not serve food can hide the food rating). The comment box always shows, so the form can never be empty.</div>
+        <div style="margin-top:8px">
+          ${FORM_CORE_META.map(([k, label])=>`
+            <label style="display:flex;align-items:center;gap:8px;padding:4px 0;cursor:pointer">
+              <input type="checkbox" data-core="${k}" ${core[k] !== false ? 'checked' : ''} /> ${esc(label)}
+            </label>`).join('')}
+        </div>
+      </section>
+      <section>
+        <h2>Your questions</h2>
+        <div class="hint">Asked after the standard questions, before the comment box. Ratings average in the owner stats; choices show a breakdown; text shows as a list. Up to 10.</div>
+        <div id="fbList" style="margin-top:8px">
+          ${extras.length ? extras.map((x, i)=>`
+            <div class="frow" style="margin-top:6px;align-items:center" data-ix="${i}">
+              <span style="flex:1;min-width:0">${esc(x.label)} <span style="color:var(--ink-faint);font-size:12px">· ${x.type === 'rating' ? '1-5 rating' : x.type === 'text' ? 'short text' : (x.multi ? 'choice, pick many' : 'choice, pick one') + ': ' + esc((x.opts || []).join(' / '))}</span></span>
+              <button type="button" class="iconbtn" data-mv="-1" aria-label="Move up">${ARR_UP}</button>
+              <button type="button" class="iconbtn" data-mv="1" aria-label="Move down">${ARR_DOWN}</button>
+              <button type="button" class="iconbtn" data-del aria-label="Remove">${TRASH}</button>
+            </div>`).join('') : '<div class="hint">None yet.</div>'}
+        </div>
+        <label class="f" style="margin-top:14px">Add a question</label>
+        <div class="frow">
+          <select id="fbType"><option value="rating">Rating 1-5</option><option value="choice">Multiple choice</option><option value="text">Short text</option></select>
+          <input type="text" id="fbLabel" maxlength="120" placeholder="The question diners see" style="flex:1;min-width:180px" />
+        </div>
+        <div id="fbChoiceOpts" style="display:none;margin-top:8px">
+          <textarea id="fbOpts" rows="3" placeholder="One option per line (2 to 12)"></textarea>
+          <label style="display:flex;align-items:center;gap:8px;margin-top:6px;cursor:pointer">
+            <input type="checkbox" id="fbMulti" /> Allow multiple answers
+          </label>
+        </div>
+        <button class="btn sm" id="fbAdd" style="margin-top:8px">Add question</button>
+        <div class="msg" id="fbAddMsg"></div>
+      </section>
+      <button class="btn" id="fbSave">Save form</button>
+      <div class="msg" id="fbMsg"></div>`;
+    $('fbBack').onclick = ()=> backFn();
+    $('fbType').onchange = ()=>{ $('fbChoiceOpts').style.display = $('fbType').value === 'choice' ? 'block' : 'none'; };
+    document.querySelectorAll('#fbList [data-mv]').forEach(b=> b.onclick = ()=>{
+      const i = +b.closest('[data-ix]').dataset.ix, j = i + (+b.dataset.mv);
+      if(j < 0 || j >= extras.length) return;
+      const t = extras[i]; extras[i] = extras[j]; extras[j] = t;
+      const c = collectCore(); Object.assign(core, c); paint();
+    });
+    document.querySelectorAll('#fbList [data-del]').forEach(b=> b.onclick = ()=>{
+      extras.splice(+b.closest('[data-ix]').dataset.ix, 1);
+      const c = collectCore(); Object.assign(core, c); paint();
+    });
+    $('fbAdd').onclick = ()=>{
+      const m = $('fbAddMsg');
+      const type = $('fbType').value, label = $('fbLabel').value.trim();
+      if(!label){ m.className='msg err'; m.textContent='Write the question first.'; return; }
+      if(extras.length >= 10){ m.className='msg err'; m.textContent='10 questions is the cap. Remove one first.'; return; }
+      const q = { id: formQid(), type, label };
+      if(type === 'choice'){
+        const opts = $('fbOpts').value.split('\n').map(s=>s.trim()).filter(Boolean).slice(0, 12);
+        if(opts.length < 2){ m.className='msg err'; m.textContent='A choice question needs at least 2 options.'; return; }
+        q.opts = opts; q.multi = $('fbMulti').checked;
+      }
+      extras.push(q);
+      const c = collectCore(); Object.assign(core, c); paint();
+    };
+    $('fbSave').onclick = async ()=>{
+      const m = $('fbMsg');
+      m.className='msg'; m.textContent='Saving…';
+      const { data:res, error:err } = await rpc('admin_set_form', { p_id: id, p_core: collectCore(), p_extras: extras });
+      if(err || !res || res.ok !== true){ failMsg(m); return; }
+      extras = res.extras || extras;
+      m.className='msg ok'; m.textContent='Saved. Live on the next app load.';
+    };
+  }
+  function collectCore(){
+    const c = {};
+    document.querySelectorAll('#main [data-core]').forEach(x=>{ c[x.dataset.core] = x.checked; });
+    return Object.keys(c).length ? c : core;
+  }
+  paint();
+}
+
+/* ---------------- add / edit form with live preview ---------------- */
+function form(existing){
+  const v = existing || { name:'', id:'', accent:'#3a6ea5', logo:'', review:'', header_bg:'', owner_email:'' };
+  const editing = !!existing;
+  $('main').innerHTML = `
+    <button class="back" id="back">${ICO_BACK}Back</button>
+    <h1>${editing?'Edit venue':'Add venue'}</h1>
+    <div class="split">
+      <section>
+        ${!editing && WORKER_URL ? `
+        <label class="f">Autofill from their website <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <div class="frow">
+          <input type="url" id="fSite" placeholder="https://theirrestaurant.com" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:200px" />
+          <button class="btn sm" id="afBtn">Autofill</button>
+        </div>
+        <div class="msg" id="afMsg"></div>
+        <div class="cands" id="afLogos"></div>
+        <div id="afPlaces"></div>
+        <hr style="border:0;border-top:1px solid var(--line);margin:16px 0 2px" />` : ''}
+        <label class="f">Restaurant name</label>
+        <input type="text" id="fName" value="${esc(v.name)}" placeholder="Ex. Bahrs Landing" />
+        <label class="f">Venue id ${editing?'(permanent)':'(permanent, becomes the QR link)'}</label>
+        <input type="text" id="fId" value="${esc(v.id)}" ${editing?'disabled style="opacity:.6"':''} placeholder="bahrs" autocapitalize="off" autocorrect="off" spellcheck="false" />
+        <label class="f">Logo</label>
+        <div class="radio" id="logoMode">
+          <label><input type="radio" name="lm" value="upload"> Upload image</label>
+          <label><input type="radio" name="lm" value="text"> Text wordmark</label>
+          ${editing?'<label><input type="radio" name="lm" value="keep" checked> Keep current</label>':''}
+        </div>
+        <div id="logoUploadRow" style="display:none;margin-top:8px">
+          <input type="file" id="fLogoFile" accept="image/*" />
+          <div class="msg" id="lgMsg"></div>
+          <div class="swatches" id="swatches"></div>
+        </div>
+        <div id="logoTextRow" style="display:none;margin-top:8px">
+          <input type="text" id="fLogoText" placeholder="BAHRS LANDING" value="${esc(!/^https?:\/\//i.test(v.logo||'') ? (v.logo||'') : '')}" />
+        </div>
+        <label class="f">Accent color</label>
+        <div class="frow">
+          <input type="color" id="fAccent" value="${esc(v.accent||'#3a6ea5')}" />
+          <input type="text" id="fAccentHex" value="${esc(v.accent||'#3a6ea5')}" style="width:110px" autocapitalize="off" spellcheck="false" />
+        </div>
+        <label class="f">Header background <span style="font-weight:400;text-transform:none">(optional, for logos that need it; white for everyone else)</span></label>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="fHbOn" ${v.header_bg?'checked':''}/> custom</label>
+          <input type="color" id="fHb" value="${esc(v.header_bg||'#16233a')}" style="${v.header_bg?'':'display:none'}" />
+        </div>
+        <label class="f">Dark mode</label>
+        <div class="hint" style="margin:0 0 6px">Black nav and a dark app. Only for venues with a dark website and a light logo. Logos are not recolored, so if the logo needs a white background, leave this off.</div>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="fDark" ${v.dark_mode?'checked':''}/> dark mode</label>
+        </div>
+        <label class="f">Google review link <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener" style="font-weight:400;text-transform:none;color:var(--accent)">Place ID finder</a></label>
+        <div class="frow">
+          <input type="text" id="fReview" value="${esc(v.review||'')}" placeholder="Paste the review link, or just the Place ID (ChIJ...)" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:200px" />
+          <button class="btn sm ghost" id="fReviewTest" type="button">Test</button>
+        </div>
+        <label class="f">Owner email <span style="font-weight:400;text-transform:none">(for the send buttons)</span></label>
+        <input type="email" id="fEmail" value="${esc(v.owner_email||'')}" placeholder="owner@restaurant.com" autocapitalize="off" />
+        <div style="margin-top:18px"><button class="btn" id="fSave">${editing?'Save changes':'Add venue'}</button></div>
+        <div class="msg" id="fMsg"></div>
+      </section>
+      <div>
+        <div class="phone"><div class="scr">
+          <div class="pv-brand" id="pvBrand"></div>
+          <div class="pv-body">
+            <div id="pvOpts"></div>
+            <div class="pv-note">live preview</div>
+          </div>
+        </div></div>
+      </div>
+    </div>`;
+
+  $('back').onclick = ()=>{ clearDraft(); editing ? detail(v.id) : home(); };
+
+  // ----- form state -----
+  // Drafts now cover EDIT too (the operator, Aug 2026: iOS evicted the tab mid-
+  // edit and the screen was gone). One draft slot; an edit draft carries
+  // mode+vid and only resumes onto the same venue.
+  const draftRaw = loadDraft();
+  const draft = draftRaw && (editing ? (draftRaw.mode === 'edit' && draftRaw.vid === v.id)
+                                     : (draftRaw.mode !== 'edit')) ? draftRaw : null;
+  let logoMode = editing ? 'keep' : 'upload';
+  let logoBlob = null;              // processed PNG waiting for upload
+  let logoPreviewUrl = /^https?:\/\//i.test(v.logo||'') ? v.logo : '';
+  let draftLogoDataUrl = (draft && draft.logoData) || null;
+  if(!editing) document.querySelector('#logoMode input[value=upload]').checked = true;
+
+  const state = ()=>({
+    name: $('fName').value.trim(),
+    id: editing ? v.id : $('fId').value.trim(),
+    accent: $('fAccentHex').value.trim(),
+    headerBg: $('fHbOn').checked ? $('fHb').value : '',
+    review: $('fReview').value.trim(),
+    email: $('fEmail').value.trim(),
+    wordmark: $('fLogoText').value.trim(),
+    dark: $('fDark').checked,
+  });
+  function saveDraftNow(){
+    const s = state();
+    // an untouched ADD form drafts nothing, so merely opening Add and
+    // leaving does not hijack the next visit into a resume. An edit form
+    // always drafts (back/save clear it), so eviction can never lose it.
+    if(!editing && !s.name && !s.review && !s.email && !s.wordmark && !logoBlob && !draftLogoDataUrl) return;
+    saveDraftObj({ ...s, logoMode, idTouched,
+      mode: editing ? 'edit' : 'add', vid: editing ? v.id : null,
+      site: $('fSite') ? $('fSite').value.trim() : '',
+      logoData: draftLogoDataUrl });
+  }
+
+  function paint(){
+    const s = state();
+    // The preview mirrors BOTH modes of the refreshed app (dark-2026-08 in
+    // app.html): dark venues get the black nav fallback, near-black cards,
+    // and the accent-tinted near-black stage; light gets white cards on the
+    // accent-tinted paper.
+    const dark = !!($('fDark') && $('fDark').checked);
+    const hb = s.headerBg || (dark ? '#0b0a09' : '#ffffff');
+    const ink = readableOn(hb);
+    const scr = document.querySelector('.phone .scr');
+    if(scr) scr.style.background = dark
+      ? `color-mix(in srgb, ${s.accent} 10%, #121110)`
+      : `color-mix(in srgb, ${s.accent} 6%, #fdfcfa)`;
+    const brand = $('pvBrand');
+    brand.style.background = hb;
+    brand.style.borderBottomColor = s.accent;
+    if(logoMode!=='text' && logoPreviewUrl){
+      brand.innerHTML = `<img src="${esc(logoPreviewUrl)}" alt="" />`;
+    } else {
+      const wm = (logoMode==='text' ? s.wordmark : '') || s.name || 'YOUR RESTAURANT';
+      brand.innerHTML = `<span class="pv-wordmark" style="color:${ink}"><span class="dot" style="background:${esc(s.accent)}"></span>${esc(wm)}</span>`;
+    }
+    // Miniature of the REAL landing cards (app.html refresh-2026-08): icon
+    // tile in the accent, text, arrow chip — in both modes.
+    const cardBg     = dark ? '#1e1b17' : '#ffffff';
+    const cardBorder = dark ? 'rgba(255,255,255,.17)' : 'rgba(22,17,10,.12)';
+    const tColor     = dark ? '#f1ede6' : '#1b1813';
+    const dColor     = dark ? '#a7a196' : 'var(--ink-dim)';
+    const arrowFg    = dark ? `color-mix(in srgb, ${s.accent} 55%, #fff)` : `color-mix(in srgb, ${s.accent} 68%, #16110a)`;
+    const arrowBg    = dark ? `color-mix(in srgb, ${s.accent} 18%, #1e1b17)` : `color-mix(in srgb, ${s.accent} 9%, #fff)`;
+    const ICONS = {
+      dice: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="3.5" width="17" height="17" rx="4.5"/><circle cx="8.4" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="8.4" r="1.15" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.15" fill="currentColor" stroke="none"/><circle cx="8.4" cy="15.6" r="1.15" fill="currentColor" stroke="none"/><circle cx="15.6" cy="15.6" r="1.15" fill="currentColor" stroke="none"/></svg>`,
+      chat: `<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5c0 4.14-4.03 7.5-9 7.5-1.02 0-2-.14-2.91-.4L4 20l1.18-3.53C3.83 15.15 3 13.4 3 11.5 3 7.36 7.03 4 12 4s9 3.36 9 7.5z"/></svg>`,
+    };
+    const card = (icon, t, d) => `
+      <div class="pv-opt" style="border:1px solid ${cardBorder};background:${cardBg};border-radius:15px;display:flex;align-items:center;gap:10px;padding:11px 12px">
+        <span style="flex:none;width:34px;height:34px;border-radius:11px;background:${esc(s.accent)};color:${readableOn(s.accent)};display:grid;place-items:center">${ICONS[icon]}</span>
+        <span style="flex:1;min-width:0">
+          <div class="t" style="color:${tColor}">${t}</div>
+          <div class="d" style="color:${dColor}">${d}</div>
+        </span>
+        <span style="flex:none;width:21px;height:21px;border-radius:999px;background:${arrowBg};color:${arrowFg};display:grid;place-items:center;font-size:12px;line-height:1">›</span>
+      </div>`;
+    $('pvOpts').innerHTML =
+      card('dice', 'Play a game', 'Pass the time, solo or with the whole table.') +
+      card('chat', 'Share feedback', `Anonymous, and seen only by ${esc(s.name||'the restaurant')}.`);
+    // Draft on every repaint, not just on DOM events: swatch taps, autofill,
+    // and other PROGRAMMATIC setters change values without firing events (the
+    // bug that lost the chosen accent), but they all call paint().
+    saveDraftNow();
+  }
+
+  // ----- wiring -----
+  let idTouched = editing;
+  $('fName').addEventListener('input', ()=>{ if(!idTouched) $('fId').value = slug($('fName').value); paint(); });
+  if(!editing) $('fId').addEventListener('input', ()=>{ idTouched = true; });
+  $('fAccent').addEventListener('input', ()=>{ $('fAccentHex').value = $('fAccent').value; paint(); });
+  $('fAccentHex').addEventListener('input', ()=>{ if(/^#[0-9a-f]{6}$/i.test($('fAccentHex').value)) { $('fAccent').value = $('fAccentHex').value; paint(); } });
+  $('fHbOn').addEventListener('change', ()=>{ $('fHb').style.display = $('fHbOn').checked ? '' : 'none'; paint(); });
+  $('fHb').addEventListener('input', paint);
+  $('fDark').addEventListener('change', paint);
+  $('fLogoText').addEventListener('input', paint);
+  // Accept either a full review URL or a bare Place ID pasted from Google's
+  // finder page; a bare id composes into the writereview link on blur.
+  $('fReview').addEventListener('change', ()=>{
+    const raw = $('fReview').value.trim();
+    if(raw && !raw.includes('://') && /^[A-Za-z0-9_-]{16,}$/.test(raw)){
+      $('fReview').value = 'https://search.google.com/local/writereview?placeid=' + raw;
+      toast('Review link composed from the Place ID');
+    }
+  });
+  // Open the review link in a new tab so the right business's review box can
+  // be eyeballed BEFORE the venue is saved (or printed).
+  $('fReviewTest').onclick = ()=>{
+    $('fReview').dispatchEvent(new Event('change'));   // compose a bare id first
+    const u = $('fReview').value.trim();
+    if(!u){ toast('Nothing to test yet'); return; }
+    if(!/^https?:\/\//i.test(u)){ toast('That does not look like a link'); return; }
+    window.open(u, '_blank', 'noopener');
+  };
+  document.querySelectorAll('#logoMode input').forEach(r=> r.addEventListener('change', ()=>{
+    logoMode = document.querySelector('#logoMode input:checked').value;
+    $('logoUploadRow').style.display = logoMode==='upload' ? '' : 'none';
+    $('logoTextRow').style.display   = logoMode==='text'   ? '' : 'none';
+    paint();
+  }));
+  $('logoUploadRow').style.display = logoMode==='upload' ? '' : 'none';
+  // Shared by the file input and the autofill candidate picker: normalize
+  // the image, preview it, and offer its colors as accent swatches.
+  async function applyLogoBlob(raw){
+    logoBlob = await processLogo(raw);
+    logoPreviewUrl = URL.createObjectURL(logoBlob);
+    const img = new Image();
+    img.onload = ()=>{ $('swatches').innerHTML = extractSwatches(img).map(c=>`<button class="sw" style="background:${c}" data-c="${c}" title="${c}"></button>`).join('');
+      document.querySelectorAll('.sw').forEach(b=> b.onclick=()=>{ $('fAccent').value=b.dataset.c; $('fAccentHex').value=b.dataset.c; paint(); }); };
+    img.src = logoPreviewUrl;
+    paint();
+    // draft the processed logo too, so a tab eviction cannot lose it
+    if(!editing){
+      const fr = new FileReader();
+      fr.onload = ()=>{ draftLogoDataUrl = fr.result; saveDraftNow(); };
+      fr.readAsDataURL(logoBlob);
+    }
+  }
+  $('fLogoFile').addEventListener('change', async ()=>{
+    const f = $('fLogoFile').files[0]; if(!f) return;
+    $('lgMsg').textContent = '';
+    // the error lives right under the picker: it was landing in fMsg at the
+    // very bottom of the form, where the operator only spotted it by luck
+    try { await applyLogoBlob(f); }
+    catch(e){ $('lgMsg').className='msg err'; $('lgMsg').textContent='Could not read that image. Try a PNG or JPG.'; }
+  });
+
+  // ----- autofill from the restaurant's website (worker-backed) -----
+  if(!editing && WORKER_URL && $('afBtn')){
+    const am = $('afMsg');
+    const wfetch = async (path, params)=>{
+      const { data:{ session } } = await db.auth.getSession();
+      const u = new URL(WORKER_URL.replace(/\/$/,'') + path);
+      Object.entries(params).forEach(([k,val])=> u.searchParams.set(k, val));
+      return fetch(u, { headers: { Authorization: 'Bearer ' + (session ? session.access_token : '') } });
+    };
+    const pickLogo = async (imgUrl, btn)=>{
+      document.querySelectorAll('.cand').forEach(c=> c.classList.toggle('sel', c===btn));
+      am.className='msg'; am.textContent='Fetching that logo…';
+      try {
+        const r = await wfetch('/img', { url: imgUrl });
+        if(!r.ok) throw new Error();
+        const blob = await r.blob();
+        const up = document.querySelector('#logoMode input[value=upload]');
+        up.checked = true; up.dispatchEvent(new Event('change'));
+        await applyLogoBlob(blob);
+        am.className='msg ok'; am.textContent='Logo set. Tap a swatch below it, or fine tune the accent.';
+      } catch(e){ am.className='msg err'; am.textContent='Could not fetch that image. Try another, or upload one.'; }
+    };
+    $('afBtn').onclick = async ()=>{
+      let siteUrl = $('fSite').value.trim();
+      if(!siteUrl){ am.className='msg err'; am.textContent='Paste their website address first.'; return; }
+      if(!/^https?:\/\//i.test(siteUrl)) siteUrl = 'https://' + siteUrl;
+      am.className='msg'; am.textContent='Reading their site…';
+      $('afLogos').innerHTML=''; $('afPlaces').innerHTML='';
+      try {
+        const r = await wfetch('/site', { url: siteUrl });
+        if(!r.ok) throw new Error((await r.json().catch(()=>({}))).error || 'site failed');
+        const d = await r.json();
+        if(d.name && !$('fName').value.trim()){
+          $('fName').value = d.name;
+          if(!idTouched) $('fId').value = slug(d.name);
+        }
+        paint();
+        const imgs = (d.images||[]).slice(0,8);
+        $('afLogos').innerHTML = imgs.map((u,i)=>`<button class="cand" data-u="${esc(u)}" title="candidate ${i+1}"><img src="${esc(u)}" referrerpolicy="no-referrer" alt="logo candidate ${i+1}" /></button>`).join('');
+        document.querySelectorAll('.cand').forEach(b=> b.onclick = ()=> pickLogo(b.dataset.u, b));
+        am.className='msg ok';
+        am.textContent = imgs.length ? `Found ${imgs.length} logo candidate${imgs.length===1?'':'s'}. Tap the best one.` : 'No logo candidates found; upload one instead.';
+        // review link straight off their own site, when they publish one.
+        // Free, no Places key involved.
+        if(d.googleReview && !$('fReview').value.trim()){
+          $('fReview').value = d.googleReview;
+          $('afPlaces').innerHTML = `<div class="hint" style="margin-top:10px">Review link found on their own site and filled in.</div>`;
+          saveDraftNow();
+        } else if(d.googleReviewDerived && !$('fReview').value.trim()){
+          $('fReview').value = d.googleReviewDerived;
+          $('afPlaces').innerHTML = `<div class="hint" style="margin-top:10px">Filled a review link derived from their g.page profile. <a href="${esc(d.googleReviewDerived)}" target="_blank" rel="noopener">Open it</a> and make sure the review box appears before trusting it.</div>`;
+          saveDraftNow();
+        }
+        if(!$('fReview').value.trim()){
+          $('afPlaces').innerHTML = `<div class="hint" style="margin-top:10px">No Google link on their site. Tap the Place ID finder link by the review field and paste the ID.</div>`;
+        }
+      } catch(e){
+        am.className='msg err'; am.textContent='Could not read that site. Fill the form manually.';
+      }
+    };
+  }
+
+  // every edit updates the draft, in BOTH modes
+  {
+    const sec = document.querySelector('#main section');
+    sec.addEventListener('input',  saveDraftNow);
+    sec.addEventListener('change', saveDraftNow);
+  }
+
+  paint();
+
+  // resume a drafted form: refill fields, logo included, after all wiring
+  if(draft){
+    if(editing){
+      // an edit draft is a complete snapshot of the form, so fields set
+      // unconditionally (a cleared review/email stays cleared)
+      $('fName').value = draft.name || v.name;
+      if(/^#[0-9a-f]{6}$/i.test(draft.accent||'')){ $('fAccentHex').value = draft.accent; $('fAccent').value = draft.accent; }
+      if(draft.headerBg){ $('fHbOn').checked = true; $('fHb').style.display=''; $('fHb').value = draft.headerBg; }
+      else { $('fHbOn').checked = false; $('fHb').style.display='none'; }
+      $('fReview').value = draft.review || '';
+      $('fEmail').value = draft.email || '';
+      if(typeof draft.dark === 'boolean') $('fDark').checked = draft.dark;
+      if(draft.logoMode === 'text'){
+        const r = document.querySelector('#logoMode input[value=text]');
+        if(r){ r.checked = true; r.dispatchEvent(new Event('change')); }
+        $('fLogoText').value = draft.wordmark || '';
+      }
+      if(draft.logoData){
+        fetch(draft.logoData).then(r=>r.blob()).then(b=>applyLogoBlob(b)).catch(()=>{});
+      }
+    } else {
+      if(draft.name) $('fName').value = draft.name;
+      if(draft.id){ $('fId').value = draft.id; idTouched = !!draft.idTouched; }
+      if(/^#[0-9a-f]{6}$/i.test(draft.accent||'')){ $('fAccentHex').value = draft.accent; $('fAccent').value = draft.accent; }
+      if(draft.headerBg){ $('fHbOn').checked = true; $('fHb').style.display=''; $('fHb').value = draft.headerBg; }
+      if(draft.review) $('fReview').value = draft.review;
+      if(draft.email) $('fEmail').value = draft.email;
+      if(typeof draft.dark === 'boolean') $('fDark').checked = draft.dark;
+      if(draft.site && $('fSite')) $('fSite').value = draft.site;
+      if(draft.logoMode === 'text'){
+        const r = document.querySelector('#logoMode input[value=text]');
+        if(r){ r.checked = true; r.dispatchEvent(new Event('change')); }
+        $('fLogoText').value = draft.wordmark || '';
+      }
+      if(draft.logoData){
+        fetch(draft.logoData).then(r=>r.blob()).then(b=>applyLogoBlob(b)).catch(()=>{});
+      }
+    }
+    paint();
+    toast(editing ? 'Resumed your unsaved edits' : 'Resumed your unsaved venue');
+  }
+
+  // ----- save -----
+  $('fSave').onclick = async ()=>{
+    const s = state(), m = $('fMsg');
+    if(!s.name){ m.className='msg err'; m.textContent='Name the restaurant.'; return; }
+    if(!/^[a-z0-9-]{2,40}$/.test(s.id)){ m.className='msg err'; m.textContent='Venue id: lowercase letters and numbers only, at least 2 characters.'; return; }
+    if(!/^#[0-9a-f]{6}$/i.test(s.accent)){ m.className='msg err'; m.textContent='Accent must be a hex color like #3a6ea5.'; return; }
+    if(s.review && !/^https:\/\/[^\s"'<>]+$/.test(s.review)){ m.className='msg err'; m.textContent='The review link must start with https:// (paste the link Google gives you, or the Place ID).'; return; }
+    if(s.name.length > 80){ m.className='msg err'; m.textContent='Keep the name under 80 characters.'; return; }
+    if(logoMode==='upload' && !logoBlob && !editing){ m.className='msg err'; m.textContent='Pick a logo image, or switch to a text wordmark.'; return; }
+    if(logoMode==='text' && !s.wordmark && !editing){ m.className='msg err'; m.textContent='Type the wordmark text.'; return; }
+    m.className='msg'; m.textContent='Saving…'; $('fSave').disabled = true;
+
+    try {
+      // 1. logo value
+      let logoValue = null;   // null = leave unchanged (edit) / none (add)
+      if(logoMode==='upload' && logoBlob){
+        const path = `${s.id}.png`;
+        await uploadLogo(path, logoBlob);
+        const pub = db.storage.from(LOGO_BUCKET).getPublicUrl(path).data.publicUrl;
+        logoValue = `${pub}?u=${Date.now()}`;   // cache-bust so a rebrand shows next load
+      } else if(logoMode==='text'){
+        logoValue = s.wordmark;
+      }
+
+      // 2. row
+      if(editing){
+        const { data, error } = await rpc('admin_update_venue', {
+          p_id: s.id, p_name: s.name, p_accent: s.accent,
+          p_logo: logoValue,                        // null = keep
+          p_review: s.review || '',                 // '' clears
+          p_header_bg: s.headerBg || '',            // '' clears back to white
+          p_owner_email: s.email || ''
+        });
+        if(error || !data || data.ok!==true) throw new Error({ bad_review:'The review link must be an https:// link.', bad_logo:'That logo value is not allowed.', bad_name:'Keep the name under 80 characters.', not_operator:'This login is not an operator.' }[data&&data.error] || 'Could not save.');
+        if($('fDark').checked !== !!v.dark_mode){
+          const r = await rpc('admin_set_dark_mode', { p_id: s.id, p_on: $('fDark').checked });
+          if(r.error || !r.data || r.data.ok!==true) toast('Saved, but dark mode needs a database update. See Platform updates.');
+        }
+        clearDraft();
+        await loadAll(); toast('Saved'); detail(s.id);
+      } else {
+        const { data, error } = await rpc('admin_add_venue', {
+          p_id: s.id, p_name: s.name, p_accent: s.accent,
+          p_logo: logoValue, p_review: s.review || null,
+          p_header_bg: s.headerBg || null, p_owner_email: s.email || null
+        });
+        if(error) throw new Error('server error');
+        if(!data || data.ok!==true){
+          const why = { id_taken:'That id is already used (maybe by an inactive venue). Pick another.',
+                        bad_id:'Venue id: lowercase letters and numbers only.',
+                        bad_accent:'Accent must be a hex color.', bad_review:'The review link must be an https:// link.',
+                        bad_logo:'That logo value is not allowed.', bad_name:'Keep the name under 80 characters.',
+                        not_operator:'This login is not an operator.' }[data&&data.error] || 'Could not add.';
+          throw new Error(why);
+        }
+        if($('fDark').checked){
+          const r = await rpc('admin_set_dark_mode', { p_id: s.id, p_on: true });
+          if(r.error || !r.data || r.data.ok!==true) toast('Added, but dark mode needs a database update. See Platform updates.');
+        }
+        clearDraft();
+        await loadAll(); toast('Venue added'); detail(s.id);
+      }
+    } catch(e){
+      m.className='msg err'; m.textContent = e.message || 'Something failed. Try again.';
+      $('fSave').disabled = false;
+    }
+  };
+}
+
+/* ---------------- venue detail ---------------- */
+/* ---- home screen card icons and helpers, shared by the venue editor ---- */
+const CARD_TYPES = { schedule:'Weekly schedule', list:'Menu or list', notice:'Announcement' };
+const SP_DAYS = [['mon','Mon'],['tue','Tue'],['wed','Wed'],['thu','Thu'],['fri','Fri'],['sat','Sat'],['sun','Sun']];
+const SP_TODAY = ['sun','mon','tue','wed','thu','fri','sat'][new Date().getDay()];
+const ARR_UP   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>';
+const ARR_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>';
+const TRASH    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+const TODAY_YMD = (d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'))(new Date());
+const cardExpired = c => c.t === 'notice' && !!c.until && c.until < TODAY_YMD;
+
+/* The venue page header: back, name, Edit venue, and the three tabs. Manage
+   and App Settings are panes of detail(); Table card is the designer view.
+   All three wear this so the tabs read as one page. */
+function venueHead(v, tab){
+  return `
+    <button class="back" id="back">${ICO_BACK}Back</button>
+    <h1>${esc(v.name)} <span class="badge ${esc(v.status)}">${esc(v.status)}</span></h1>
+    <div class="actions"><button class="btn ghost" id="editBtn">Edit venue</button></div>
+    <div class="tabs" role="tablist">
+      <button class="tab${tab === 'manage' ? ' on' : ''}" id="tabVenueBtn" role="tab" aria-selected="${tab === 'manage'}">Manage</button>
+      <button class="tab${tab === 'app' ? ' on' : ''}" id="tabAppBtn" role="tab" aria-selected="${tab === 'app'}">App Settings</button>
+      <button class="tab${tab === 'card' ? ' on' : ''}" id="tabCardBtn" role="tab" aria-selected="${tab === 'card'}">Table card</button>
+    </div>
+    <div id="tabConfirm"></div>`;
+}
+// leaving a pane with unsaved work asks first; the strip sits under the tabs
+function leaveVenuePage(go){
+  if(!Object.values(DIRTY).some(Boolean)){ go(); return; }
+  askInline($('tabConfirm'), 'You have unsaved changes on this page. Leave without saving?', 'Leave', go, true, null, 'Stay');
+}
+function detail(id, tab){
+  const v = venueById(id);
+  if(!v){ home(); return; }
+  const app = tab === 'app';
+  setView((app ? 'va=' : 'v=') + v.id);
+  const plans = STRIPE_PLANS.filter(p=>p.url);
+  const cap = ()=> v.card_cap ?? 4;
+  const gamesOrder = (()=>{ const saved = (v.games || []).filter(g => GAME_ORDER.includes(g)); return saved.concat(GAME_ORDER.filter(g => !saved.includes(g))); })();
+  const gameOn = g => !v.games || !v.games.length || v.games.includes(g);
+  const cap1 = s => s[0].toUpperCase() + s.slice(1);
+
+  $('main').innerHTML = venueHead(v, app ? 'app' : 'manage') + `
+
+    <div class="pane${app ? '' : ' on'}" id="paneVenue">
+      <section>
+        <h2>Status</h2>
+        <div class="hint">Lead: the app works but saves nothing. Active: everything saves. Inactive: the QR stops loading. You change this by hand when a subscription starts or ends.</div>
+        <div class="statusbtns" id="statusBtns"></div>
+        <div id="stConfirm"></div>
+        <div class="msg" id="stMsg"></div>
+      </section>
+
+      <section>
+        <h2>Links</h2>
+        <div class="hint">The live app link is safe to share. The owner dashboard and guest report links are private to the owner.</div>
+        <label class="f">Live app</label>
+        <div class="linkrow">
+          <span class="lk" id="lkDemo">${esc(demoLink(v))}</span>
+          <div class="linkbtns"><a class="btn sm ghost" id="opDemo" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpDemo">Copy</button></div>
+        </div>
+        <label class="f">Owner dashboard</label>
+        <div class="linkrow">
+          <span class="lk" id="lkOwner">${esc(ownerLink(v))}</span>
+          <div class="linkbtns"><a class="btn sm ghost" id="opOwner" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpOwner">Copy</button></div>
+        </div>
+        <label class="f">Guest report</label>
+        <div class="hint" style="margin:0 0 6px">Same link every month; the month picker is on the page. It shares the owner's key, so a new owner link also makes a new report link.</div>
+        <div class="linkrow">
+          <span class="lk" id="lkReport">${esc(reportLink(v))}</span>
+          <div class="linkbtns"><a class="btn sm ghost" id="opReport" target="_blank" rel="noopener">Open</a><button class="btn sm ghost" id="cpReport">Copy</button></div>
+        </div>
+        <div class="frow" style="margin-top:4px"><button class="btn sm ghost" id="rotate">Issue a new owner link</button><span class="hint" style="margin:0">Only if the private link ever gets out. The old links stop working right away.</span></div>
+        <div id="rotConfirm"></div>
+        <div class="msg" id="rotMsg"></div>
+
+        <label class="f" style="margin-top:18px">Owner passphrase</label>
+        <div class="hint">Optional. Asked once per device when the owner opens their dashboard. Send it by text or in person, never in the same email as the link.</div>
+        <div id="opRow"></div>
+        <div id="opConfirm"></div>
+        <div class="msg" id="opMsg"></div>
+      </section>
+
+      <section>
+        <h2>Send an email</h2>
+        <div class="hint">${v.owner_email ? `Opens a prefilled email to ${esc(v.owner_email)} in your mail app. You read it over and send it from your own address.` : 'Add an owner email under Edit venue to turn these on.'}</div>
+        <div class="mailbtns">
+          ${[['mDemo','Demo link'],['mOwner','Owner dashboard link'],['mReport','Guest report link']].concat(plans.length ? [['mStripe','Payment link']] : []).map(([id, label]) => v.owner_email ? `<a class="btn sm ghost" id="${id}">${label}</a>` : `<button type="button" class="btn sm ghost" disabled>${label}</button>`).join('')}
+        </div>
+      </section>
+
+      <section>
+        <h2>Subscription</h2>
+        ${plans.length ? `
+        <div class="hint">Pick a plan. The link is tagged with this venue and prefilled with the owner email.</div>
+        <div class="frow">
+          <select id="planSel">${plans.map((p,i)=>`<option value="${i}">${esc(p.name)}</option>`).join('')}</select>
+          <button class="btn sm ghost" id="cpPlan">Copy link</button>
+        </div>
+        <div class="linkrow"><span class="lk" id="lkPlan"></span></div>` : `
+        <div class="hint" style="margin:0">Add your Stripe plan links under Settings to send signup links from here.</div>`}
+      </section>
+
+      <section>
+        <h2>Engagement</h2>
+        <div class="hint">Last 30 days in the app. Lead venues count too; that is the demo signal. Ratings and comments stay owner-only on purpose.</div>
+        <div id="engBody" class="hint" style="margin:8px 0 0">Loading…</div>
+      </section>
+    </div>
+
+    <div class="pane${app ? ' on' : ''}" id="paneApp">
+      <section>
+        <h2>Games</h2>
+        <div class="hint">What this venue's tables can play, in this order. At least one stays on. The owner can change this from their dashboard too.</div>
+        <div id="gToggles">${gamesOrder.map(g => `
+          <div class="grow" data-id="${g}">
+            <label class="ck" style="flex:1;margin:0;align-items:center"><input type="checkbox" data-game="${g}" ${gameOn(g)?'checked':''}> ${esc(GAMES_META[g].name)}</label>
+            <span class="gmove"><button type="button" class="iconbtn" data-mv="-1" aria-label="Move ${esc(GAMES_META[g].name)} up">${ARR_UP}</button><button type="button" class="iconbtn" data-mv="1" aria-label="Move ${esc(GAMES_META[g].name)} down">${ARR_DOWN}</button></span>
+          </div>`).join('')}</div>
+        <div class="saverow"><button class="btn" id="gamesSave">Save</button><span class="msg" id="gMsg"></span></div>
+      </section>
+
+      <section>
+        <h2>Home screen cards</h2>
+        <div class="hint">The cards on the app's home screen, in this order. Tap one to edit it. The owner has this same editor on their dashboard.</div>
+        <div id="cardList"></div>
+        <div class="frow" id="cardAddRow" style="margin-top:12px">
+          <button class="btn ghost" id="addCardBtn">+ Add a card</button>
+          <span class="hint" id="cardCapLine" style="margin:0"></span>
+        </div>
+        <div class="kind" id="cardKind" style="display:none">
+          <h4>What kind of card?</h4>
+          <button type="button" class="kindopt" data-add="list"><b>Menu or list</b><span>Rows of names and prices: a tap list, a happy hour menu</span></button>
+          <button type="button" class="kindopt" data-add="notice"><b>Announcement</b><span>One message: an event, a notice, a one-off promo</span></button>
+          <button type="button" class="kindopt" data-add="schedule"><b>Weekly schedule</b><span>Something that repeats by day: daily specials, live music nights</span></button>
+          <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" id="cardKindCancel">Cancel</button></div>
+        </div>
+        <div class="saverow"><button class="btn" id="cardsSave">Save</button><span class="msg" id="cardsMsg"></span></div>
+      </section>
+
+      <section>
+        <h2>Add-ons and limits</h2>
+        <div class="hint">Operator-only. Owners never see these switches.</div>
+        <label class="f">Card slots</label>
+        <div class="frow">
+          <input type="number" id="capIn" min="0" max="20" value="${v.card_cap ?? 4}" style="width:84px;flex:none" />
+          <span class="hint" style="margin:0">How many home screen cards this venue can use. Default 4. Lowering it drops the last cards.</span>
+        </div>
+        <label class="ck" style="margin-top:14px"><input type="checkbox" id="gamesOn" ${v.games_enabled === false ? '' : 'checked'}> <span>Games on for this venue<small>Off hides the games side of the app. Feedback and cards stay.</small></span></label>
+        <label class="ck"><input type="checkbox" id="ffFlag" ${v.form_custom?'checked':''}> <span>Custom feedback form (paid)<small>Replaces the shared form for this venue. It starts as a copy; later changes to the shared form never touch it. The owner can edit it from their dashboard.</small></span></label>
+        <div id="ffEditWrap" style="display:${v.form_custom?'block':'none'};margin:4px 0 0 28px"><button class="btn sm ghost" id="ffEdit">Edit this venue's form</button></div>
+        <label class="ck"><input type="checkbox" id="cqFlag" ${v.custom_questions?'checked':''}> <span>Custom questions (paid)<small>This venue's own game questions, dealt first. Turning it off hides them without deleting anything.</small></span></label>
+        <label class="ck"><input type="checkbox" id="rcFlag" ${v.report_county !== false ? 'checked' : ''}> <span>County comparison on the guest report<small>Untick to leave the "vs county" page off this venue's monthly report.</small></span></label>
+        <div id="addonsConfirm"></div>
+        <div class="saverow"><button class="btn" id="addonsSave">Save</button><span class="msg" id="addonsMsg"></span></div>
+      </section>
+
+      <section id="cqSection" style="display:${v.custom_questions?'block':'none'}">
+        <h2>Custom questions</h2>
+        <div class="hint">Rows here belong to ${esc(v.name)} only.</div>
+        <label class="f">Custom-only games</label>
+        <div class="hint">Deal only this venue's questions in these games. Each needs enough rows for a full round; aim for three times that so repeat visits stay fresh. Below the floor the app blends the shared pool back in.</div>
+        <div id="cqOnly" class="hint">Loading…</div>
+        <div class="saverow"><button class="btn sm" id="cqOnlySave">Save</button><span class="msg" id="cqOnlyMsg"></span></div>
+        <label class="f" style="margin-top:16px">Import a pack for this venue</label>
+        <div class="hint">Same JSON format as Question packs. Rows land as this venue's custom questions.</div>
+        <input type="file" id="cqPackFile" accept=".json,application/json" />
+        <div id="cqPackConfirm"></div>
+        <div class="msg" id="cqPackMsg"></div>
+        <div id="cqList" class="hint" style="margin-top:10px">Loading…</div>
+        <label class="f" style="margin-top:16px">Add a custom row</label>
+        <select id="cqGame">${CONTENT_GAMES.map(g=>`<option value="${g}">${esc(GAMES_META[g].name)}</option>`).join('')}</select>
+        <div id="cqFields" style="margin-top:8px"></div>
+        <div class="saverow"><button class="btn sm" id="cqAdd">Add row</button><span class="msg" id="cqMsg"></span></div>
+      </section>
+    </div>`;
+
+  // ---- tabs: switching starts the new pane at the top ----
+  const showTab = which => {
+    const a = which === 'app';
+    $('paneVenue').classList.toggle('on', !a); $('paneApp').classList.toggle('on', a);
+    $('tabVenueBtn').classList.toggle('on', !a); $('tabAppBtn').classList.toggle('on', a);
+    $('tabVenueBtn').setAttribute('aria-selected', String(!a)); $('tabAppBtn').setAttribute('aria-selected', String(a));
+    _setView((a ? 'va=' : 'v=') + v.id, true);   // the plain one, replacing: a tab switch is not a new view, unsaved work stays guarded
+  };
+  $('tabVenueBtn').onclick = ()=>{ showTab('venue'); window.scrollTo(0, 0); };
+  $('tabAppBtn').onclick = ()=>{ showTab('app'); window.scrollTo(0, 0); };
+  $('tabCardBtn').onclick = ()=> leaveVenuePage(()=>{ cardView(v); window.scrollTo(0, 0); });
+
+  $('back').onclick = ()=> leaveVenuePage(home);
+  $('editBtn').onclick = ()=> leaveVenuePage(()=> form(v));
+  $('cpDemo').onclick = ()=> copy(demoLink(v));
+  $('cpOwner').onclick = ()=> copy(ownerLink(v));
+  $('cpReport').onclick = ()=> copy(reportLink(v));
+  $('opDemo').href  = demoLink(v);
+  $('opOwner').href = ownerLink(v);
+  $('opReport').href = reportLink(v);
+
+  // ---- status: an inline confirm, then a next step; the strip and badge repaint in place ----
+  const paintStatus = ()=>{
+    $('statusBtns').innerHTML = ['lead','active','inactive'].map(s=>`<button class="btn sm ${v.status===s?'cur':'ghost'}" data-st="${s}" ${v.status===s?'disabled aria-current="true"':''}>${cap1(s)}</button>`).join('');
+    const badge = document.querySelector('h1 .badge'); if(badge){ badge.className = 'badge ' + v.status; badge.textContent = v.status; }
+    document.querySelectorAll('[data-st]').forEach(b=> b.onclick = ()=>{
+      const st = b.dataset.st;
+      const why = { active:'Votes, surveys, and plays start saving for real.', inactive:'Their QR stops loading at the table.', lead:'The app keeps working but stops saving.' }[st];
+      askInline($('stConfirm'), `Set ${esc(v.name)} to ${st}? ${why}`, 'Set ' + st, async ()=>{
+        const m = $('stMsg'); m.className = 'msg'; m.textContent = 'Saving…';
+        const { data, error } = await rpc('admin_set_status', { p_id: v.id, p_status: st });
+        if(error || !data || data.ok!==true){ failMsg(m, 'Could not change the status.'); return; }
+        v.status = st; paintStatus();
+        m.className = 'msg ok';
+        m.textContent = st === 'active' ? 'Now active. Next: send them their dashboard link.' : st === 'inactive' ? 'Now inactive. Their QR no longer loads.' : 'Back to lead. The app works but saves nothing.';
+      }, st === 'inactive');
+    });
+  };
+  paintStatus();
+
+  // ---- owner passphrase: the row repaints in place after a change ----
+  const paintPass = ()=>{
+    $('opRow').innerHTML = `
+        <div class="hint" id="opStatus">${v.has_pass ? 'A passphrase is set.' : 'No passphrase. The link alone opens the dashboard.'}</div>
+        <div class="frow" style="margin-top:8px">
+          <input type="text" id="opPass" placeholder="Ex. blue heron 22" autocapitalize="off" autocorrect="off" spellcheck="false" style="flex:1;min-width:170px" />
+          <button class="btn sm ghost" id="opSet">${v.has_pass ? 'Replace' : 'Set'}</button>
+          ${v.has_pass ? '<button class="btn sm ghost" id="opClear">Remove</button>' : ''}
+        </div>`;
+    $('opSet').onclick = async ()=>{
+      const p = $('opPass').value.trim(), m = $('opMsg');
+      if(p.length < 8){ m.className = 'msg err'; m.textContent = 'At least 8 characters. A couple of words works well.'; return; }
+      m.className = 'msg'; m.textContent = 'Saving…';
+      const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: p });
+      if(error || !data || data.ok!==true){ failMsg(m); return; }
+      v.has_pass = true; paintPass();
+      m.className = 'msg ok'; m.textContent = 'Set. Owners on other devices will be asked for it. Text it to them separately.';
+    };
+    const opClear = $('opClear');
+    if(opClear) opClear.onclick = ()=> askInline($('opConfirm'), `Remove ${esc(v.name)}'s passphrase? The link alone opens the dashboard again.`, 'Remove', async ()=>{
+      const m = $('opMsg'); m.className = 'msg'; m.textContent = 'Removing…';
+      const { data, error } = await rpc('admin_set_owner_pass', { p_id: v.id, p_pass: null });
+      if(error || !data || data.ok!==true){ failMsg(m, 'Could not remove it.'); return; }
+      v.has_pass = false; paintPass();
+      m.className = 'msg ok'; m.textContent = 'Removed. The link alone opens the dashboard.';
+    }, true, null, 'Keep');
+  };
+  paintPass();
+
+  // ---- emails (mailto). Painted as a function so a new owner link repaints them. ----
+  const mail = (id, subject, body)=>{
+    const a = $(id); if(!a) return;
+    if(!v.owner_email) return;   // rendered as a disabled button; the section hint says what to do
+    a.href = mailto(v, subject, body);
+  };
+  const ownerMailBody = ()=>
+`Hi,
+
+Here is your private ${v.name} dashboard. Live ratings, comments from your guests, game activity, and the home screen cards you can update any time:
+
+${ownerLink(v)}
+
+This link is just for you. If it ever gets out, tell me and I will issue a fresh one.
+
+${SIG}`;
+  const paintMail = ()=>{
+    mail('mDemo', `Your ${v.name} demo`,
+`Hi,
+
+Great meeting you. Here is the ${v.name} demo, live right now with your branding. Open it on your phone and tap around like a guest would:
+
+${demoLink(v)}
+
+If you want it on your tables, it comes with a 30 day money back guarantee. Reply here${CFG.operatorPhone ? ", or call or text me at " + CFG.operatorPhone : ""}.
+
+${SIG}`);
+    mail('mOwner', `Your private ${v.name} dashboard`, ownerMailBody());
+    mail('mReport', `Your ${v.name} guest report`,
+`Hi,
+
+Your ${v.name} guest report is ready. Same link every month, always current:
+
+${reportLink(v)}
+
+Pick any month at the top of the page, and print or save it as a PDF right from there. This link is private to you, like your dashboard.
+
+${SIG}`);
+  };
+  paintMail();
+  if(plans.length){
+    const paint = ()=>{
+      const p = plans[+$('planSel').value];
+      $('lkPlan').textContent = stripeLink(p.url, v);
+      mail('mStripe', `Start your ${v.name} subscription`,
+`Hi,
+
+Here is the signup link for ${v.name}:
+
+${stripeLink(p.url, v)}
+
+It comes with a 30 day money back guarantee: if it is not for you, say so within 30 days and you get a full refund. No contract, and you can cancel any time with one click. Questions, just reply.
+
+${SIG}`);
+    };
+    $('planSel').onchange = paint;
+    $('cpPlan').onclick = ()=> copy($('lkPlan').textContent);
+    paint();
+  }
+
+  // ---- a new owner link: inline confirm, links repaint in place, a next step stays on screen ----
+  $('rotate').onclick = ()=> askInline($('rotConfirm'), `Issue a new owner link for ${esc(v.name)}? Their current dashboard and report links stop working right away.`, 'Issue new link', async ()=>{
+    const m = $('rotMsg'); m.className = 'msg'; m.textContent = 'Working…';
+    const { data, error } = await rpc('admin_rotate_owner_key', { p_id: v.id });
+    if(error || !data || data.ok!==true){ failMsg(m, 'Could not issue a new link.'); return; }
+    v.owner_key = data.owner_key;
+    $('lkOwner').textContent = ownerLink(v); $('lkReport').textContent = reportLink(v);
+    $('opOwner').href = ownerLink(v); $('opReport').href = reportLink(v);
+    paintMail();
+    m.className = 'msg ok';
+    m.innerHTML = 'New link issued. The old one no longer works. <span class="frow" style="display:inline-flex;margin-left:6px"><button type="button" class="btn sm ghost" id="rotCopy">Copy new link</button>' + (v.owner_email ? '<a class="btn sm ghost" id="rotMail">Email it</a>' : '') + '</span>';
+    $('rotCopy').onclick = ()=> copy(ownerLink(v));
+    if($('rotMail')) $('rotMail').href = mailto(v, `Your new ${v.name} dashboard link`, ownerMailBody());
+  }, true);
+
+  // ---- engagement snapshot ----
+  (async ()=>{
+    const { data, error } = await rpc('admin_venue_stats', { p_id: v.id });
+    const el = $('engBody');
+    if(error || !data){ el.innerHTML = 'Not available yet. Your database may need an update: ' + PLAT_LINK + '.'; return; }
+    const e30 = data.events_30d || {};
+    const stat = (n, label) => `<li class="chip"><b>${n||0}</b><span>${label}</span></li>`;
+    const games30 = (data.games_30d||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.n}`).join(', ');
+    const playsAll = (data.plays_all_time||[]).map(g=>`${esc((GAMES_META[g.game]||{name:g.game}).name)} ${g.plays}`).join(', ');
+    const last = data.last_event_at ? new Date(data.last_event_at).toLocaleDateString([], {month:'short', day:'numeric'}) : 'never';
+    el.className = '';
+    el.innerHTML = `
+      <ul class="chips">${stat(e30.opens,'opens')}${stat(e30.game_starts,'game starts')}${stat(e30.surveys,'surveys')}${stat(e30.review_clicks,'review clicks')}${stat(e30.promo_clicks,'card taps')}</ul>
+      ${games30 ? `<div class="hint" style="margin-top:8px">Games, 30 days: ${games30}</div>` : ''}
+      ${playsAll ? `<div class="hint" style="margin-top:2px">All-time plays: ${playsAll}</div>` : ''}
+      <div class="hint" style="margin-top:2px">Last activity: ${last}</div>`;
+  })();
+
+  // ---- games: dirty state, one Save ----
+  const gamesDirty = ()=> markDirty('games', 'gamesSave', 'Save', 'gMsg');
+  setSaveState('games', 'gamesSave', 'Save');
+  document.querySelectorAll('#gToggles input[type=checkbox]').forEach(i => i.onchange = gamesDirty);
+  document.querySelectorAll('#gToggles [data-mv]').forEach(b => b.onclick = ()=>{
+    const row = b.closest('[data-id]');
+    if (b.dataset.mv === '-1' && row.previousElementSibling) row.parentNode.insertBefore(row, row.previousElementSibling);
+    if (b.dataset.mv === '1'  && row.nextElementSibling)     row.parentNode.insertBefore(row.nextElementSibling, row);
+    gamesDirty();
+  });
+  $('gamesSave').onclick = async ()=>{
+    const picked = [...document.querySelectorAll('#gToggles input:checked')].map(x=>x.dataset.game);
+    const m = $('gMsg');
+    if(!picked.length){ m.className = 'msg err'; m.textContent = 'At least one game stays on.'; return; }
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const { data, error } = await rpc('admin_set_games', { p_id: v.id, p_games: picked });
+    if(error || !data || data.ok!==true){ failMsg(m); return; }
+    v.games = data.games;
+    DIRTY.games = false; setSaveState('games', 'gamesSave', 'Save');
+    m.className = 'msg ok'; m.textContent = 'Saved. Live on their tables now.';
+  };
+
+  // ---- home screen cards: the owner dashboard's editor, verbatim in behavior ----
+  const cardDraftK = 'st_admin_cards_' + v.id;
+  let CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : [];
+  let hadDraft = false;
+  try { const d = localStorage.getItem(cardDraftK); if(d){ CARDS = JSON.parse(d); hadDraft = JSON.stringify(CARDS) !== JSON.stringify(Array.isArray(v.cards) ? v.cards : []); } } catch(e){}
+  let CARD_OPEN = -1, CARD_CONFIRM = -1;
+  const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK, JSON.stringify(CARDS)); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); setSaveState('cards', 'cardsSaveInline', 'Save'); };
+  const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK); } catch(e){} };
+  const defaultCard = t =>
+      t === 'schedule' ? { t, title:'Daily specials', icon:'calendar', days:{} }
+    : t === 'list'     ? { t, title:'', icon:'beer', items:[{n:'',d:'',p:''}] }
+    :                    { t, title:'', icon:'megaphone', mode:'inline', body:'' };
+
+  function cardBody(c, ix){
+    const mode = c.mode || 'inline';
+    const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
+      <label class="cfl">Short line under the name (optional)</label>
+      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
+    const common = `
+      <label class="cfl">Card name</label>
+      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}
+      <label class="cfl">Icon</label>
+      <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
+      <div class="hint" style="margin:6px 0 0">Icon: ${esc(c.icon || 'star')}</div>`;
+    if (c.t === 'schedule') return common + `
+      <label class="cfl">The week</label>
+      <div class="hint" style="margin-bottom:2px">One line per day. Diners see today's line on the home screen and can tap in for the whole week. Blank days show no card that day.</div>
+      ${SP_DAYS.map(([k, label]) => `
+        <div class="sprow${k === SP_TODAY ? ' today' : ''}">
+          <label>${label}</label>
+          <input type="text" maxlength="200" data-day="${k}" data-ix="${ix}" value="${esc((c.days || {})[k] || '')}" placeholder="${k === 'mon' ? 'Ex. Half price specialty cocktails, $2 off Modelo drafts' : ''}">
+        </div>`).join('')}
+      <label class="ck"><input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''}> Keep the card on the home screen even on blank days, so diners can still open the week</label>`;
+    if (c.t === 'list') return common + `
+      <label class="cfl">The list</label>
+      <div class="hint" style="margin-bottom:2px">Prices get a dollar sign in the app. Type just the number, or words like "Market price".</div>
+      ${(c.items || []).map((i, j) => `
+        <div class="lirow">
+          <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness">
+          <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" inputmode="decimal">
+          <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
+          <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
+        </div>`).join('')}
+      <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" data-additem="${ix}">+ Add a row</button></div>`;
+    const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
+    return common + `
+      <label class="cfl">What it does</label>
+      <label class="ck"><input type="radio" name="cmode_${ix}" value="inline" data-ix="${ix}" ${mode === 'inline' ? 'checked' : ''}> The message sits right on the app home screen</label>
+      <label class="ck"><input type="radio" name="cmode_${ix}" value="link" data-ix="${ix}" ${mode === 'link' ? 'checked' : ''}> Tapping it opens a link</label>
+      <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>
+      ${mode === 'inline' ? `
+        <label class="cfl">Message</label>
+        <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>
+        <label class="ck"><input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''}> Make it stand out: a banner in the accent color</label>` : ''}
+      ${mode === 'link' ? `
+        <label class="cfl">Link</label>
+        ${urlField}` : ''}
+      ${mode === 'page' ? `
+        <label class="cfl">The details page</label>
+        <textarea data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Ex. Doors at 7, $10 cover, 21 and over. Reserve a table by Thursday.">${esc(c.body || '')}</textarea>
+        <label class="cfl">Button link at the bottom of the page (optional)</label>
+        ${urlField}
+        <label class="cfl">Button text</label>
+        <input type="text" style="max-width:260px" data-f="btn" data-ix="${ix}" maxlength="30" value="${esc(c.btn || '')}" placeholder="Ex. Learn More">` : ''}
+      <label class="cfl">Hide message after this date (optional)</label>
+      <input type="date" style="max-width:200px" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}">
+      <div class="hint" style="margin:4px 0 0">The card hides itself the day after, and stays here to reuse. Blank = shows until you hide or delete it.</div>`;
+  }
+
+  const renderCards = ()=>{
+    $('cardCapLine').textContent = cap() === 0 ? 'This venue has no card slots.' : CARDS.length + ' of ' + cap() + ' card slots used' + (CARDS.length >= cap() ? '. Delete one to add another.' : '');
+    $('addCardBtn').style.display = CARDS.length < cap() ? '' : 'none';
+    if(CARDS.length >= cap()) $('cardKind').style.display = 'none';
+    setSaveState('cards', 'cardsSave', 'Save');
+    $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
+      <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
+        <div class="cbox__head">
+          <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
+            <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
+            <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(c.desc || CARD_TYPES[c.t])}${c.off ? ' · hidden' : ''}</span>${cardExpired(c) ? `<span class="cbox__why">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>` : ''}</span>
+            <span class="cbox__chev" aria-hidden="true">›</span>
+          </button>
+          <span class="cbox__ctl"><button type="button" class="iconbtn" data-up="${ix}" title="Move up" aria-label="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
+          <button type="button" class="iconbtn" data-down="${ix}" title="Move down" aria-label="Move down" ${ix === CARDS.length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
+          <button type="button" class="iconbtn" data-ask="${ix}" title="Delete this card" aria-label="Delete this card">${TRASH}</button></span>
+        </div>
+        ${ix === CARD_CONFIRM && ix !== CARD_OPEN ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}
+        ${ix === CARD_OPEN ? `<div class="cbox__body">${cardBody(c, ix)}
+          <div class="frow" style="margin-top:18px;padding-top:14px;border-top:1px solid var(--line)">
+            <button type="button" class="btn sm" id="cardsSaveInline" style="min-width:96px">Save</button>
+            <button type="button" class="btn ghost sm" data-eye="${ix}" style="min-width:96px">${c.off ? 'Show' : 'Hide'}</button>
+            <button type="button" class="btn ghost sm" data-ask="${ix}" style="min-width:96px">Delete</button>
+          </div></div>${ix === CARD_CONFIRM ? `<div class="confirm" role="alert"><b>Delete "${esc(c.title || 'this card')}"?</b><button type="button" class="btn danger sm" data-del="${ix}">Delete</button><button type="button" class="btn ghost sm" data-keep="${ix}">Keep</button></div>` : ''}` : ''}
+      </div>`).join('') : '<div class="hint" style="margin:8px 0 0">No cards yet. Add one below.</div>';
+    wireCards();
+    setSaveState('cards', 'cardsSaveInline', 'Save');
+  };
+
+  function wireCards(){
+    const L = $('cardList');
+    L.querySelectorAll('[data-open]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.open; CARD_OPEN = CARD_OPEN === ix ? -1 : ix; CARD_CONFIRM = -1; renderCards(); });
+    L.querySelectorAll('[data-up]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.up; [CARDS[ix-1], CARDS[ix]] = [CARDS[ix], CARDS[ix-1]]; if(CARD_OPEN === ix) CARD_OPEN = ix - 1; else if(CARD_OPEN === ix - 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-down]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.down; [CARDS[ix], CARDS[ix+1]] = [CARDS[ix+1], CARDS[ix]]; if(CARD_OPEN === ix) CARD_OPEN = ix + 1; else if(CARD_OPEN === ix + 1) CARD_OPEN = ix; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-eye]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.eye]; c.off = !c.off; CARD_OPEN = -1; CARD_CONFIRM = -1; cardSaveDraft(); renderCards(); });
+    const si = $('cardsSaveInline'); if(si) si.onclick = ()=> $('cardsSave').onclick();
+    L.querySelectorAll('[data-ask]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = +b.dataset.ask; renderCards(); });
+    L.querySelectorAll('[data-keep]').forEach(b => b.onclick = ()=>{ CARD_CONFIRM = -1; renderCards(); });
+    L.querySelectorAll('[data-del]').forEach(b => b.onclick = ()=>{ const ix = +b.dataset.del; CARDS.splice(ix, 1); CARD_CONFIRM = -1; if(CARD_OPEN === ix) CARD_OPEN = -1; else if(CARD_OPEN > ix) CARD_OPEN--; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-icon]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.ix].icon = b.dataset.icon; cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('input[data-f], textarea[data-f]').forEach(i => i.addEventListener('input', ()=>{
+      const c = CARDS[+i.dataset.ix];
+      if(i.type === 'checkbox') c[i.dataset.f] = i.checked; else c[i.dataset.f] = i.value;
+      if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
+      if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
+      if(i.dataset.f === 'until'){ cardSaveDraft(); renderCards(); return; }
+      cardSaveDraft();
+    }));
+    L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{ const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft(); }));
+    L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards(); }));
+    L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{ CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft(); }));
+    L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
+  }
+
+  $('addCardBtn').onclick = ()=>{ $('cardKind').style.display = ''; $('cardKind').querySelector('.kindopt').focus(); };
+  $('cardKindCancel').onclick = ()=>{ $('cardKind').style.display = 'none'; };
+  document.querySelectorAll('#cardKind [data-add]').forEach(b => b.onclick = ()=>{
+    if(CARDS.length >= cap()) return;
+    $('cardKind').style.display = 'none';
+    CARDS.push(defaultCard(b.dataset.add));
+    CARD_OPEN = CARDS.length - 1; CARD_CONFIRM = -1;
+    cardSaveDraft(); renderCards();
+    const opened = document.querySelectorAll('.cbox')[CARD_OPEN];
+    if(opened) opened.scrollIntoView({ block: 'start', behavior: 'smooth' });
+  });
+
+  $('cardsSave').onclick = async ()=>{
+    const m = $('cardsMsg');
+    if(CARDS.some(c => !(c.title || '').trim())){ m.className = 'msg err'; m.textContent = 'Every card needs a name.'; return; }
+    const out = CARDS.map(c => {
+      const d = { ...c };
+      d.title = d.title.trim();
+      if(d.url && !/^(https?:\/\/|mailto:|tel:)/i.test(d.url.trim())) d.url = 'https://' + d.url.trim();
+      if(d.t === 'list') d.items = (d.items || []).filter(i => i.n && i.n.trim());
+      if(d.t === 'schedule'){ const days = {}; SP_DAYS.forEach(([k]) => { const t = ((d.days || {})[k] || '').trim(); if(t) days[k] = t; }); d.days = days; }
+      return d;
+    });
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const { data, error } = await rpc('admin_set_cards', { p_id: v.id, p_cards: out.length ? out : null });
+    if(error || !data || data.ok !== true){ failMsg(m); return; }
+    CARDS = out; v.cards = out;
+    cardClearDraft();
+    DIRTY.cards = false;
+    CARD_OPEN = -1; CARD_CONFIRM = -1;
+    renderCards();
+    m.className = 'msg ok'; m.textContent = 'Saved. Live on their tables now.';
+  };
+  renderCards();
+  if(hadDraft){
+    DIRTY.cards = true; setSaveState('cards', 'cardsSave', 'Save');
+    const m = $('cardsMsg'); m.className = 'msg';
+    m.innerHTML = 'Unsaved changes from last time are back. Save them, or <button type="button" class="linkbtn" id="dropDraft">drop them</button>.';
+    $('dropDraft').onclick = ()=>{ cardClearDraft(); CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : []; CARD_OPEN = -1; CARD_CONFIRM = -1; DIRTY.cards = false; renderCards(); m.textContent = 'Dropped. Showing what is live.'; };
+  }
+
+  // ---- add-ons and limits: one Save runs only what changed ----
+  const addonsDirty = ()=> markDirty('addons', 'addonsSave', 'Save', 'addonsMsg');
+  setSaveState('addons', 'addonsSave', 'Save');
+  ['capIn','gamesOn','ffFlag','cqFlag','rcFlag'].forEach(id => { $(id).addEventListener('input', addonsDirty); $(id).addEventListener('change', addonsDirty); });
+  const paintAddons = ()=>{ $('capIn').value = v.card_cap ?? 4; $('gamesOn').checked = v.games_enabled !== false; $('ffFlag').checked = !!v.form_custom; $('cqFlag').checked = !!v.custom_questions; $('rcFlag').checked = v.report_county !== false; };
+  $('addonsSave').onclick = async ()=>{
+    const m = $('addonsMsg');
+    const n = parseInt($('capIn').value, 10);
+    if(isNaN(n) || n < 0 || n > 20){ m.className = 'msg err'; m.textContent = 'Card slots is a number from 0 to 20.'; return; }
+    const jobs = [];
+    if(n !== (v.card_cap ?? 4)) jobs.push(['admin_set_card_cap', { p_id: v.id, p_cap: n }, ()=>{ v.card_cap = n; if(CARDS.length > n){ CARDS = CARDS.slice(0, n); v.cards = v.cards ? v.cards.slice(0, n) : v.cards; if(CARD_OPEN >= n) CARD_OPEN = -1; } renderCards(); }]);
+    const gOn = $('gamesOn').checked; if(gOn !== (v.games_enabled !== false)) jobs.push(['admin_set_games_enabled', { p_id: v.id, p_on: gOn }, ()=>{ v.games_enabled = gOn; }]);
+    const ff = $('ffFlag').checked; if(ff !== !!v.form_custom) jobs.push(['admin_set_form_custom', { p_id: v.id, p_on: ff }, ()=>{ v.form_custom = ff; $('ffEditWrap').style.display = ff ? 'block' : 'none'; }]);
+    const cq = $('cqFlag').checked; if(cq !== !!v.custom_questions) jobs.push(['admin_set_custom_questions', { p_id: v.id, p_on: cq }, ()=>{ v.custom_questions = cq; $('cqSection').style.display = cq ? 'block' : 'none'; }]);
+    const rc = $('rcFlag').checked; if(rc !== (v.report_county !== false)) jobs.push(['admin_set_report_county', { p_id: v.id, p_on: rc }, ()=>{ v.report_county = rc; }]);
+    const run = async ()=>{
+      m.className = 'msg'; m.textContent = 'Saving…';
+      for(const [fn, args, ok] of jobs){
+        const { data, error } = await rpc(fn, args);
+        if(error || !data || data.ok !== true){ failMsg(m); paintAddons(); return; }
+        ok(data);
+      }
+      DIRTY.addons = false; setSaveState('addons', 'addonsSave', 'Save');
+      m.className = 'msg ok'; m.textContent = jobs.length ? 'Saved.' : 'Nothing changed.';
+    };
+    const dropped = CARDS.length - n;
+    if(n !== (v.card_cap ?? 4) && dropped > 0) askInline($('addonsConfirm'), `Lower the slots to ${n}? The last ${dropped} card${dropped === 1 ? '' : 's'} on the home screen ${dropped === 1 ? 'is' : 'are'} deleted.`, 'Lower and delete', run, true, null, 'Keep');
+    else run();
+  };
+  $('ffEdit').onclick = ()=> formBuilder(v.id, ()=> detail(v.id, 'app'));
+
+  // ---- custom questions ----
+  const cqOnlyPaint = (rows)=>{
+    const counts = {};
+    (rows||[]).forEach(r=>{ if(r.status==='active') counts[r.game]=(counts[r.game]||0)+1; });
+    const sel = v.custom_only || [];
+    $('cqOnly').className = '';
+    $('cqOnly').innerHTML = CONTENT_GAMES.map(g=>{
+      const n = counts[g]||0, floor = MIN_CUSTOM_ONLY[g], ok = n >= floor;
+      return `<label class="ck" style="align-items:center;cursor:${ok?'pointer':'default'};opacity:${ok?1:.55}">
+        <input type="checkbox" data-co="${g}" ${sel.includes(g)?'checked':''} ${ok?'':'disabled'}>
+        <span>${esc(GAMES_META[g].name)} <span class="hint" style="display:inline;margin:0">${n} active${ok?'':`, needs ${floor}`}</span></span>
+      </label>`;
+    }).join('');
+    $('cqOnly').querySelectorAll('input').forEach(i => i.onchange = ()=> markDirty('cqonly', 'cqOnlySave', 'Save', 'cqOnlyMsg'));
+    setSaveState('cqonly', 'cqOnlySave', 'Save');
+  };
+  $('cqOnlySave').onclick = async ()=>{
+    const picked = [...document.querySelectorAll('#cqOnly input:checked')].map(x=>x.dataset.co);
+    const m = $('cqOnlyMsg');
+    m.className = 'msg'; m.textContent = 'Saving…';
+    const { data, error } = await rpc('admin_set_custom_only', { p_id: v.id, p_games: picked });
+    if(error || !data || data.ok!==true){ failMsg(m); return; }
+    v.custom_only = data.custom_only;
+    DIRTY.cqonly = false; setSaveState('cqonly', 'cqOnlySave', 'Save');
+    m.className = 'msg ok'; m.textContent = 'Saved.';
+  };
+
+  $('cqPackFile').addEventListener('change', async ()=>{
+    const f = $('cqPackFile').files[0], m = $('cqPackMsg');
+    if(!f) return;
+    let pack;
+    try { pack = JSON.parse(await f.text()); }
+    catch(e){ m.className = 'msg err'; m.textContent = 'Not valid JSON: ' + e.message; return; }
+    const res = validatePack(pack);
+    if(res.error){ m.className = 'msg err'; m.textContent = res.error; return; }
+    if(res.bad.length){ m.className = 'msg err'; m.textContent = `${res.bad.length} bad row(s): ${res.bad.slice(0,3).join('; ')}${res.bad.length>3?'; …':''}`; return; }
+    askInline($('cqPackConfirm'), `Import ${res.rows.length} ${esc(GAMES_META[res.game].name)} row${res.rows.length === 1 ? '' : 's'} as ${esc(v.name)}'s custom questions?`, 'Import', async ()=>{
+      m.className = 'msg'; m.textContent = 'Importing…';
+      let inserted = 0, skipped = 0;
+      for(let i = 0; i < res.rows.length; i += 400){
+        const { data, error } = await rpc('admin_add_content', { p_game: res.game, p_rows: res.rows.slice(i, i+400), p_venue_id: v.id });
+        if(error || !data || data.ok!==true){ failMsg(m, 'Import stopped after ' + inserted + ' rows.'); return; }
+        inserted += data.inserted; skipped += data.skipped;
+      }
+      m.className = skipped ? 'msg err' : 'msg ok';
+      m.textContent = `Done: ${inserted} inserted${skipped?`, ${skipped} skipped`:''}.`;
+      $('cqPackFile').value = '';
+      cqLoad();
+    }, false, ()=>{ $('cqPackFile').value = ''; }, 'Cancel');
+  });
+
+  const cqPaintFields = ()=>{
+    const g = $('cqGame').value;
+    $('cqFields').innerHTML = GAMES_META[g].fields.map(([k, label])=>
+      `<input type="text" data-k="${k}" placeholder="${esc(label)}" style="margin-top:6px" />`).join('');
+  };
+  $('cqGame').onchange = cqPaintFields;
+  cqPaintFields();
+
+  const cqLoad = async ()=>{
+    const { data, error } = await rpc('admin_list_custom', { p_id: v.id });
+    const el = $('cqList');
+    if(error || data === null || !Array.isArray(data)){ el.innerHTML = 'Not available yet. Your database may need an update: ' + PLAT_LINK + '.'; $('cqOnly').textContent = 'Not available yet.'; return; }
+    cqOnlyPaint(data);
+    if(!data.length){ el.textContent = 'No custom rows yet.'; return; }
+    el.className = '';
+    el.innerHTML = data.map(r=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)">
+        <span style="flex:1;min-width:0"><span style="color:var(--ink-dim);font-size:12px">${esc((GAMES_META[r.game]||{name:r.game}).name)}</span><br/>
+          <span style="${r.status==='retired'?'text-decoration:line-through;color:var(--ink-dim)':''}">${esc(r.label)}</span></span>
+        <button class="btn sm ghost" data-cq="${esc(r.game)}|${esc(r.key)}|${r.status==='active'?'retired':'active'}">${r.status==='active'?'Retire':'Restore'}</button>
+      </div>`).join('');
+    el.insertAdjacentHTML('beforeend', '<div id="cqRowConfirm"></div><div class="msg" id="cqListMsg"></div>');
+    el.querySelectorAll('[data-cq]').forEach(b=> b.onclick = ()=>{
+      const [game, key, status] = b.dataset.cq.split('|');
+      const go = async ()=>{
+        const m = $('cqListMsg');
+        const { data:d } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+        if(!d || d.ok!==true){ failMsg(m, 'Could not update that row.'); return; }
+        await cqLoad();
+        const m2 = $('cqListMsg'); if(m2){ m2.className = 'msg ok'; m2.textContent = status === 'retired' ? 'Retired. It stops showing on tables now; Restore brings it back.' : 'Restored.'; }
+      };
+      if(status === 'retired') askInline($('cqRowConfirm'), 'Retire this question? It stops showing on tables now. Restore brings it back.', 'Retire', go, true, null, 'Keep');
+      else go();
+    });
+  };
+  cqLoad();
+
+  $('cqAdd').onclick = async ()=>{
+    const g = $('cqGame').value, m = $('cqMsg');
+    const row = {};
+    document.querySelectorAll('#cqFields input').forEach(i=> row[i.dataset.k] = i.value.trim());
+    const bad = validateRow(g, row);
+    if(bad){ m.className = 'msg err'; m.textContent = bad; return; }
+    m.className = 'msg'; m.textContent = 'Adding…';
+    const { data, error } = await rpc('admin_add_content', { p_game: g, p_rows: [row], p_venue_id: v.id });
+    if(error || !data || data.ok!==true || data.inserted!==1){
+      const why = data && data.errors && data.errors[0] && data.errors[0].error;
+      if(why){ m.className = 'msg err'; m.textContent = why; } else failMsg(m, 'Could not add it.');
+      return;
+    }
+    m.className = 'msg ok'; m.textContent = 'Added.';
+    document.querySelectorAll('#cqFields input').forEach(i=> i.value = '');
+    cqLoad();
+  };
+}
+
+/* ================================================================
+   QUESTION PACKS. The content door:
+   plain JSON in, validated client-side AND server-side, inserted
+   through the one typed admin_add_content RPC. Never raw SQL.
+   Pack format: {"game":"trivia","rows":[{...}]} — field names per
+   game are in GAMES_META above (they match 27_admin_content.sql).
+   ================================================================ */
+function packs(){
+  setView('packs');
+  $('main').innerHTML = `
+    <button class="back" id="back">${ICO_BACK}Back</button>
+    <h1>Question packs</h1>
+
+    <section>
+      <h2>What's live now</h2>
+      <div class="hint">Shared pool per game. Custom = venue-owned rows across all venues.</div>
+      <div id="ccBody" class="hint" style="margin-top:8px">Loading…</div>
+    </section>
+
+    <section>
+      <h2>Import a pack</h2>
+      <div class="hint">A pack is a JSON file like
+        <code style="display:block;background:var(--panel-2);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:12px;overflow-x:auto">{"game":"trivia","rows":[{"question":"…","correct":"…","wrong1":"…","wrong2":"…","wrong3":"…"}]}</code>
+        Field names per game: who_knows_who prompt/a/b/c/d ({N} = player name) · guess_the_split a/b · wordy word ·
+        trivia question/correct/wrong1..3 · who_invited_you category/word · fortune_teller text · all_talk category.
+        Rows go to the SHARED pool (every venue). Custom rows for one venue are added from that venue's page instead.</div>
+      <input type="file" id="packFile" accept=".json,application/json" style="margin-top:10px" />
+      <label class="f" style="margin-top:12px">Or paste the JSON</label>
+      <textarea id="packText" rows="7" style="width:100%;font-family:monospace;font-size:12px" spellcheck="false"></textarea>
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn sm ghost" id="packCheck">Validate</button>
+        <button class="btn sm" id="packGo" disabled style="opacity:.5">Import</button>
+      </div>
+      <div class="msg" id="packMsg"></div>
+    </section>
+
+    <section>
+      <h2>Retire by upload date</h2>
+      <div class="hint">Retires SHARED-pool rows of one game added before a date (custom rows are never touched). Preview first, always; a retire that would leave a game under one full round is refused. Retired rows are kept and can come back.</div>
+      <div class="frow" style="margin-top:10px">
+        <select id="rbGame">${CONTENT_GAMES.map(g=>`<option value="${g}">${esc(GAMES_META[g].name)}</option>`).join('')}</select>
+        <input type="date" id="rbDate" />
+        <button class="btn sm ghost" id="rbPreview">Preview</button>
+        <button class="btn sm danger" id="rbGo" disabled style="opacity:.5">Retire</button>
+      <div id="rbConfirm"></div>
+      </div>
+      <div class="msg" id="rbMsg"></div>
+    </section>
+
+    <section>
+      <h2>Find a question</h2>
+      <div class="hint">Search a game's questions (shared and custom, active and retired) to retire a bad one, or bring one back.</div>
+      <div class="frow" style="margin-top:10px">
+        <select id="fqGame">${CONTENT_GAMES.map(g=>`<option value="${g}">${esc(GAMES_META[g].name)}</option>`).join('')}</select>
+        <input type="text" id="fqQ" placeholder="Search text…" style="flex:1;min-width:150px" />
+        <button class="btn sm ghost" id="fqGo">Search</button>
+      </div>
+      <div id="fqList" class="hint" style="margin-top:10px"></div>
+    </section>`;
+  $('back').onclick = ()=> home();
+
+  // ---- retire by date: dry run gates the live run ----
+  let rbChecked = null;
+  const rbInvalidate = ()=>{ rbChecked = null; $('rbGo').disabled = true; $('rbGo').style.opacity = .5; };
+  $('rbGame').onchange = rbInvalidate; $('rbDate').onchange = rbInvalidate;
+  $('rbPreview').onclick = async ()=>{
+    rbInvalidate();
+    const m = $('rbMsg'), g = $('rbGame').value, d = $('rbDate').value;
+    if(!d){ m.className='msg err'; m.textContent='Pick a date.'; return; }
+    m.className='msg'; m.textContent='Checking…';
+    const { data, error } = await rpc('admin_retire_before', { p_game: g, p_before: d, p_dry_run: true });
+    if(error || !data){ failMsg(m, 'The preview is not available yet.'); return; }
+    if(data.ok !== true){
+      m.className='msg err';
+      m.textContent = data.error === 'below_floor'
+        ? `Refused: that would retire ${data.would_retire} of ${data.active_now} and leave the game under its floor of ${data.floor}.`
+        : 'Failed: ' + data.error;
+      return;
+    }
+    if(!data.would_retire){ m.className='msg'; m.textContent='Nothing to retire before that date.'; return; }
+    rbChecked = { g, d };
+    m.className='msg ok';
+    m.textContent = `Would retire ${data.would_retire} of ${data.active_now} active ${GAMES_META[g].name} rows, leaving ${data.left_active}. Tap Retire to do it.`;
+    $('rbGo').disabled = false; $('rbGo').style.opacity = 1;
+  };
+  $('rbGo').onclick = ()=>{
+    if(!rbChecked) return;
+    askInline($('rbConfirm'), `Retire the previewed ${esc(GAMES_META[rbChecked.g].name)} rows added before ${esc(rbChecked.d)}? They are kept and can be restored, but stop showing on tables right away.`, 'Retire', doRetire, true, null, 'Keep');
+  };
+  const doRetire = async ()=>{
+    const m = $('rbMsg');
+    const { data, error } = await rpc('admin_retire_before', { p_game: rbChecked.g, p_before: rbChecked.d, p_dry_run: false });
+    rbInvalidate();
+    if(error || !data || data.ok!==true){ m.className='msg err'; m.textContent='Retire failed: ' + (error ? error.message : (data&&data.error)||'unknown'); return; }
+    m.className='msg ok'; m.textContent = `Retired ${data.retired}; ${data.left_active} still active.`;
+    paintCounts();
+  };
+
+  // ---- find + retire/restore one question ----
+  const fqRun = async ()=>{
+    const el = $('fqList'), q = $('fqQ').value.trim();
+    if(!q){ el.className='hint'; el.textContent='Type something to search for.'; return; }
+    el.className='hint'; el.textContent='Searching…';
+    const { data, error } = await rpc('admin_search_content', { p_game: $('fqGame').value, p_q: q });
+    if(error || data === null){ failMsg(el, 'Search is not available yet.'); return; }
+    if(!data.length){ el.textContent='No matches.'; return; }
+    el.className='';
+    el.innerHTML = data.map(r=>`
+      <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--line)">
+        <span style="flex:1;min-width:0">
+          <span style="color:var(--ink-dim);font-size:12px">${r.venue_id?esc(r.venue_id)+' custom':'shared'}${r.status==='retired'?' · retired':''}</span><br/>
+          <span style="${r.status==='retired'?'text-decoration:line-through;color:var(--ink-dim)':''}">${esc(r.label)}</span></span>
+        <button class="btn sm ${r.status==='active'?'danger':'ghost'}" data-fq="${esc(r.game)}|${esc(r.key)}|${r.status==='active'?'retired':'active'}">${r.status==='active'?'Retire':'Restore'}</button>
+      </div>`).join('');
+    el.insertAdjacentHTML('beforeend', '<div id="fqRowConfirm"></div><div class="msg" id="fqListMsg"></div>');
+    el.querySelectorAll('[data-fq]').forEach(b=> b.onclick = ()=>{
+      const [game, key, status] = b.dataset.fq.split('|');
+      const go = async ()=>{
+        const m = $('fqListMsg');
+        const { data:d, error:e } = await rpc('admin_set_content_status', { p_game: game, p_key: key, p_status: status });
+        if(e || !d || d.ok!==true){
+          if(d && d.error === 'below_floor'){ m.className = 'msg err'; m.textContent = 'Not retired: the game would drop under its floor of ' + d.floor + ' active rows.'; }
+          else failMsg(m, 'Could not update that row.');
+          return;
+        }
+        await fqRun(); paintCounts();
+        const m2 = $('fqListMsg'); if(m2){ m2.className = 'msg ok'; m2.textContent = status === 'retired' ? 'Retired. It stops showing on tables now; Restore brings it back.' : 'Restored.'; }
+      };
+      if(status === 'retired') askInline($('fqRowConfirm'), 'Retire this question? It stops showing on tables now. Restore brings it back.', 'Retire', go, true, null, 'Keep');
+      else go();
+    });
+  };
+  $('fqGo').onclick = fqRun;
+  $('fqQ').addEventListener('keydown', e=>{ if(e.key==='Enter') fqRun(); });
+
+  const paintCounts = async ()=>{
+    const { data, error } = await rpc('admin_content_counts');
+    const el = $('ccBody');
+    if(error || !data){ el.innerHTML = 'Not available yet. Your database may need an update: ' + PLAT_LINK + '.'; return; }
+    el.className = '';
+    el.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:14px">
+      <tr style="color:var(--ink-dim);font-size:12px;text-align:left"><th style="padding:4px 0">Game</th><th>Active</th><th>Retired</th><th>Custom</th><th>Newest</th></tr>
+      ${data.map(r=>`<tr style="border-top:1px solid var(--line)">
+        <td style="padding:6px 0">${esc((GAMES_META[r.game]||{name:r.game}).name)}</td>
+        <td>${r.active}</td><td>${r.retired}</td><td>${r.custom}</td>
+        <td style="color:var(--ink-dim)">${r.newest ? new Date(r.newest).toLocaleDateString([], {month:'short', day:'numeric', year:'2-digit'}) : 'none'}</td>
+      </tr>`).join('')}
+    </table>`;
+  };
+  paintCounts();
+
+  let checked = null;   // the validated pack, cleared on any input change
+  const m = $('packMsg');
+  const invalidate = ()=>{ checked = null; $('packGo').disabled = true; $('packGo').style.opacity = .5; };
+  $('packText').addEventListener('input', invalidate);
+  $('packFile').addEventListener('change', async ()=>{
+    const f = $('packFile').files[0];
+    if(!f) return;
+    $('packText').value = await f.text();
+    invalidate();
+    $('packCheck').click();
+  });
+
+  $('packCheck').onclick = ()=>{
+    invalidate();
+    let pack;
+    try { pack = JSON.parse($('packText').value); }
+    catch(e){ m.className='msg err'; m.textContent = 'Not valid JSON: ' + e.message; return; }
+    const res = validatePack(pack);
+    if(res.error){ m.className='msg err'; m.textContent = res.error; return; }
+    if(res.bad.length){
+      m.className='msg err';
+      m.innerHTML = `${res.bad.length} bad row${res.bad.length===1?'':'s'}. Fix these first:<br/>` +
+        res.bad.slice(0,8).map(esc).join('<br/>') + (res.bad.length>8?'<br/>…':'');
+      return;
+    }
+    checked = res;
+    m.className='msg ok';
+    m.textContent = `Valid: ${res.rows.length} ${GAMES_META[res.game].name} row${res.rows.length===1?'':'s'} ready for the shared pool.`;
+    $('packGo').disabled = false; $('packGo').style.opacity = 1;
+  };
+
+  $('packGo').onclick = async ()=>{
+    if(!checked) return;
+    $('packGo').disabled = true;
+    m.className='msg'; m.textContent = 'Importing…';
+    let inserted = 0, skipped = 0, errs = [];
+    for(let i = 0; i < checked.rows.length; i += 400){         // server caps 500/call
+      const { data, error } = await rpc('admin_add_content', {
+        p_game: checked.game, p_rows: checked.rows.slice(i, i+400) });
+      if(error || !data || data.ok!==true){
+        m.className='msg err';
+        m.textContent = `Import stopped at row ${i+1}: ${error ? error.message : (data && data.error) || 'unknown error'}. ${inserted} rows were already inserted.`;
+        return;
+      }
+      inserted += data.inserted; skipped += data.skipped;
+      errs = errs.concat(data.errors || []);
+    }
+    m.className = skipped ? 'msg err' : 'msg ok';
+    m.textContent = `Done: ${inserted} inserted` + (skipped ? `, ${skipped} skipped (${errs.slice(0,3).map(e=>`row ${e.row}: ${e.error}`).join('; ')}${errs.length>3?'; …':''})` : '.');
+    checked = null;
+    paintCounts();
+  };
+}
+
+/* ================================================================
+   TABLE CARD GENERATOR. Reproduces the standard 4x6 card design as a
+   pure-canvas render at 1200x1800 (true 300dpi print). Variables:
+   logo, accent1 (structure: pills, headlines, caps, bottom bar;
+   default deep navy), accent2 (the venue accent: header rule,
+   feedback pill), town line (town only; the Bahrs SINCE line was
+   a one-off and is not part of the template). Both QRs come from
+   the verified encoder above. All type is Hanken Grotesk (sans;
+   serif headlines were rejected early on). NOTE the
+   spelling: the Google font is "Hanken Grotesk". The public pages
+   still request the nonexistent "Hanken Grotesque" and silently
+   fall back to system-ui; canvas has no such fallback, which is
+   how the typo was discovered here.
+   ================================================================ */
+function drawTracked(ctx, text, x, y, ls){
+  let cx = x;
+  for(const ch of text){ ctx.fillText(ch, cx, y); cx += ctx.measureText(ch).width + ls; }
+  return cx - ls;
+}
+function trackedWidth(ctx, text, ls){
+  let w = 0;
+  for(const ch of text) w += ctx.measureText(ch).width + ls;
+  return w - ls;
+}
+function roundRect(ctx, x, y, w, h, r){
+  ctx.beginPath();
+  ctx.moveTo(x+r, y);
+  ctx.arcTo(x+w, y, x+w, y+h, r);
+  ctx.arcTo(x+w, y+h, x, y+h, r);
+  ctx.arcTo(x, y+h, x, y, r);
+  ctx.arcTo(x, y, x+w, y, r);
+  ctx.closePath();
+}
+function drawQrCard(ctx, matrix, x, y, size){
+  ctx.save();
+  ctx.shadowColor = 'rgba(30,25,15,.16)'; ctx.shadowBlur = 36; ctx.shadowOffsetY = 10;
+  ctx.fillStyle = '#ffffff';
+  roundRect(ctx, x, y, size, size, 30); ctx.fill();
+  ctx.restore();
+  const pad = 50, inner = size - pad*2, mc = matrix.length, mod = inner/mc;
+  ctx.fillStyle = '#1a1a1a';
+  for(let r=0; r<mc; r++) for(let c=0; c<mc; c++)
+    if(matrix[r][c]) ctx.fillRect(x+pad + c*mod, y+pad + r*mod, Math.ceil(mod), Math.ceil(mod));
+}
+function drawPill(ctx, x, y, label, bg, dotColor){
+  ctx.font = '700 30px "Hanken Grotesk", sans-serif';
+  const ls = 4.5, tw = trackedWidth(ctx, label, ls);
+  const h = 64, dotR = 8, padL = 30, gap = 16, padR = 32;
+  const w = padL + dotR*2 + gap + tw + padR;
+  ctx.fillStyle = bg;
+  roundRect(ctx, x, y, w, h, h/2); ctx.fill();
+  ctx.fillStyle = dotColor;
+  ctx.beginPath(); ctx.arc(x+padL+dotR, y+h/2, dotR, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = '#ffffff';
+  ctx.textBaseline = 'middle';
+  drawTracked(ctx, label, x+padL+dotR*2+gap, y+h/2+2, ls);
+  ctx.textBaseline = 'alphabetic';
+}
+async function renderCard(cnv, v, opts){
+  // opts.bleed (px per edge): the background bands extend through the
+  // bleed ring so a commercial printer can trim back to a clean 4x6.
+  // 38px at 300dpi is a hair over the standard 1/8" bleed.
+  // opts.headerBg: custom header band color (venue header_bg prefill).
+  // opts.dark: dark card — dark warm body + light text, header defaults
+  // to the app's black nav, QR cards STAY white so they scan.
+  const W = 1200, H = 1800, B = opts.bleed || 0;
+  cnv.width = W + 2*B; cnv.height = H + 2*B;
+  const ctx = cnv.getContext('2d');
+  const a1 = opts.a1, a2 = opts.a2, DARK = !!opts.dark;
+  const INK    = DARK ? '#ece7dd' : '#33302a';
+  const DIM    = DARK ? '#a7a196' : '#8b8578';
+  const BODY   = DARK ? '#171512' : '#efe8dc';
+  const HEADER = opts.headerBg || (DARK ? '#0b0a09' : '#ffffff');
+  const TOWN   = readableOn(HEADER) === '#ffffff' ? '#a7a196' : '#8b8578';
+  const RULE_L = DARK ? '#3a352e' : '#d9d2c2';    // the hairline divider
+  await Promise.all([
+    document.fonts.load('800 100px "Hanken Grotesk", sans-serif'),
+    document.fonts.load('700 30px "Hanken Grotesk", sans-serif'),
+    document.fonts.load('400 38px "Hanken Grotesk", sans-serif'),
+  ]).catch(()=>{});
+
+  // background bands, painted edge to edge including the bleed ring
+  ctx.fillStyle = BODY; ctx.fillRect(0, 0, W+2*B, H+2*B);
+  ctx.fillStyle = HEADER; ctx.fillRect(0, 0, W+2*B, 332+B);        // header band
+  ctx.fillStyle = a2; ctx.fillRect(0, 332+B, W+2*B, 12);           // accent rule
+  ctx.fillStyle = a1; ctx.fillRect(0, H-54+B, W+2*B, 54+B);        // bottom bar
+  ctx.translate(B, B);  // everything below draws in trim-box coordinates
+
+  // header: logo left (image or wordmark), town right
+  if(opts.logoImg){
+    const img = opts.logoImg, maxW = 430, maxH = 214;
+    const s = Math.min(maxW/img.naturalWidth, maxH/img.naturalHeight, 2.2);
+    const w = img.naturalWidth*s, h = img.naturalHeight*s;
+    ctx.drawImage(img, 110, 166 - h/2, w, h);
+  } else {
+    ctx.fillStyle = a1;
+    ctx.font = '800 58px "Hanken Grotesk", sans-serif';
+    ctx.fillText((v.logo && !/^(https?:|images\/)/i.test(v.logo) ? v.logo : v.name), 110, 188);
+  }
+  if(opts.town){
+    ctx.fillStyle = TOWN;   // header-aware: light dim on dark headers
+    ctx.font = '700 36px "Hanken Grotesk", sans-serif';
+    const t = opts.town.toUpperCase(), ls = 6;
+    drawTracked(ctx, t, W - 110 - trackedWidth(ctx, t, ls), 182, ls);
+  }
+
+  // QR cards
+  const games = QR.encode(`${DOMAIN}/app.html?v=${v.id}&go=games`);
+  const box   = QR.encode(`${DOMAIN}/app.html?v=${v.id}&go=box`);
+  drawQrCard(ctx, games, 710, 435, 380);
+  drawQrCard(ctx, box,   710, 1095, 380);
+
+  // section 1: games
+  drawPill(ctx, 110, 430, 'GAME TIME', a1, a2);
+  ctx.fillStyle = a1; ctx.font = '800 74px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Play games', 110, 592);
+  ctx.fillText('while you wait.', 110, 678);
+  ctx.fillStyle = INK; ctx.font = '400 38px "Hanken Grotesk", sans-serif';
+  ctx.fillText('A few quick games for the table.', 110, 756);
+  ctx.fillText('No app or sign-up required.', 110, 808);
+  ctx.fillStyle = a1; ctx.font = '700 34px "Hanken Grotesk", sans-serif';
+  drawTracked(ctx, 'SCAN TO PLAY TABLE GAMES', 110, 884, 4);
+
+  // divider
+  ctx.fillStyle = RULE_L; ctx.fillRect(110, 972, W-220, 2);
+
+  // section 2: feedback
+  drawPill(ctx, 110, 1090, 'YOUR FEEDBACK', a2, '#ffffff');
+  ctx.fillStyle = a1; ctx.font = '800 74px "Hanken Grotesk", sans-serif';
+  ctx.fillText('How was', 110, 1252);
+  ctx.fillText('everything?', 110, 1338);
+  ctx.fillStyle = INK; ctx.font = '400 38px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Tell us anything, completely', 110, 1416);
+  ctx.fillText('anonymous. No name, no email.', 110, 1468);
+  ctx.fillStyle = a1; ctx.font = '700 34px "Hanken Grotesk", sans-serif';
+  drawTracked(ctx, 'SCAN TO LEAVE FEEDBACK', 110, 1544, 4);
+  ctx.fillStyle = DIM; ctx.font = '400 32px "Hanken Grotesk", sans-serif';
+  ctx.fillText('Takes 30 seconds · 100% anonymous', 110, 1614);
+}
+async function loadCardLogo(v){
+  if(!v.logo || !/^(https?:|images\/)/i.test(v.logo)) return null;
+  try {
+    const res = await fetch(v.logo);
+    if(!res.ok) return null;
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const img = new Image();
+    await new Promise((ok, no)=>{ img.onload=ok; img.onerror=no; img.src=url; });
+    return img;
+  } catch(e){ return null; }
+}
+function downloadCanvas(cnv, filename){
+  cnv.toBlob(blob=>{
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+  }, 'image/png');
+}
+function cardView(v){
+  // The card design is remembered per venue on this device (the operator, Aug
+  // 2026: reopening the generator reverted his settings). Saved on every
+  // repaint; venue fields are only the FIRST-open defaults.
+  setView('card=' + v.id);
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem('st_card_' + v.id) || 'null'); } catch(e){}
+  const d = {
+    town: (saved && saved.town) || '',
+    a1:   (saved && /^#[0-9a-f]{6}$/i.test(saved.a1||'') && saved.a1) || '#1e3a5f',
+    a2:   (saved && /^#[0-9a-f]{6}$/i.test(saved.a2||'') && saved.a2) || v.accent,
+    hb:   saved ? (saved.hb || null) : (v.header_bg || null),
+    dark: saved ? !!saved.dark : !!v.dark_mode,
+  };
+  $('main').innerHTML = venueHead(v, 'card') + `
+    <div class="split">
+      <section>
+        <label class="f">Town line <span style="font-weight:400;text-transform:none">(shown top right)</span></label>
+        <input type="text" id="cTown" value="${esc(d.town)}" placeholder="Ex. Springfield, USA" maxlength="30" />
+        <label class="f">Structure color <span style="font-weight:400;text-transform:none">(pills, headlines, bottom bar)</span></label>
+        <div class="frow">
+          <input type="color" id="cA1" value="${esc(d.a1)}" />
+          <input type="text" id="cA1Hex" value="${esc(d.a1)}" style="width:110px" autocapitalize="off" spellcheck="false" />
+        </div>
+        <div class="swatches" id="cSw1"></div>
+        <label class="f">Accent color <span style="font-weight:400;text-transform:none">(header rule, feedback pill; prefilled from the venue)</span></label>
+        <div class="frow">
+          <input type="color" id="cA2" value="${esc(d.a2)}" />
+          <input type="text" id="cA2Hex" value="${esc(d.a2)}" style="width:110px" autocapitalize="off" spellcheck="false" />
+        </div>
+        <div class="swatches" id="cSw2"></div>
+        <label class="f">Header background <span style="font-weight:400;text-transform:none">(prefilled from the venue; white otherwise)</span></label>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="cHbOn" ${d.hb?'checked':''}/> custom</label>
+          <input type="color" id="cHb" value="${esc(d.hb||'#0b0a09')}" style="${d.hb?'':'display:none'}" />
+        </div>
+        <label class="f">Dark card <span style="font-weight:400;text-transform:none">(matches the app's dark mode; QR panels stay white so they scan)</span></label>
+        <div class="frow">
+          <label style="font-size:14px;display:flex;gap:6px;align-items:center"><input type="checkbox" id="cDark" ${d.dark?'checked':''}/> dark card</label>
+        </div>
+        <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn" id="dlPrint">Download print PNG</button>
+          <button class="btn ghost" id="dlBleed">Download with bleed</button>
+        </div>
+        <div class="hint" style="margin-top:12px">Print PNG is exact 4x6 at 300dpi (1200x1800) for borderless home/lab printing. The bleed version (1276x1876) extends the background 1/8&quot; past each edge for commercial printers that trim to size. Always test-scan a printed card before a real run.</div>
+        <div class="msg" id="cMsg"></div>
+      </section>
+      <div><canvas id="cardCanvas" style="width:100%;max-width:340px;border-radius:10px;box-shadow:0 10px 30px rgba(22,17,10,.18);display:block;margin:0 auto"></canvas></div>
+    </div>`;
+  $('back').onclick = ()=> home();
+  $('editBtn').onclick = ()=> form(v);
+  $('tabVenueBtn').onclick = ()=>{ detail(v.id); window.scrollTo(0, 0); };
+  $('tabAppBtn').onclick = ()=>{ detail(v.id, 'app'); window.scrollTo(0, 0); };
+
+  let logoImg = null, timer = null;
+  const opts = ()=>({ town: $('cTown').value.trim(), a1: $('cA1Hex').value, a2: $('cA2Hex').value,
+                      headerBg: $('cHbOn').checked ? $('cHb').value : null,
+                      dark: $('cDark').checked, logoImg });
+  const paint = ()=>{
+    const o = opts();
+    try { localStorage.setItem('st_card_' + v.id, JSON.stringify({ town:o.town, a1:o.a1, a2:o.a2, hb:o.headerBg, dark:o.dark })); } catch(e){}
+    return renderCard($('cardCanvas'), v, o);
+  };
+  const queue = ()=>{ clearTimeout(timer); timer = setTimeout(paint, 150); };
+  [['cA1','cA1Hex'],['cA2','cA2Hex']].forEach(([wheel,hex])=>{
+    $(wheel).addEventListener('input', ()=>{ $(hex).value = $(wheel).value; queue(); });
+    $(hex).addEventListener('input', ()=>{ if(/^#[0-9a-f]{6}$/i.test($(hex).value)){ $(wheel).value = $(hex).value; queue(); } });
+  });
+  $('cTown').addEventListener('input', queue);
+  $('cHbOn').addEventListener('change', ()=>{ $('cHb').style.display = $('cHbOn').checked ? '' : 'none'; queue(); });
+  $('cHb').addEventListener('input', queue);
+  $('cDark').addEventListener('change', queue);
+  $('dlPrint').onclick = async ()=>{ await paint(); downloadCanvas($('cardCanvas'), `${v.id}-table-card.png`); };
+  $('dlBleed').onclick = async ()=>{
+    const b = document.createElement('canvas');
+    await renderCard(b, v, { ...opts(), bleed: 38 });
+    downloadCanvas(b, `${v.id}-table-card-bleed.png`);
+  };
+
+  (async ()=>{
+    $('cMsg').className='msg'; $('cMsg').textContent = 'Rendering…';
+    logoImg = await loadCardLogo(v);
+    await paint();
+    $('cMsg').className='msg ok';
+    $('cMsg').textContent = logoImg ? '' : 'No logo image; using the wordmark in the header.';
+    // color suggestions pulled from the logo, same extractor as Add venue
+    if(logoImg){
+      const sw = extractSwatches(logoImg);
+      [['cSw1','cA1','cA1Hex'],['cSw2','cA2','cA2Hex']].forEach(([box, wheel, hex])=>{
+        $(box).innerHTML = sw.map(c=>`<button class="sw" style="background:${c}" data-c="${c}" title="${c}"></button>`).join('');
+        $(box).querySelectorAll('.sw').forEach(b=> b.onclick = ()=>{
+          $(wheel).value = b.dataset.c; $(hex).value = b.dataset.c; paint();
+        });
+      });
+    }
+  })();
+}
+
+init();

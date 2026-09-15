@@ -69,10 +69,17 @@ const sql = read(path.join(ROOT, 'install', 'install.sql'));
 const seedWant = 'insert into schema_migrations (version) values ' + Array.from({ length: newest }, (_, i) => `(${i + 1})`).join(', ') + ';';
 if (!sql.includes(seedWant)) fail(`install.sql must seed: ${seedWant}`);
 else ok('install.sql seeds every schema version');
-const admin = read(path.join(ROOT, 'public', 'admin.html'));
-const bm = admin.match(/const BUILD = (\d+);/);
-if (!bm || parseInt(bm[1], 10) !== vj.build) fail(`admin.html BUILD (${bm && bm[1]}) and version.json build (${vj.build}) differ`);
-else ok(`build ${vj.build} stamped in both places`);
+const adminJs = read(path.join(ROOT, 'public', 'js', 'admin.js'));
+const bm = adminJs.match(/^const BUILD = (\d+);/m);
+if (!bm || parseInt(bm[1], 10) !== vj.build) fail(`js/admin.js BUILD (${bm && bm[1]}) and version.json build (${vj.build}) differ`);
+else ok(`build ${vj.build} stamped in js/admin.js and version.json`);
+for (const f of ['index.html', 'app.html', 'owner.html', 'report.html', 'admin.html']) {
+  const page = read(path.join(ROOT, 'public', f));
+  if (/<script(?![^>]*\bsrc=)[^>]*>\s*\S/.test(page)) fail(`${f} has an inline <script> (the CSP refuses those since build 25)`);
+  const stamps = [...page.matchAll(/<script src="js\/[a-z-]+\.js\?v=(\d+)"/g)].map(m => +m[1]);
+  if (!stamps.length || stamps.some(s => s !== vj.build)) fail(`${f} script tags are not all stamped ?v=${vj.build} (run tools/stamp-build.js ${vj.build})`);
+}
+ok('pages carry no inline script and every js tag is stamped');
 
 // 4. newest migration's definitions are in install.sql
 if (folders.length) {
