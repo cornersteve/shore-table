@@ -4143,8 +4143,7 @@ const EC_SETS = {
 };
 // what to draw, and what to leave for the next player
 function ecTipCopy(parts, i){
-  const part = parts[i], next = parts[i + 1];
-  return 'Draw ONLY ' + part.what + '.' + (next ? ' The NEXT player draws the ' + next.t.toLowerCase() + '.' : ' You are the last drawer.');
+  return 'Draw ONLY ' + parts[i].what + '. ' + ecJoinCopy(parts, i);
 }
 // how this part joins its neighbours: the whole game lives in these two edges
 function ecJoinCopy(parts, i){
@@ -4307,7 +4306,6 @@ reg('ec_draw', (el)=>{
     </div>
     <h1 class="big" style="font-size:24px">Draw the ${part.t}${prompt ? ` <span class="ec-of">of ${escHtml(prompt)}</span>` : ''}</h1>
     <p class="lede" style="margin-top:6px">${ecTipCopy(parts, ec.turn)}</p>
-    <div class="ec-join">${ecJoinCopy(parts, ec.turn)}</div>
     <div class="ec-board" id="ecBoard"></div>
     <div class="ec-tools">
       <button type="button" class="ec-tool on" id="ecPen" aria-pressed="true">${EC_ICON.pencil}Pencil</button>
