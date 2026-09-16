@@ -497,7 +497,7 @@ reg('hub', (el)=>{
     guess_the_split:    { ok: TOT.length,      html: gcard('gcTot',    'Solo or up to 8 players',         'Guess the Split',  'Pick a side, then call how the crowd split.') },
     horse_racing:    { ok: true,            html: gcard('gcHr',     'Solo or up to 8 · dice decide',   'Horse Racing',     'Buy tickets on a horse and cheer it home.') },
     ring_toss:       { ok: true,            html: gcard('gcRt',     'Solo · hold and release',         'Ring Toss',        'Swing the ring on its string and catch the hook.') },
-    exquisite_corpse:{ ok: true,            html: gcard('gcEc',     '2 to 4 players · pass and draw',  'Exquisite Corpse', 'Draw one part, pass it on. See what the table made.') },
+    exquisite_corpse:{ ok: true,            html: gcard('gcEc',     '2 or 3 players · pass and draw',  'Exquisite Corpse', 'Draw one part, pass it on. See what the table made.') },
   };
   // The venue's saved list IS the display order (33_game_order.sql preserves
   // it server-side). Fail-open rule unchanged: a null, empty, or all-junk
@@ -4133,30 +4133,32 @@ let ec = { players: [] };
 const EC_W = 320, EC_H = 250, EC_STRIP = 28;   // css px; the strip is what the next drawer gets to see
 const EC_SETS = {
   figure: { name: 'A character', parts: [
-    { t:'Head',  tip:'Draw a head and a neck.' },
-    { t:'Body',  tip:'Draw the body and the arms.' },
-    { t:'Legs',  tip:'Draw the legs.' },
-    { t:'Feet',  tip:'Draw the feet and whatever they stand on.' } ] },
+    { t:'Head', what:'the head and the neck' },
+    { t:'Body', what:'the body and the arms' },
+    { t:'Legs', what:'the legs and the feet' } ] },
   scene: { name: 'A scene', parts: [
-    { t:'Sky',         tip:'Draw what is up in the sky.' },
-    { t:'Middle',      tip:'Draw the middle of the picture.' },
-    { t:'Ground',      tip:'Draw the ground and what stands on it.' },
-    { t:'Underground', tip:'Draw what is under the ground, or under the water.' } ] },
+    { t:'Sky',         what:'the sky and whatever is up in it' },
+    { t:'Ground',      what:'the ground and whatever stands on it' },
+    { t:'Underground', what:'whatever is under the ground, or under the water' } ] },
 };
-// how a part joins its neighbours: the whole game lives in these two edges
-function ecJoinCopy(i, n){
-  const top = 'The strip at the top is the bottom edge of the last drawing. Connect your lines to it.';
-  const bottom = 'Draw all the way off the bottom edge. The next drawer sees only that edge, and the drawing only connects if your lines reach it.';
-  if(i === 0) return bottom;
-  if(i === n - 1) return top;
-  return top + ' Then ' + bottom.charAt(0).toLowerCase() + bottom.slice(1);
+// what to draw, and what to leave for the next player
+function ecTipCopy(parts, i){
+  const part = parts[i], next = parts[i + 1];
+  return 'Draw ONLY ' + part.what + '.' + (next ? ' The next player draws the ' + next.t.toLowerCase() + '.' : ' You are the last drawer.');
+}
+// how this part joins its neighbours: the whole game lives in these two edges
+function ecJoinCopy(parts, i){
+  const part = parts[i], prev = parts[i - 1], next = parts[i + 1];
+  const top = prev ? 'The strip at the top is the bottom edge of the ' + prev.t.toLowerCase() + '. Connect your ' + part.t.toLowerCase() + ' to it.' : '';
+  const bottom = next ? 'Draw the ' + part.t.toLowerCase() + ' all the way off the bottom edge: the next drawer sees only that edge, and the ' + next.t.toLowerCase() + ' will only connect if your lines reach it.' : '';
+  return [top, bottom].filter(Boolean).join(' ');
 }
 const EC_PROMPTS = {
   figure: ['a pirate','a chef','a robot','a sea captain','a lifeguard','a rock star','a mermaid','a superhero','a very sleepy tourist','a lighthouse keeper','a wizard','a hockey player'],
   scene:  ['a beach day','a shipwreck','the boardwalk at night','a fishing trip','a thunderstorm at sea','a backyard barbecue','a parade','a snow day at the shore','a carnival','a marina at sunrise'],
 };
-const EC_COLORS = ['#1b1410', '#c0392b', '#3a6ea5', '#2e9e63', '#d6a32b'];   // ink, red, blue, green, gold (the app's own palette)
-const EC_SIZES = [2.5, 5, 9, 18];   // the last one is for filling
+const EC_COLORS = ['#1b1410', '#7a4b2a', '#c0392b', '#d6a32b', '#2e9e63', '#3a6ea5', '#ffffff'];   // ink, brown, red, gold, green, blue, white
+const EC_SIZES = [2.5, 5, 9, 22];   // the last one is for filling; the eraser follows the same choice
 const EC_ICON = {
   pencil: '<svg viewBox="0 0 24 24"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M13.5 6.5l3 3"/></svg>',
   eraser: '<svg viewBox="0 0 24 24"><path d="M7 20l-3.5-3.5a2 2 0 0 1 0-2.8l8.7-8.7a2 2 0 0 1 2.8 0l4.5 4.5a2 2 0 0 1 0 2.8L12 20H7z"/><path d="M6 20h14M9.5 9.5l5 5"/></svg>',
@@ -4183,10 +4185,10 @@ reg('ec_intro', (el)=>{
     <h1 class="big">Draw a piece. Pass it on.</h1>
     <div class="howto">
       <div class="howto__step"><span class="howto__n">1</span><span>One drawing, made in parts. The first player draws the head, then hands the phone over.</span></div>
-      <div class="howto__step"><span class="howto__n">2</span><span>The next player sees only a thin strip of the bottom of that drawing, just enough to connect their lines to it, and draws the body. Then the legs, then the feet.</span></div>
+      <div class="howto__step"><span class="howto__n">2</span><span>The next player sees only a thin strip of the bottom of that drawing, just enough to connect their lines to it, and draws the body. The third draws the legs.</span></div>
       <div class="howto__step"><span class="howto__n">3</span><span>Nobody sees the whole thing until the last part is done. Then the drawing unfolds for the table.</span></div>
     </div>
-    <p class="lede">Choose a character or a scene, and turn on prompts if you want a nudge for each part. Two to four players.</p>
+    <p class="lede">Choose a character or a scene, and a prompt if you want a nudge. Two or three players.</p>
     <button class="btn" id="ecToSetup" style="margin-top:14px">Add players ›</button>
     <div class="spacer"></div>`;
   el.querySelector('#ecToSetup').onclick = ()=>{ ec = { players: [], set: 'figure', prompts: true }; go('ec_setup', { exit:true }); };
@@ -4198,20 +4200,19 @@ reg('ec_setup', (el)=>{
   el.innerHTML = `
     <div class="eyebrow">Exquisite Corpse · setup</div>
     <h1 class="big">Who's drawing?</h1>
-    <p class="lede">Add the drawers in the order the phone will go around. 2 to 4 players: a drawing has four parts at most.</p>
+    <p class="lede">Add the drawers in the order the phone will go around. Two or three players.</p>
     <div class="players" id="chips"></div>
     <div class="nameadd">
       <input id="nameInput" placeholder="Add a name" autocomplete="off" maxlength="14" />
       <button class="btn sm" id="addBtn" style="padding-left:20px;padding-right:20px">Add</button>
     </div>
     <div class="namehint" id="nameHint"></div>
-    <div class="ec-note" id="ecPartsNote"></div>
     <button class="btn" id="startEc" style="margin-top:14px">Next ›</button>
     <div class="spacer"></div>`;
   const chips = el.querySelector('#chips'), input = el.querySelector('#nameInput'), hint = el.querySelector('#nameHint');
   if(!ec.icon) ec.icon = {};
   if(!ec.iconPool) ec.iconPool = shuffle(HS_ICONS);
-  const partsFor = n => n >= 4 ? 4 : 3;
+
   function renderChips(){
     chips.innerHTML = '';
     ec.players.forEach((p, idx)=>{
@@ -4224,15 +4225,11 @@ reg('ec_setup', (el)=>{
     const n = ec.players.length + (input.value.trim() ? 1 : 0);
     const b = el.querySelector('#startEc'); const ok = n >= 2;
     b.disabled = !ok; b.style.opacity = ok ? '1' : '.4';
-    const parts = EC_SETS[ec.set].parts.slice(0, partsFor(n)).map(p => p.t).join(', ');
-    el.querySelector('#ecPartsNote').textContent = n >= 2
-      ? `${partsFor(n)} parts: ${parts}.` + (n < partsFor(n) ? ' With two of you the phone goes back and forth.' : '')
-      : '';
   }
   function add(){
     const v = input.value.trim();
     if(!v) return false;
-    if(ec.players.length >= 4){ hint.textContent = "That's the max of 4 drawers. A drawing has four parts at most."; return false; }
+    if(ec.players.length >= 3){ hint.textContent = "That's the max of 3 drawers. A drawing has three parts."; return false; }
     if(ec.players.some(p => p.toLowerCase() === v.toLowerCase())){ hint.textContent = 'Someone already has that name. Add a last initial?'; return false; }
     const used = new Set(Object.values(ec.icon));
     ec.icon[v] = ec.iconPool.find(x => !used.has(x)) || HS_ICONS[Object.keys(ec.icon).length % HS_ICONS.length];
@@ -4245,7 +4242,7 @@ reg('ec_setup', (el)=>{
   el.querySelector('#startEc').onclick = ()=>{
     if(input.value.trim() && !add()){ input.focus(); return; }
     if(ec.players.length < 2) return;
-    ec.nParts = partsFor(ec.players.length);
+    ec.nParts = 3;
     ec.startIx = 0;
     go('ec_options', { exit:true });
   };
@@ -4301,9 +4298,9 @@ reg('ec_draw', (el)=>{
   const prompt = ec.prompt;
   el.innerHTML = `
     <div class="eyebrow">Exquisite Corpse · ${escHtml(who)} · part ${ec.turn + 1} of ${parts.length}</div>
-    <h1 class="big" style="font-size:24px">${part.t}${prompt ? ` <span class="ec-of">of ${escHtml(prompt)}</span>` : ''}</h1>
-    <p class="lede" style="margin-top:6px">${part.tip}</p>
-    <div class="ec-join">${ecJoinCopy(ec.turn, parts.length)}</div>
+    <h1 class="big" style="font-size:24px">Draw the ${part.t}${prompt ? ` <span class="ec-of">of ${escHtml(prompt)}</span>` : ''}</h1>
+    <p class="lede" style="margin-top:6px">${ecTipCopy(parts, ec.turn)}</p>
+    <div class="ec-join">${ecJoinCopy(parts, ec.turn)}</div>
     <div class="ec-board" id="ecBoard"></div>
     <div class="ec-tools">
       <button type="button" class="ec-tool on" id="ecPen" aria-pressed="true">${EC_ICON.pencil}Pencil</button>
@@ -4315,7 +4312,7 @@ reg('ec_draw', (el)=>{
       <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${Math.min(30, Math.round(s * 1.5 + 4))}px;height:${Math.min(30, Math.round(s * 1.5 + 4))}px"></span></button>`).join('')}</div>
     </div>
     <div class="namehint" id="ecHint" style="text-align:center;min-height:18px"></div>
-    <button class="btn" id="ecDone" style="margin-top:6px">Done, pass it on ›</button>
+    <button class="btn" id="ecDone" style="margin-top:6px">${ec.turn === parts.length - 1 ? 'Done, reveal the drawing ›' : 'Done, pass it on ›'}</button>
     <div class="spacer"></div>`;
   const board = el.querySelector('#ecBoard');
   if(prev){
@@ -4334,7 +4331,7 @@ reg('ec_draw', (el)=>{
   const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (EC_W / r.width), y: (e.clientY - r.top) * (EC_H / r.height) }; };
   const setTool = t => { tool = t; el.querySelector('#ecPen').classList.toggle('on', t === 'pen'); el.querySelector('#ecEraser').classList.toggle('on', t === 'eraser'); el.querySelector('#ecPen').setAttribute('aria-pressed', t === 'pen'); el.querySelector('#ecEraser').setAttribute('aria-pressed', t === 'eraser'); };
   const applyTool = ()=>{
-    if(tool === 'eraser'){ ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 22; }
+    if(tool === 'eraser'){ ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = size * 2.2; }
     else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = size; }
   };
   cv.addEventListener('pointerdown', e=>{
@@ -4359,7 +4356,7 @@ reg('ec_draw', (el)=>{
   el.querySelector('#ecUndo').onclick = ()=>{ const s = undos.pop(); if(s) ctx.putImageData(s, 0, 0); };
   // a color or size pick also puts the pencil back in hand
   el.querySelectorAll('.ec-sw').forEach(b => b.onclick = ()=>{ color = b.dataset.c; el.querySelectorAll('.ec-sw').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); setTool('pen'); });
-  el.querySelectorAll('.ec-sz').forEach(b => b.onclick = ()=>{ size = +b.dataset.s; el.querySelectorAll('.ec-sz').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); setTool('pen'); });
+  el.querySelectorAll('.ec-sz').forEach(b => b.onclick = ()=>{ size = +b.dataset.s; el.querySelectorAll('.ec-sz').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); });
   const drewSomething = ()=>{ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for(let i = 3; i < d.length; i += 4){ if(d[i]) return true; } return false; };
   el.querySelector('#ecDone').onclick = ()=>{
     if(!drewSomething()){ el.querySelector('#ecHint').textContent = 'Draw something first, even a squiggle.'; return; }
@@ -4389,7 +4386,7 @@ reg('ec_reveal', (el)=>{
     </div>
     <div class="spacer"></div>`;
   el.querySelector('#ecReveal').onclick = ()=> el.querySelector('#ecReveal').classList.toggle('zoom');
-  el.querySelector('#ecAgain').onclick = ()=>{ ec.startIx = (ec.startIx + n) % ec.players.length; ecBegin(); };
+  el.querySelector('#ecAgain').onclick = ()=>{ ec.startIx = (ec.startIx + n) % ec.players.length; go('ec_options', { exit:true }); };
   el.querySelector('#ecSave').onclick = ()=>{ const a = document.createElement('a'); a.href = url; a.download = 'exquisite-corpse.png'; document.body.appendChild(a); a.click(); a.remove(); };
   el.querySelector('#ecHub').onclick = ()=> go('hub');
 });
