@@ -4312,7 +4312,7 @@ reg('ec_draw', (el)=>{
       <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${Math.min(30, Math.round(s * 1.5 + 4))}px;height:${Math.min(30, Math.round(s * 1.5 + 4))}px"></span></button>`).join('')}</div>
     </div>
     <div class="namehint" id="ecHint" style="text-align:center;min-height:18px"></div>
-    <button class="btn" id="ecDone" style="margin-top:6px">${ec.turn === parts.length - 1 ? 'Done, reveal the drawing ›' : 'Done, pass it on ›'}</button>
+    <button class="btn" id="ecDone" style="margin-top:6px">${ec.turn === parts.length - 1 ? 'Done, reveal the drawing ›' : 'Done ›'}</button>
     <div class="spacer"></div>`;
   const board = el.querySelector('#ecBoard');
   if(prev){
