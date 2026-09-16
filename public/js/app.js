@@ -3457,9 +3457,9 @@ reg('sb_done', (el)=>{
           <a class="btn reviewcta__btn" href="${escHtml(review)}" target="_blank" rel="noopener">Leave a Google review ↗</a>
         </div>` : ''}
     </div>
-    ${venue().gamesEnabled === false ? '' : '<button class="btn btn--ghost" id="games">Play a game while you wait ›</button>'}
+    <button class="btn btn--ghost" id="homeBtn">Back to home ›</button>
     <div style="text-align:center;margin-top:10px"><button class="privacy-link" id="privacyLink">Privacy</button></div>`;
-  el.querySelector('#games')?.addEventListener('click', ()=>{state.entry='games';go('hub');});
+  el.querySelector('#homeBtn').onclick = ()=> go('landing');   // takeout guests are not waiting for a table
   el.querySelector('#privacyLink').onclick = openPrivacy;
   el.querySelector('.reviewcta__btn')?.addEventListener('click', ()=> logEvent('review_click'));
 });
