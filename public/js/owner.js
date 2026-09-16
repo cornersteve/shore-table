@@ -48,6 +48,15 @@ function deltaChip(cur, prev){
 function render(s){
   $('page').style.display = 'block';
   $('msg').style.display = 'none';
+  // an inactive venue's cards open to nothing: say so before anything else
+  const note = $('statusNote');
+  if(note){
+    note.hidden = s.status !== 'inactive';
+    if(s.status === 'inactive'){
+      const em = CFG.contactEmail || '';
+      note.innerHTML = '<b>Your app is not active right now.</b>Guests who scan your table cards see nothing until it is turned back on. To reactivate, contact ' + (em ? '<a href="mailto:' + esc(em) + '">' + esc(em) + '</a>' : esc(CFG.brandName || 'your operator')) + '.';
+    }
+  }
   // Venue logo up top when it is a URL; the venue name in text otherwise
   // (same convention as the diner app: venues.logo holds a URL or a wordmark).
   if (/^(https?:\/\/|images\/)/i.test(s.logo || '')) $('vname').innerHTML = `<img class="vlogo" src="${esc(s.logo)}" alt="${esc(s.name)}">`;
