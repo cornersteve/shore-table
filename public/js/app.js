@@ -4301,7 +4301,10 @@ reg('ec_draw', (el)=>{
   const parts = ecParts(), part = parts[ec.turn], who = ecDrawer(ec.turn), prev = ec.panels[ec.turn - 1] || null;
   const prompt = ec.prompt;
   el.innerHTML = `
-    <div class="eyebrow">Exquisite Corpse · ${escHtml(who)} · part ${ec.turn + 1} of ${parts.length}</div>
+    <div class="ec-top">
+      <div class="eyebrow" style="margin:0">Exquisite Corpse · ${escHtml(who)} · part ${ec.turn + 1} of ${parts.length}</div>
+      <button type="button" class="btn sm" id="ecDoneTop">${ec.turn === parts.length - 1 ? 'Reveal ›' : 'Done ›'}</button>
+    </div>
     <h1 class="big" style="font-size:24px">Draw the ${part.t}${prompt ? ` <span class="ec-of">of ${escHtml(prompt)}</span>` : ''}</h1>
     <p class="lede" style="margin-top:6px">${ecTipCopy(parts, ec.turn)}</p>
     <div class="ec-join">${ecJoinCopy(parts, ec.turn)}</div>
@@ -4364,13 +4367,15 @@ reg('ec_draw', (el)=>{
   el.querySelectorAll('.ec-sw').forEach(b => b.onclick = ()=>{ color = b.dataset.c; el.querySelectorAll('.ec-sw').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); setTool('pen'); });
   el.querySelectorAll('.ec-sz').forEach(b => b.onclick = ()=>{ size = +b.dataset.s; el.querySelectorAll('.ec-sz').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); });
   const drewSomething = ()=>{ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for(let i = 3; i < d.length; i += 4){ if(d[i]) return true; } return false; };
-  el.querySelector('#ecDone').onclick = ()=>{
+  const finish = ()=>{
     if(!drewSomething()){ el.querySelector('#ecHint').textContent = 'Draw something first, even a squiggle.'; return; }
     ec.panels[ec.turn] = cv;
     ec.turn++;
     if(ec.turn < parts.length) go('ec_pass', { exit:true });
     else go('ec_reveal', { exit:true });
   };
+  el.querySelector('#ecDone').onclick = finish;
+  el.querySelector('#ecDoneTop').onclick = finish;
 });
 
 reg('ec_reveal', (el)=>{
