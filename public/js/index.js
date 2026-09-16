@@ -54,14 +54,27 @@ function mkHome(v){
   const phones = document.querySelector('.phones');
   const show = ()=>{ if(phones) phones.classList.remove('mk-wait'); };
   const CACHE = 'st_demo_venue_' + DEMO;
+  // the venue's own accent on the phones and the report sheet, the way its
+  // real app and report wear it (the page around them keeps the operator's)
+  const onAccent = hex => { const m = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex); if(!m) return '#ffffff';
+    const lin = h => { const x = parseInt(h, 16) / 255; return x <= .03928 ? x / 12.92 : Math.pow((x + .055) / 1.055, 2.4); };
+    const L = .2126 * lin(m[1]) + .7152 * lin(m[2]) + .0722 * lin(m[3]); return (1.05 / (L + .05)) >= 4.5 ? '#ffffff' : '#16110a'; };
   const fill = v => {
     if(!v || !v.name) return false;
     document.querySelectorAll('.mk-name').forEach(e => e.textContent = v.name);
     const home = document.querySelector('.mk-home'); if(home) home.innerHTML = mkHome(v);
+    if(/^#[0-9a-f]{6}$/i.test(v.accent || '')) document.querySelectorAll('.phones, .report-fig').forEach(e => {
+      e.style.setProperty('--accent', v.accent);
+      e.style.setProperty('--on-accent', onAccent(v.accent));
+      e.style.setProperty('--accent-deep', 'color-mix(in srgb, ' + v.accent + ' 72%, #16110a)');
+    });
     if(v.logo && /^(https?:|images\/|data:image\/)/i.test(v.logo)) document.querySelectorAll('.mk-logo').forEach(e => {
-      if(e.classList.contains('has-img')) return;
+      // claim the slot before the image loads: the cached fill and the live
+      // fill can arrive within the same second, and each used to add a logo
+      if(e.dataset.logo === v.logo) return;
+      e.dataset.logo = v.logo;
       const i = new Image(); i.alt = '';
-      i.onload = ()=>{ e.appendChild(i); e.classList.add('has-img'); };
+      i.onload = ()=>{ e.querySelectorAll('img').forEach(x => x.remove()); e.appendChild(i); e.classList.add('has-img'); };
       i.src = v.logo;
     });
     return true;
@@ -71,11 +84,11 @@ function mkHome(v){
   if(!C.supabaseUrl || !C.supabaseKey){ show(); return; }
   // never hold the phones for more than a moment on a slow connection
   const t0 = setTimeout(show, 2500);
-  fetch(C.supabaseUrl.replace(/\/$/, '') + '/rest/v1/public_venues?id=eq.' + encodeURIComponent(DEMO) + '&select=name,logo,cards,games_enabled', { headers: { apikey: C.supabaseKey, Authorization: 'Bearer ' + C.supabaseKey } })
+  fetch(C.supabaseUrl.replace(/\/$/, '') + '/rest/v1/public_venues?id=eq.' + encodeURIComponent(DEMO) + '&select=name,logo,accent,cards,games_enabled', { headers: { apikey: C.supabaseKey, Authorization: 'Bearer ' + C.supabaseKey } })
     .then(r => r.ok ? r.json() : [])
     .then(rows => {
       const v = rows && rows[0];
-      if(fill(v)){ try { localStorage.setItem(CACHE, JSON.stringify({ name: v.name, logo: v.logo || null, cards: v.cards || null, games_enabled: v.games_enabled })); } catch(e){} }
+      if(fill(v)){ try { localStorage.setItem(CACHE, JSON.stringify({ name: v.name, logo: v.logo || null, accent: v.accent || null, cards: v.cards || null, games_enabled: v.games_enabled })); } catch(e){} }
     })
     .catch(()=>{})
     .finally(()=>{ clearTimeout(t0); show(); });
