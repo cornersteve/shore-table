@@ -4316,7 +4316,7 @@ reg('ec_draw', (el)=>{
   };
   cv.addEventListener('pointerdown', e=>{
     e.preventDefault();
-    if(undos.length >= 30) undos.shift();
+    if(undos.length >= 8) undos.shift();   // eight steps back is plenty for a doodle
     undos.push(ctx.getImageData(0, 0, cv.width, cv.height));
     try { cv.setPointerCapture(e.pointerId); } catch(err){}
     drawing = true; last = pos(e); applyTool();
