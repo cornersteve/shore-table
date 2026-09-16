@@ -4162,7 +4162,7 @@ const EC_PROMPTS = {
            'a jazz club','a cabin in the mountains','a volcano island','a haunted house','a rooftop party','a dog park','a sailing race','the line at the ice cream truck','a drive-in movie','a garden party'],
 };
 const EC_COLORS = ['#1b1410', '#7a4b2a', '#c0392b', '#d6a32b', '#2e9e63', '#3a6ea5', '#ffffff'];   // ink, brown, red, gold, green, blue, white
-const EC_SIZES = [2.5, 5, 9, 22];   // the last one is for filling; the eraser follows the same choice
+const EC_SIZES = [2.5, 5, 9, 40];   // the last one is for filling; the eraser follows the same choice
 const EC_ICON = {
   pencil: '<svg viewBox="0 0 24 24"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M13.5 6.5l3 3"/></svg>',
   eraser: '<svg viewBox="0 0 24 24"><path d="M7 20l-3.5-3.5a2 2 0 0 1 0-2.8l8.7-8.7a2 2 0 0 1 2.8 0l4.5 4.5a2 2 0 0 1 0 2.8L12 20H7z"/><path d="M6 20h14M9.5 9.5l5 5"/></svg>',
