@@ -4144,7 +4144,7 @@ const EC_SETS = {
 // what to draw, and what to leave for the next player
 function ecTipCopy(parts, i){
   const part = parts[i], next = parts[i + 1];
-  return 'Draw ONLY ' + part.what + '.' + (next ? ' The next player draws the ' + next.t.toLowerCase() + '.' : ' You are the last drawer.');
+  return 'Draw ONLY ' + part.what + '.' + (next ? ' The NEXT player draws the ' + next.t.toLowerCase() + '.' : ' You are the last drawer.');
 }
 // how this part joins its neighbours: the whole game lives in these two edges
 function ecJoinCopy(parts, i){
@@ -4315,9 +4315,11 @@ reg('ec_draw', (el)=>{
       <div class="ec-swatches">${EC_COLORS.map((c, i) => `<button type="button" class="ec-sw${i === 0 ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color ${i + 1}" aria-pressed="${i === 0}"></button>`).join('')}</div>
       <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${Math.min(30, Math.round(s * 1.5 + 4))}px;height:${Math.min(30, Math.round(s * 1.5 + 4))}px"></span></button>`).join('')}</div>
     </div>
-    <div class="namehint" id="ecHint" style="text-align:center;min-height:18px"></div>
-    <button class="btn" id="ecDone" style="margin-top:6px">${ec.turn === parts.length - 1 ? 'Done, reveal the drawing ›' : 'Done ›'}</button>
-    <div class="spacer"></div>`;
+    <div class="spacer"></div>
+    <div class="ec-done">
+      <div class="namehint" id="ecHint" style="text-align:center;min-height:18px;margin:0 0 6px"></div>
+      <button class="btn" id="ecDone">${ec.turn === parts.length - 1 ? 'Done, reveal the drawing ›' : 'Done ›'}</button>
+    </div>`;
   const board = el.querySelector('#ecBoard');
   if(prev){
     const strip = ecCanvas(EC_W, EC_STRIP); strip.className = 'ec-strip';
@@ -4378,9 +4380,11 @@ reg('ec_reveal', (el)=>{
   ec.panels.slice(0, n).forEach((p, i)=> fx.drawImage(p, 0, i * EC_H, EC_W, EC_H));
   const url = fin.toDataURL('image/png');
   const artists = parts.map((p, i)=> `${ecDrawer(i)}`).filter((v, i, a)=> a.indexOf(v) === i);
+  // "Dana & Jim" or "Dana, Jim, & Alex"
+  const byLine = artists.length <= 1 ? artists.join('') : artists.length === 2 ? artists.join(' & ') : artists.slice(0, -1).join(', ') + ', & ' + artists[artists.length - 1];
   el.innerHTML = `
     <div class="eyebrow">Exquisite Corpse · the reveal</div>
-    <h1 class="big" style="font-size:24px">${EC_SETS[ec.set].name}, by ${escHtml(artists.join(', '))}</h1>
+    <h1 class="big" style="font-size:24px">${EC_SETS[ec.set].name}, by ${escHtml(byLine)}</h1>
     <div class="ec-reveal" id="ecReveal"><img class="ec-final" src="${url}" alt="The finished drawing" /><div class="ec-curtain"></div></div>
     <p class="lede" style="text-align:center;margin-top:4px">Tap the drawing to zoom in. Press and hold it to save it to your phone.</p>
     <div class="ec-actions">
