@@ -186,7 +186,7 @@ create table at_categories (            -- All Talk
 create table game_plays (
   venue_id   text        not null references venues(id),
   game       text        not null check (game in
-    ('guess_the_split','who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss')),
+    ('guess_the_split','who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss','exquisite_corpse')),
   plays      integer     not null default 0 check (plays >= 0),
   updated_at timestamptz not null default now(),
   hour_start timestamptz,                              -- hourly flood cap (log_game_play): the hour...
@@ -247,7 +247,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -562,7 +562,7 @@ declare
   v_status public.venue_status;
   v_hour   timestamptz := date_trunc('hour', now());
 begin
-  if p_game not in ('guess_the_split','who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss') then
+  if p_game not in ('guess_the_split','who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss','exquisite_corpse') then
     return;
   end if;
 
@@ -866,7 +866,7 @@ as $$
 declare
   v_row     public.venues%rowtype;
   v_clean   text[];
-  v_allowed constant text[] := array['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour'];
+  v_allowed constant text[] := array['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','exquisite_corpse'];
   v_excl    constant text[] := array['horse_racing','ring_toss'];   -- keepable, never addable
 begin
   if public.owner_gate(p_venue_id, p_key, p_pass) <> 'ok' then
@@ -1499,7 +1499,7 @@ as $$
 declare
   v_clean   text[];
   v_allowed constant text[] := array
-    ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss'];
+    ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss','exquisite_corpse'];
 begin
   if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
   if not exists (select 1 from public.venues where id = p_id) then

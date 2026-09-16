@@ -530,6 +530,7 @@ const GAME_LIB = [
   { id:'all_talk',        name:'All Talk',         sub:'2 to 8, bid and prove' },
   { id:'cornhole',        name:'Cornhole',         sub:'bag toss, teams or solo' },
   { id:'quick_pour',      name:GNAME.quick_pour,       sub:'timed bar game, solo' },
+  { id:'exquisite_corpse', name:'Exquisite Corpse',  sub:'2 to 6, pass and draw' },
   // excl: venue-exclusive (38_horse_racing.sql). The row only renders for a
   // venue that already has the game, and the server refuses to ADD it from
   // this page, so unticking it here means only the platform can restore it.
