@@ -4309,6 +4309,7 @@ reg('ec_draw', (el)=>{
     <h1 class="big" style="font-size:24px">Draw the ${part.t}${prompt ? ` <span class="ec-of">of ${escHtml(prompt)}</span>` : ''}</h1>
     <p class="lede" style="margin-top:6px">${ecTipCopy(parts, ec.turn)}</p>
     <div class="ec-board" id="ecBoard"></div>
+    <div class="namehint" id="ecHint" style="text-align:center;min-height:18px;margin:8px 0 0"></div>
     <div class="ec-tools">
       <button type="button" class="ec-tool on" id="ecPen" aria-pressed="true">${EC_ICON.pencil}Pencil</button>
       <button type="button" class="ec-tool" id="ecEraser" aria-pressed="false">${EC_ICON.eraser}Eraser</button>
@@ -4320,7 +4321,6 @@ reg('ec_draw', (el)=>{
     </div>
     <div class="spacer"></div>
     <div class="ec-done">
-      <div class="namehint" id="ecHint" style="text-align:center;min-height:18px;margin:0 0 6px"></div>
       <button class="btn" id="ecDone">${ec.turn === parts.length - 1 ? 'Done, reveal the drawing ›' : 'Done ›'}</button>
     </div>`;
   const board = el.querySelector('#ecBoard');
@@ -4368,7 +4368,7 @@ reg('ec_draw', (el)=>{
   el.querySelectorAll('.ec-sz').forEach(b => b.onclick = ()=>{ size = +b.dataset.s; el.querySelectorAll('.ec-sz').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); });
   const drewSomething = ()=>{ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for(let i = 3; i < d.length; i += 4){ if(d[i]) return true; } return false; };
   const finish = ()=>{
-    if(!drewSomething()){ el.querySelector('#ecHint').textContent = 'Draw something first, even a squiggle.'; return; }
+    if(!drewSomething()){ el.querySelector('#ecHint').textContent = 'Draw something first.'; return; }
     ec.panels[ec.turn] = cv;
     ec.turn++;
     if(ec.turn < parts.length) go('ec_pass', { exit:true });
