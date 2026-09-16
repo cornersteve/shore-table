@@ -147,6 +147,7 @@
   details.fold>summary::before{content:"";width:8px;height:8px;border-right:2px solid var(--ink-dim);border-bottom:2px solid var(--ink-dim);transform:rotate(-45deg);margin:0 6px 0 4px;transition:transform .15s}
   details.fold[open]>summary::before{transform:rotate(45deg)}
   .savemsg.ok{color:var(--good)} .savemsg.err{color:var(--bad)}
+  .textlink{color:var(--accent);font-weight:600;text-decoration:underline;text-underline-offset:3px}
   .inactive-note{background:var(--bad);color:#fff;border-radius:14px;padding:16px 18px;margin:0 0 18px;font-size:16px;line-height:1.5}
   .inactive-note b{display:block;font-family:var(--font-d);font-weight:800;font-size:19px;margin-bottom:4px}
   .inactive-note a{color:#fff;font-weight:700}
@@ -189,7 +190,7 @@
 
   <div class="inactive-note" id="statusNote" hidden role="alert"></div>
   <h1 id="vname"></h1>
-  <div class="sub">Live numbers from your table cards. Anonymous, seen only by you. The monthly report adds the bigger local picture.</div>
+  <div class="sub"><a class="textlink" id="liveAppLink" href="#" target="_blank" rel="noopener">View your live app</a></div>
 
   <div class="tabs" role="tablist">
     <button class="tab on" id="tabMonthBtn" role="tab" aria-selected="true" aria-controls="paneMonth">My Stats</button>
@@ -322,7 +323,7 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=32"></script>
-<script src="js/owner.js?v=32"></script>
+<script src="js/shared.js?v=33"></script>
+<script src="js/owner.js?v=33"></script>
 </body>
 </html>
