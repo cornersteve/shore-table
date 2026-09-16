@@ -4380,9 +4380,11 @@ reg('ec_reveal', (el)=>{
   ec.panels.slice(0, n).forEach((p, i)=> fx.drawImage(p, 0, i * EC_H, EC_W, EC_H));
   const url = fin.toDataURL('image/png');
   const artists = parts.map((p, i)=> `${ecDrawer(i)}`).filter((v, i, a)=> a.indexOf(v) === i);
+  // "Dana & Jim" or "Dana, Jim, & Alex"
+  const byLine = artists.length <= 1 ? artists.join('') : artists.length === 2 ? artists.join(' & ') : artists.slice(0, -1).join(', ') + ', & ' + artists[artists.length - 1];
   el.innerHTML = `
     <div class="eyebrow">Exquisite Corpse · the reveal</div>
-    <h1 class="big" style="font-size:24px">${EC_SETS[ec.set].name}, by ${escHtml(artists.join(', '))}</h1>
+    <h1 class="big" style="font-size:24px">${EC_SETS[ec.set].name}, by ${escHtml(byLine)}</h1>
     <div class="ec-reveal" id="ecReveal"><img class="ec-final" src="${url}" alt="The finished drawing" /><div class="ec-curtain"></div></div>
     <p class="lede" style="text-align:center;margin-top:4px">Tap the drawing to zoom in. Press and hold it to save it to your phone.</p>
     <div class="ec-actions">
