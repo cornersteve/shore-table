@@ -1189,11 +1189,17 @@ function home(){
       <span><div class="vname">${esc(v.name)}</div><div class="vid">${esc(v.id)}</div></span>
       <span class="vspacer"><span class="badge ${esc(v.status)}">${esc(v.status)}</span> ›</span>
     </button>`;
-  // grouped by status: the working list on top, inactive venues folded away with their history intact
-  const active = sorted.filter(v => v.status === 'active'), leads = sorted.filter(v => v.status === 'lead'), inactive = sorted.filter(v => v.status === 'inactive');
-  const both = active.length && leads.length;
-  const rows = (both ? '<h2 class="vgroup">Active</h2>' : '') + active.map(rowHtml).join('')
-    + (both ? '<h2 class="vgroup">Leads</h2>' : '') + leads.map(rowHtml).join('')
+  // grouped: the demo venue first (it is what the homepage and sales demos
+  // show, so it gets edited often), then active, leads, and inactive folded
+  // away with their history intact. The demo is whichever venue Settings >
+  // Demo venue points at (the platform's own 'demo' row by default).
+  const demoId = brandNow(SETTINGS).demoVenue || 'demo';
+  const demo = sorted.filter(v => v.id === demoId), rest = sorted.filter(v => v.id !== demoId);
+  const active = rest.filter(v => v.status === 'active'), leads = rest.filter(v => v.status === 'lead'), inactive = rest.filter(v => v.status === 'inactive');
+  const heads = demo.length || (active.length && leads.length);
+  const rows = (demo.length ? '<h2 class="vgroup">Demo</h2>' : '') + demo.map(rowHtml).join('')
+    + (heads && active.length ? '<h2 class="vgroup">Active</h2>' : '') + active.map(rowHtml).join('')
+    + (heads && leads.length ? '<h2 class="vgroup">Leads</h2>' : '') + leads.map(rowHtml).join('')
     + (inactive.length ? `<details class="vfold"><summary>Inactive (${inactive.length})</summary>${inactive.map(rowHtml).join('')}</details>` : '');
 
   // demo watch: rollup per lead venue + the latest raw events
