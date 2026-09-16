@@ -497,7 +497,7 @@ reg('hub', (el)=>{
     guess_the_split:    { ok: TOT.length,      html: gcard('gcTot',    'Solo or up to 8 players',         'Guess the Split',  'Pick a side, then call how the crowd split.') },
     horse_racing:    { ok: true,            html: gcard('gcHr',     'Solo or up to 8 · dice decide',   'Horse Racing',     'Buy tickets on a horse and cheer it home.') },
     ring_toss:       { ok: true,            html: gcard('gcRt',     'Solo · hold and release',         'Ring Toss',        'Swing the ring on its string and catch the hook.') },
-    exquisite_corpse:{ ok: true,            html: gcard('gcEc',     '2 to 6 players · pass and draw',  'Exquisite Corpse', 'Draw one part, pass it on. See what the table made.') },
+    exquisite_corpse:{ ok: true,            html: gcard('gcEc',     '2 to 4 players · pass and draw',  'Exquisite Corpse', 'Draw one part, pass it on. See what the table made.') },
   };
   // The venue's saved list IS the display order (33_game_order.sql preserves
   // it server-side). Fail-open rule unchanged: a null, empty, or all-junk
@@ -505,7 +505,9 @@ reg('hub', (el)=>{
   const DEFAULT_ORDER = ['who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','guess_the_split'];
   const gl = venue().games;
   const valid = gl && gl.length && gl.some(x=>GAME_IDS.includes(x));
-  const order = valid ? gl.filter(x=>GAME_IDS.includes(x)) : DEFAULT_ORDER;
+  let order = valid ? gl.filter(x=>GAME_IDS.includes(x)) : DEFAULT_ORDER;
+  const tryGame = params.get('try');   // ?try=<game id>: preview a game this venue has not turned on yet
+  if(tryGame && GAME_IDS.includes(tryGame) && !order.includes(tryGame)) order = [tryGame].concat(order);
   el.innerHTML = `
     <div class="eyebrow">While you wait</div>
     <h1 class="big">Pick a game.</h1>
@@ -4151,6 +4153,8 @@ const EC_PROMPTS = {
   Ground: ['a sandcastle','a beach full of towels','a marina','a picnic','a crowd of crabs','a parade'],
   Below:  ['a shipwreck','a subway','buried treasure','a very surprised mole','an octopus','roots and worms'],
 };
+const EC_COLORS = ['#1b1410', '#c0392b', '#3a6ea5', '#2e9e63', '#d6a32b'];   // ink, red, blue, green, gold (the app's own palette)
+const EC_SIZES = [2.5, 5, 9];
 const EC_ICON = {
   pencil: '<svg viewBox="0 0 24 24"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M13.5 6.5l3 3"/></svg>',
   eraser: '<svg viewBox="0 0 24 24"><path d="M7 20l-3.5-3.5a2 2 0 0 1 0-2.8l8.7-8.7a2 2 0 0 1 2.8 0l4.5 4.5a2 2 0 0 1 0 2.8L12 20H7z"/><path d="M6 20h14M9.5 9.5l5 5"/></svg>',
@@ -4180,7 +4184,7 @@ reg('ec_intro', (el)=>{
       <div class="howto__step"><span class="howto__n">2</span><span>The next player sees only a thin strip of the bottom of that drawing, just enough to connect their lines to it, and draws the body. Then the legs, then the feet.</span></div>
       <div class="howto__step"><span class="howto__n">3</span><span>Nobody sees the whole thing until the last part is done. Then the drawing unfolds for the table.</span></div>
     </div>
-    <p class="lede">Choose a character or a scene, and turn on prompts if you want a nudge for each part. Two to six players.</p>
+    <p class="lede">Choose a character or a scene, and turn on prompts if you want a nudge for each part. Two to four players.</p>
     <button class="btn" id="ecToSetup" style="margin-top:14px">Add players ›</button>
     <div class="spacer"></div>`;
   el.querySelector('#ecToSetup').onclick = ()=>{ ec = { players: [], set: 'figure', prompts: true }; go('ec_setup', { exit:true }); };
@@ -4192,7 +4196,7 @@ reg('ec_setup', (el)=>{
   el.innerHTML = `
     <div class="eyebrow">Exquisite Corpse · setup</div>
     <h1 class="big">Who's drawing?</h1>
-    <p class="lede">Add everyone at the table, in the order the phone will go around. 2 to 6 players.</p>
+    <p class="lede">Add the drawers in the order the phone will go around. 2 to 4 players: a drawing has four parts at most.</p>
     <div class="players" id="chips"></div>
     <div class="nameadd">
       <input id="nameInput" placeholder="Add a name" autocomplete="off" maxlength="14" />
@@ -4227,13 +4231,13 @@ reg('ec_setup', (el)=>{
     b.disabled = !ok; b.style.opacity = ok ? '1' : '.4';
     const parts = EC_SETS[ec.set].parts.slice(0, partsFor(n)).map(p => p.t).join(', ');
     el.querySelector('#ecPartsNote').textContent = n >= 2
-      ? `${partsFor(n)} parts: ${parts}.` + (n > partsFor(n) ? ' Everyone gets a turn across a couple of drawings.' : n < partsFor(n) ? ' With two of you the phone goes back and forth.' : '')
+      ? `${partsFor(n)} parts: ${parts}.` + (n < partsFor(n) ? ' With two of you the phone goes back and forth.' : '')
       : '';
   }
   function add(){
     const v = input.value.trim();
     if(!v) return false;
-    if(ec.players.length >= 6){ hint.textContent = "That's the max of 6 players. Remove someone first."; return false; }
+    if(ec.players.length >= 4){ hint.textContent = "That's the max of 4 drawers. A drawing has four parts at most."; return false; }
     if(ec.players.some(p => p.toLowerCase() === v.toLowerCase())){ hint.textContent = 'Someone already has that name. Add a last initial?'; return false; }
     const used = new Set(Object.values(ec.icon));
     ec.icon[v] = ec.iconPool.find(x => !used.has(x)) || HS_ICONS[Object.keys(ec.icon).length % HS_ICONS.length];
@@ -4283,6 +4287,10 @@ reg('ec_draw', (el)=>{
       <button type="button" class="ec-tool" id="ecEraser" aria-pressed="false">${EC_ICON.eraser}Eraser</button>
       <button type="button" class="ec-tool" id="ecUndo">${EC_ICON.undo}Undo</button>
     </div>
+    <div class="ec-palette">
+      <div class="ec-swatches">${EC_COLORS.map((c, i) => `<button type="button" class="ec-sw${i === 0 ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color ${i + 1}" aria-pressed="${i === 0}"></button>`).join('')}</div>
+      <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${s * 2 + 4}px;height:${s * 2 + 4}px"></span></button>`).join('')}</div>
+    </div>
     <div class="namehint" id="ecHint" style="text-align:center;min-height:18px"></div>
     <button class="btn" id="ecDone" style="margin-top:6px">Done, pass it on ›</button>
     <div class="spacer"></div>`;
@@ -4297,14 +4305,14 @@ reg('ec_draw', (el)=>{
   }
   const cv = ecCanvas(EC_W, EC_H); cv.className = 'ec-cv'; board.appendChild(cv);
   const ctx = cv.getContext('2d');
-  const ink = getComputedStyle(appEl).getPropertyValue('--ink').trim() || '#1b1410';
+  let color = EC_COLORS[0], size = EC_SIZES[1];
   let tool = 'pen', drawing = false, last = null;
   const undos = [];
   const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (EC_W / r.width), y: (e.clientY - r.top) * (EC_H / r.height) }; };
   const setTool = t => { tool = t; el.querySelector('#ecPen').classList.toggle('on', t === 'pen'); el.querySelector('#ecEraser').classList.toggle('on', t === 'eraser'); el.querySelector('#ecPen').setAttribute('aria-pressed', t === 'pen'); el.querySelector('#ecEraser').setAttribute('aria-pressed', t === 'eraser'); };
   const applyTool = ()=>{
     if(tool === 'eraser'){ ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = 22; }
-    else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = ink; ctx.lineWidth = 4; }
+    else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = size; }
   };
   cv.addEventListener('pointerdown', e=>{
     e.preventDefault();
@@ -4326,6 +4334,9 @@ reg('ec_draw', (el)=>{
   el.querySelector('#ecPen').onclick = ()=> setTool('pen');
   el.querySelector('#ecEraser').onclick = ()=> setTool('eraser');
   el.querySelector('#ecUndo').onclick = ()=>{ const s = undos.pop(); if(s) ctx.putImageData(s, 0, 0); };
+  // a color or size pick also puts the pencil back in hand
+  el.querySelectorAll('.ec-sw').forEach(b => b.onclick = ()=>{ color = b.dataset.c; el.querySelectorAll('.ec-sw').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); setTool('pen'); });
+  el.querySelectorAll('.ec-sz').forEach(b => b.onclick = ()=>{ size = +b.dataset.s; el.querySelectorAll('.ec-sz').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); setTool('pen'); });
   const drewSomething = ()=>{ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for(let i = 3; i < d.length; i += 4){ if(d[i]) return true; } return false; };
   el.querySelector('#ecDone').onclick = ()=>{
     if(!drewSomething()){ el.querySelector('#ecHint').textContent = 'Draw something first, even a squiggle.'; return; }
