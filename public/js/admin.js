@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 26;
+const BUILD = 27;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -632,6 +632,16 @@ function loadDraft(){
   } catch(e){ return null; }
 }
 function clearDraft(){ try { localStorage.removeItem(DRAFT_KEY); } catch(e){} }
+// a data: URL back into a Blob, no network call (connect-src does not allow data:)
+function dataUrlToBlob(u){
+  try {
+    const [meta, b64] = String(u).split(',');
+    const type = (meta.match(/^data:([^;]+)/) || [])[1] || 'image/png';
+    const bin = atob(b64), arr = new Uint8Array(bin.length);
+    for(let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type });
+  } catch(e){ return null; }
+}
 
 /* ============================================================
    Self-contained QR encoder (ISO/IEC 18004), byte mode, ECC
@@ -849,14 +859,18 @@ const QR = (() => {
 /* ---------------- auth (email + password; the reset email covers both
    first-time setup and forgotten passwords) ---------------- */
 let recovering = /type=recovery/.test(location.hash);
+let STARTED = false;   // start() runs once per sign-in; a failed load resets it so Retry can run it again
 async function init(){
   const { data:{ session } } = await db.auth.getSession();
   if(recovering){ showLogin(true); showPwPanel(true); return; }
-  session ? start() : showLogin();
+  // a stored session shows the page right here: waiting for the SIGNED_IN
+  // event to reveal it left a blank page whenever that event did not fire
+  if(session){ showLogin(false); if(!STARTED) start(); }
+  else showLogin();
 }
-db.auth.onAuthStateChange((ev)=>{
+db.auth.onAuthStateChange((ev, session)=>{
   if(ev === 'PASSWORD_RECOVERY'){ recovering = true; showLogin(true); showPwPanel(true); return; }
-  if(ev === 'SIGNED_IN' && !recovering){ showLogin(false); start(); }
+  if((ev === 'SIGNED_IN' || ev === 'INITIAL_SESSION') && session && !recovering){ showLogin(false); if(!STARTED) start(); }
 });
 
 function showLogin(show=true){
@@ -902,16 +916,32 @@ $('signOut').onclick = async ()=>{
 
 /* ---------------- data ---------------- */
 let SETTINGS = {};     // admin_get_settings cache (brand + GitHub connection)
+let LOAD_ERR = null, LOAD_RETRIED = false;
 async function loadAll(){
-  const [v, w, s] = await Promise.all([ rpc('admin_list_venues'), rpc('admin_demo_watch'), rpc('admin_get_settings') ]);
-  if(v.error || v.data === null){ VENUES = null; return; }   // null = not an operator (or 25 not run)
+  let v, w, s;
+  try { [v, w, s] = await Promise.all([ rpc('admin_list_venues'), rpc('admin_demo_watch'), rpc('admin_get_settings') ]); }
+  catch(e){ LOAD_ERR = e; return; }
+  if(v.error){ LOAD_ERR = v.error; return; }              // the request failed: network, a token mid-refresh
+  LOAD_ERR = null;
+  if(v.data === null){ VENUES = null; return; }           // null = not an operator (or install.sql not run)
   VENUES = v.data; WATCH = (w.data || []); SETTINGS = (s && s.data) || {};
 }
 const venueById = id => (VENUES||[]).find(x=>x.id===id);
 
 async function start(){
+  STARTED = true;
   $('main').innerHTML = '<p style="color:var(--ink-dim)">Loading…</p>';
   await loadAll();
+  if(LOAD_ERR){
+    STARTED = false;
+    if(!LOAD_RETRIED){ LOAD_RETRIED = true; setTimeout(start, 1500); return; }   // one quiet retry covers a token refresh race
+    $('main').innerHTML = `<section><h2>Could not reach your database</h2>
+      <div class="hint">The dashboard could not load your venues. Check your connection and try again.</div>
+      <div class="frow" style="margin-top:10px"><button class="btn sm" id="retryLoad">Try again</button></div></section>`;
+    $('retryLoad').onclick = ()=>{ LOAD_RETRIED = false; start(); };
+    return;
+  }
+  LOAD_RETRIED = false;
   // the preview address serves this same dashboard; anything generated here
   // (table cards, owner links) would point at it, so say so, every visit
   if(ON_PREVIEW && !$('previewWarn')){
@@ -1622,7 +1652,8 @@ function form(existing){
         $('fLogoText').value = draft.wordmark || '';
       }
       if(draft.logoData){
-        fetch(draft.logoData).then(r=>r.blob()).then(b=>applyLogoBlob(b)).catch(()=>{});
+        const b = dataUrlToBlob(draft.logoData);
+        if(b) applyLogoBlob(b).catch(()=>{});
       }
     } else {
       if(draft.name) $('fName').value = draft.name;
@@ -1639,7 +1670,8 @@ function form(existing){
         $('fLogoText').value = draft.wordmark || '';
       }
       if(draft.logoData){
-        fetch(draft.logoData).then(r=>r.blob()).then(b=>applyLogoBlob(b)).catch(()=>{});
+        const b = dataUrlToBlob(draft.logoData);
+        if(b) applyLogoBlob(b).catch(()=>{});
       }
     }
     paint();
