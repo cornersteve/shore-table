@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 29;
+const BUILD = 30;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -48,19 +48,6 @@ async function platformView(){
       ${pending.length ? '<div class="msg err">' + pending.length + ' database migration(s) pending. Apply them below.</div>' : ''}
     </section>
     <section>
-      <h2>GitHub connection</h2>
-      <div class="hint">For the one-button update. Repo is your fork as owner/name, e.g. jane/my-table-app. The token is a GitHub <b>fine-grained</b> personal access token from the account that owns your fork: Repository access = only that fork; Permissions = Contents, Read and write; expiration up to a year. It is stored in your database, never in git, and never shown again after you save it. (A classic token with the repo scope also works; fine-grained is just narrower.)</div>
-      <label class="f">Your fork (owner/repo)</label>
-      <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
-      <label class="f">GitHub token</label>
-      <input type="password" id="ghToken" value="" placeholder="${settings.gh_token_set ? 'Saved (ends in ' + esc(settings.gh_token_hint || '') + '). Paste a new one only to replace it.' : 'github_pat_...'}" autocapitalize="off" spellcheck="false" autocomplete="off" />
-      <label class="f">Token expires (optional)</label>
-      <input type="date" id="ghExpires" value="${esc(settings.gh_token_expires || '')}" style="max-width:200px" />
-      ${tokenWarn(settings.gh_token_expires)}
-      <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button>${settings.gh_token_set ? '<button class="btn sm ghost" id="ghForget">Remove token</button>' : ''}</div>
-      <div class="msg" id="ghMsg"></div>
-    </section>
-    <section>
       <h2>Update</h2>
       <div class="hint">The update button pulls the latest version into your fork; your site redeploys automatically (usually under two minutes) and this page reloads itself. The second button lights up when an update needs database changes.</div>
       <div class="frow" style="margin-top:8px">
@@ -76,6 +63,19 @@ async function platformView(){
       <div class="hint">Supabase keeps its own database backups on the paid plans; this is an extra copy in your hands. One file with your venues, every piece of feedback, game counters, a year of analytics, forms, content and settings (the GitHub token is left out). It contains your venues' owner links, so keep it somewhere private.</div>
       <div class="frow" style="margin-top:8px"><button class="btn sm ghost" id="bkBtn">Download a backup</button></div>
       <div class="msg" id="bkMsg"></div>
+    </section>
+    <section>
+      <h2>GitHub connection</h2>
+      <div class="hint">For the one-button update. Repo is your fork as owner/name, e.g. jane/my-table-app. The token is a GitHub <b>fine-grained</b> personal access token from the account that owns your fork: Repository access = only that fork; Permissions = Contents, Read and write; expiration up to a year. It is stored in your database, never in git, and never shown again after you save it. (A classic token with the repo scope also works; fine-grained is just narrower.)</div>
+      <label class="f">Your fork (owner/repo)</label>
+      <input type="text" id="ghRepo" value="${esc(settings.gh_repo || '')}" placeholder="youruser/your-fork" autocapitalize="off" spellcheck="false" />
+      <label class="f">GitHub token</label>
+      <input type="password" id="ghToken" value="" placeholder="${settings.gh_token_set ? 'Saved (ends in ' + esc(settings.gh_token_hint || '') + '). Paste a new one only to replace it.' : 'github_pat_...'}" autocapitalize="off" spellcheck="false" autocomplete="off" />
+      <label class="f">Token expires (optional)</label>
+      <input type="date" id="ghExpires" value="${esc(settings.gh_token_expires || '')}" style="max-width:200px" />
+      ${tokenWarn(settings.gh_token_expires)}
+      <div class="frow" style="margin-top:10px"><button class="btn sm" id="ghSave">Save connection</button>${settings.gh_token_set ? '<button class="btn sm ghost" id="ghForget">Remove token</button>' : ''}</div>
+      <div class="msg" id="ghMsg"></div>
     </section>`;
   $('bkBtn').onclick = async ()=>{
     const m = $('bkMsg'); m.className = 'msg'; m.textContent = 'Gathering everything…';

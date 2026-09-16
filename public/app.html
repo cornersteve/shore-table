@@ -705,7 +705,7 @@
   .ec-palette{display:flex;flex-direction:column;align-items:center;gap:8px;margin:2px 0 6px}
   .ec-swatches,.ec-sizes{display:flex;gap:5px;flex-wrap:wrap;justify-content:center}
   .ec-join{background:color-mix(in srgb, var(--accent) 9%, var(--bg));border:1px solid color-mix(in srgb, var(--accent) 30%, transparent);border-radius:12px;padding:10px 12px;font-size:14px;line-height:1.45;margin-top:10px;color:var(--ink)}
-  .ec-of{font-weight:600;color:var(--ink-dim);font-size:.72em}
+  .ec-of{font-weight:inherit;color:var(--ink-dim)}   /* same size as the part name, only the color differs */
   .ec-optgroup{margin-top:18px;display:flex;flex-direction:column;gap:8px}
   .ec-optlabel{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-dim)}
   .ec-actions{display:flex;flex-direction:column;gap:10px;margin-top:14px}
@@ -716,7 +716,9 @@
   .ec-sz span{display:block;border-radius:50%;background:var(--ink)}
   .ec-sz.on{border-color:var(--accent);background:var(--accent)}
   .ec-sz.on span{background:var(--on-accent)}
-  .ec-done{position:sticky;bottom:0;z-index:3;background:var(--page);padding:10px 0 4px;border-top:1px solid var(--line);margin-top:8px}   /* Done stays in view while the long screen scrolls */
+  .ec-done{padding:10px 0 4px;border-top:1px solid var(--line);margin-top:8px}
+  .ec-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
+  .ec-top .btn.sm{padding:9px 16px;font-size:14px;min-height:40px;box-shadow:none}
   .ec-tool{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 15px;border-radius:999px;border:1.5px solid var(--line-2);background:var(--bg);color:var(--ink);font-family:var(--font-b);font-weight:600;font-size:14px;cursor:pointer}
   .ec-tool.on{border-color:var(--accent);color:var(--on-accent);background:var(--accent)}   /* filled, so the live tool reads at a glance in any accent */
   .ec-tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
@@ -756,7 +758,7 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=29"></script>
-<script src="js/app.js?v=29"></script>
+<script src="js/shared.js?v=30"></script>
+<script src="js/app.js?v=30"></script>
 </body>
 </html>
