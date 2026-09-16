@@ -158,7 +158,7 @@ window.addEventListener('popstate', ()=>{
 // __back if it has one ('own'); otherwise, inside a game, that game's first
 // screen (a clean restart), and from a game's first screen the hub. A big
 // visible arrow of ours keeps thumbs off the browser's, which would leave.
-const GAME_HOME = { tot:'tot_intro', gs:'tot_intro', hs:'hs_setup', wiy:'wiy_intro', ch:'ch_intro', pp:'pp_intro', hr:'hr_intro', rt:'rt_intro', trivia:'trivia_intro', tv:'trivia_intro', fortune:'fortune_intro', at:'at_intro', wordle:'hub' };
+const GAME_HOME = { tot:'tot_intro', gs:'tot_intro', hs:'hs_setup', wiy:'wiy_intro', ch:'ch_intro', pp:'pp_intro', hr:'hr_intro', rt:'rt_intro', trivia:'trivia_intro', tv:'trivia_intro', fortune:'fortune_intro', at:'at_intro', wordle:'hub', ec:'ec_intro' };
 function backTarget(id){
   if(!id) return null;
   if(screens[id+'__back']) return 'own';
@@ -473,7 +473,7 @@ reg('hub__back', ()=> go('landing'));
 // GAME_IDS so a venue that carries one renders the card, but NOT in
 // DEFAULT_ORDER, so the fail-open full library never shows them at other
 // venues.
-const GAME_IDS = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss'];
+const GAME_IDS = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss','exquisite_corpse'];
 reg('hub', (el)=>{
   backBtn.style.display='block';   // chooser is home, reachable from any entry mode
   // One template per game; `ok` is the content check (a game with no rows
@@ -497,6 +497,7 @@ reg('hub', (el)=>{
     guess_the_split:    { ok: TOT.length,      html: gcard('gcTot',    'Solo or up to 8 players',         'Guess the Split',  'Pick a side, then call how the crowd split.') },
     horse_racing:    { ok: true,            html: gcard('gcHr',     'Solo or up to 8 · dice decide',   'Horse Racing',     'Buy tickets on a horse and cheer it home.') },
     ring_toss:       { ok: true,            html: gcard('gcRt',     'Solo · hold and release',         'Ring Toss',        'Swing the ring on its string and catch the hook.') },
+    exquisite_corpse:{ ok: true,            html: gcard('gcEc',     '2 or 3 players · pass and draw',  'Exquisite Corpse', 'Draw one part, pass it on. See what the table made.') },
   };
   // The venue's saved list IS the display order (33_game_order.sql preserves
   // it server-side). Fail-open rule unchanged: a null, empty, or all-junk
@@ -504,7 +505,9 @@ reg('hub', (el)=>{
   const DEFAULT_ORDER = ['who_knows_who','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','guess_the_split'];
   const gl = venue().games;
   const valid = gl && gl.length && gl.some(x=>GAME_IDS.includes(x));
-  const order = valid ? gl.filter(x=>GAME_IDS.includes(x)) : DEFAULT_ORDER;
+  let order = valid ? gl.filter(x=>GAME_IDS.includes(x)) : DEFAULT_ORDER;
+  const tryGame = params.get('try');   // ?try=<game id>: preview a game this venue has not turned on yet
+  if(tryGame && GAME_IDS.includes(tryGame) && !order.includes(tryGame)) order = [tryGame].concat(order);
   el.innerHTML = `
     <div class="eyebrow">While you wait</div>
     <h1 class="big">Pick a game.</h1>
@@ -523,6 +526,7 @@ reg('hub', (el)=>{
   wire('#gcTriv',  ()=> go('trivia_intro',{exit:true}));
   wire('#gcFor',   ()=> go('fortune_intro',{exit:true}));
   wire('#gcAt',    ()=> go('at_intro',{exit:true}));
+  wire('#gcEc',    ()=> go('ec_intro',{exit:true}));
 });
 
 /* ---------- GUESS THE SPLIT (internal id: guess_the_split) ----------
@@ -4118,6 +4122,278 @@ function showRetry(){
   b.onclick=()=> location.reload();
   stage.querySelector('.center-col').appendChild(b);
 }
+
+/* ---------- EXQUISITE CORPSE (internal id: exquisite_corpse) ----------
+   Pass-and-draw. Each player draws one part of a character (or one layer of
+   a scene) seeing only a thin strip of the bottom of the part before it, so
+   the lines meet without anyone seeing the whole. The parts stack into one
+   drawing at the end. One pencil, an eraser, undo. Ships OFF everywhere;
+   operators tick it on per venue. */
+let ec = { players: [] };
+const EC_W = 320, EC_H = 250, EC_STRIP = 28;   // css px; the strip is what the next drawer gets to see
+const EC_SETS = {
+  figure: { name: 'A character', parts: [
+    { t:'Head', what:'the head and the neck' },
+    { t:'Body', what:'the body and the arms' },
+    { t:'Legs', what:'the legs and the feet' } ] },
+  scene: { name: 'A scene', parts: [
+    { t:'Sky',         what:'the sky and whatever is up in it' },
+    { t:'Ground',      what:'the ground and whatever stands on it' },
+    { t:'Underground', what:'whatever is under the ground, or under the water' } ] },
+};
+// what to draw, and what to leave for the next player
+function ecTipCopy(parts, i){
+  const part = parts[i], next = parts[i + 1];
+  return 'Draw ONLY ' + part.what + '.' + (next ? ' The next player draws the ' + next.t.toLowerCase() + '.' : ' You are the last drawer.');
+}
+// how this part joins its neighbours: the whole game lives in these two edges
+function ecJoinCopy(parts, i){
+  const part = parts[i], prev = parts[i - 1], next = parts[i + 1];
+  const top = prev ? 'The strip at the top is the bottom edge of the ' + prev.t.toLowerCase() + '. Connect your ' + part.t.toLowerCase() + ' to it.' : '';
+  const bottom = next ? 'Draw the ' + part.t.toLowerCase() + ' all the way off the bottom edge: the next drawer sees only that edge, and the ' + next.t.toLowerCase() + ' will only connect if your lines reach it.' : '';
+  return [top, bottom].filter(Boolean).join(' ');
+}
+const EC_PROMPTS = {
+  figure: ['a pirate','a chef','a robot','a sea captain','a lifeguard','a rock star','a mermaid','a superhero','a very sleepy tourist','a lighthouse keeper','a wizard','a hockey player',
+           'a fisherman','a ballerina','a cowboy','a knight','a scuba diver','an astronaut','a surfer','a clown','a detective','a mad scientist',
+           'a construction worker','a friendly ghost','a snowman','a farmer','a viking','a cheerleader','a magician','a bartender','a marathon runner','a beekeeper'],
+  scene:  ['a beach day','a shipwreck','the boardwalk at night','a fishing trip','a thunderstorm at sea','a backyard barbecue','a parade','a snow day at the shore','a carnival','a marina at sunrise',
+           'a lighthouse in the fog','a pirate ship','a treehouse','a farmers market','a hot dog eating contest','a lemonade stand','a rainy day on the pier','a lifeguard rescue','a campfire on the beach','a crowded subway car',
+           'a jazz club','a cabin in the mountains','a volcano island','a haunted house','a rooftop party','a dog park','a sailing race','the line at the ice cream truck','a drive-in movie','a garden party'],
+};
+const EC_COLORS = ['#1b1410', '#7a4b2a', '#c0392b', '#d6a32b', '#2e9e63', '#3a6ea5', '#ffffff'];   // ink, brown, red, gold, green, blue, white
+const EC_SIZES = [2.5, 5, 9, 40];   // the last one is for filling; the eraser follows the same choice
+const EC_ICON = {
+  pencil: '<svg viewBox="0 0 24 24"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M13.5 6.5l3 3"/></svg>',
+  eraser: '<svg viewBox="0 0 24 24"><path d="M7 20l-3.5-3.5a2 2 0 0 1 0-2.8l8.7-8.7a2 2 0 0 1 2.8 0l4.5 4.5a2 2 0 0 1 0 2.8L12 20H7z"/><path d="M6 20h14M9.5 9.5l5 5"/></svg>',
+  undo:   '<svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h9a6 6 0 0 1 0 12h-3"/></svg>',
+};
+function ecCanvas(w, h){
+  const c = document.createElement('canvas'), D = Math.min(2, window.devicePixelRatio || 1);
+  c.width = w * D; c.height = h * D; c.style.width = w + 'px'; c.style.height = h + 'px';
+  const x = c.getContext('2d'); x.scale(D, D); x.lineCap = 'round'; x.lineJoin = 'round';
+  return c;
+}
+function ecParts(){ return EC_SETS[ec.set].parts.slice(0, ec.nParts); }
+function ecDrawer(i){ return ec.players[(ec.startIx + i) % ec.players.length]; }
+function ecPrompt(){ if(!ec.prompts) return ''; const list = EC_PROMPTS[ec.set] || []; return list.length ? list[Math.floor(Math.random() * list.length)] : ''; }
+function ecBegin(){
+  ec.panels = []; ec.turn = 0;
+  ec.prompt = ecPrompt();   // one prompt for the whole drawing, so the parts belong together
+  go('ec_pass', { exit:true });
+}
+
+reg('ec_intro', (el)=>{
+  el.innerHTML = `
+    <div class="eyebrow">Exquisite Corpse</div>
+    <h1 class="big">Draw a piece. Pass it on.</h1>
+    <div class="howto">
+      <div class="howto__step"><span class="howto__n">1</span><span>One drawing, made in parts. The first player draws the head, then hands the phone over.</span></div>
+      <div class="howto__step"><span class="howto__n">2</span><span>The next player sees only a thin strip of the bottom of that drawing, just enough to connect their lines to it, and draws the body. The third draws the legs.</span></div>
+      <div class="howto__step"><span class="howto__n">3</span><span>Nobody sees the whole thing until the last part is done. Then the drawing unfolds for the table.</span></div>
+    </div>
+    <p class="lede">Choose a character or a scene, and a prompt if you want a nudge. Two or three players.</p>
+    <button class="btn" id="ecToSetup" style="margin-top:14px">Add players ›</button>
+    <div class="spacer"></div>`;
+  el.querySelector('#ecToSetup').onclick = ()=>{ ec = { players: [], set: 'figure', prompts: true }; go('ec_setup', { exit:true }); };
+});
+
+reg('ec_setup', (el)=>{
+  if(!ec.set) ec.set = 'figure';
+  if(ec.prompts === undefined) ec.prompts = true;
+  el.innerHTML = `
+    <div class="eyebrow">Exquisite Corpse · setup</div>
+    <h1 class="big">Who's drawing?</h1>
+    <p class="lede">Add the drawers in the order the phone will go around. Two or three players.</p>
+    <div class="players" id="chips"></div>
+    <div class="nameadd">
+      <input id="nameInput" placeholder="Add a name" autocomplete="off" maxlength="14" />
+      <button class="btn sm" id="addBtn" style="padding-left:20px;padding-right:20px">Add</button>
+    </div>
+    <div class="namehint" id="nameHint"></div>
+    <button class="btn" id="startEc" style="margin-top:14px">Next ›</button>
+    <div class="spacer"></div>`;
+  const chips = el.querySelector('#chips'), input = el.querySelector('#nameInput'), hint = el.querySelector('#nameHint');
+  if(!ec.icon) ec.icon = {};
+  if(!ec.iconPool) ec.iconPool = shuffle(HS_ICONS);
+
+  function renderChips(){
+    chips.innerHTML = '';
+    ec.players.forEach((p, idx)=>{
+      const c = h(`<span class="namechip"><span class="pico">${ec.icon[p] || ''}</span> ${escHtml(p)}<button aria-label="Remove ${escHtml(p)}">×</button></span>`);
+      c.querySelector('button').onclick = ()=>{ const nm = ec.players[idx]; ec.players.splice(idx, 1); delete ec.icon[nm]; renderChips(); refresh(); };
+      chips.appendChild(c);
+    });
+  }
+  function refresh(){
+    const n = ec.players.length + (input.value.trim() ? 1 : 0);
+    const b = el.querySelector('#startEc'); const ok = n >= 2;
+    b.disabled = !ok; b.style.opacity = ok ? '1' : '.4';
+  }
+  function add(){
+    const v = input.value.trim();
+    if(!v) return false;
+    if(ec.players.length >= 3){ hint.textContent = "That's the max of 3 drawers. A drawing has three parts."; return false; }
+    if(ec.players.some(p => p.toLowerCase() === v.toLowerCase())){ hint.textContent = 'Someone already has that name. Add a last initial?'; return false; }
+    const used = new Set(Object.values(ec.icon));
+    ec.icon[v] = ec.iconPool.find(x => !used.has(x)) || HS_ICONS[Object.keys(ec.icon).length % HS_ICONS.length];
+    hint.textContent = ''; ec.players.push(v); input.value = ''; input.focus(); renderChips(); refresh();
+    return true;
+  }
+  el.querySelector('#addBtn').onclick = ()=>{ add(); };
+  input.addEventListener('keydown', e=>{ if(e.key === 'Enter') add(); else hint.textContent = ''; });
+  input.addEventListener('input', refresh);
+  el.querySelector('#startEc').onclick = ()=>{
+    if(input.value.trim() && !add()){ input.focus(); return; }
+    if(ec.players.length < 2) return;
+    ec.nParts = 3;
+    ec.startIx = 0;
+    go('ec_options', { exit:true });
+  };
+  renderChips(); refresh();
+});
+
+// the drawing's settings, separate from the players so they read as one
+// choice for the table, not a per-player setting
+reg('ec_options', (el)=>{
+  const partsLine = s => EC_SETS[s].parts.slice(0, ec.nParts).map(p => p.t).join(', ') + '.';
+  el.innerHTML = `
+    <div class="eyebrow">Exquisite Corpse · setup</div>
+    <h1 class="big">What are we drawing?</h1>
+    <div class="ec-optgroup">
+      <div class="ec-optlabel">The drawing</div>
+      <div class="ec-optrow">
+        <button type="button" class="ec-tool${ec.set === 'figure' ? ' on' : ''}" data-set="figure">A character</button>
+        <button type="button" class="ec-tool${ec.set === 'scene' ? ' on' : ''}" data-set="scene">A scene</button>
+      </div>
+      <div class="ec-note" id="ecPartsNote">${ec.nParts} parts: ${partsLine(ec.set)}</div>
+    </div>
+    <div class="ec-optgroup">
+      <div class="ec-optlabel">A nudge?</div>
+      <div class="ec-optrow">
+        <button type="button" class="ec-tool${ec.prompts ? ' on' : ''}" data-pr="1">Use a prompt</button>
+        <button type="button" class="ec-tool${!ec.prompts ? ' on' : ''}" data-pr="0">Freestyle</button>
+      </div>
+      <div class="ec-note">One prompt for the whole drawing, like "a pirate". Everyone draws their part to it.</div>
+    </div>
+    <button class="btn" id="startEc" style="margin-top:14px">Start drawing ›</button>
+    <div class="spacer"></div>`;
+  el.querySelectorAll('[data-set]').forEach(b => b.onclick = ()=>{ ec.set = b.dataset.set; el.querySelectorAll('[data-set]').forEach(x => x.classList.toggle('on', x === b)); el.querySelector('#ecPartsNote').textContent = ec.nParts + ' parts: ' + partsLine(ec.set); });
+  el.querySelectorAll('[data-pr]').forEach(b => b.onclick = ()=>{ ec.prompts = b.dataset.pr === '1'; el.querySelectorAll('[data-pr]').forEach(x => x.classList.toggle('on', x === b)); });
+  el.querySelector('#startEc').onclick = ()=>{ logPlay('exquisite_corpse'); ecBegin(); };
+});
+reg('ec_options__back', ()=> go('ec_setup', { exit:true }));
+
+reg('ec_pass', (el)=>{
+  const part = ecParts()[ec.turn], who = ecDrawer(ec.turn), n = ecParts().length;
+  el.innerHTML = `
+    <div class="eyebrow">Exquisite Corpse · part ${ec.turn + 1} of ${n}</div>
+    <div class="handoff">
+      <div class="handoff__pass">Pass the phone to <span class="pico34">📲</span></div>
+      <div class="handoff__to">${ec.icon[who] || ''} ${escHtml(who)}</div>
+      <div class="handoff__role">${escHtml(who)} draws the <b>${part.t.toLowerCase()}</b>${ec.prompt ? ' of <b>' + escHtml(ec.prompt) + '</b>' : ''}.${ec.turn > 0 ? ' Only the bottom edge of the last part shows. Nobody else look.' : ' Nobody else look.'}</div>
+      <button class="btn" id="ecReady">I'm ${escHtml(who)}, start drawing ›</button>
+    </div>`;
+  el.querySelector('#ecReady').onclick = ()=> go('ec_draw', { exit:true });
+});
+
+reg('ec_draw', (el)=>{
+  const parts = ecParts(), part = parts[ec.turn], who = ecDrawer(ec.turn), prev = ec.panels[ec.turn - 1] || null;
+  const prompt = ec.prompt;
+  el.innerHTML = `
+    <div class="eyebrow">Exquisite Corpse · ${escHtml(who)} · part ${ec.turn + 1} of ${parts.length}</div>
+    <h1 class="big" style="font-size:24px">Draw the ${part.t}${prompt ? ` <span class="ec-of">of ${escHtml(prompt)}</span>` : ''}</h1>
+    <p class="lede" style="margin-top:6px">${ecTipCopy(parts, ec.turn)}</p>
+    <div class="ec-join">${ecJoinCopy(parts, ec.turn)}</div>
+    <div class="ec-board" id="ecBoard"></div>
+    <div class="ec-tools">
+      <button type="button" class="ec-tool on" id="ecPen" aria-pressed="true">${EC_ICON.pencil}Pencil</button>
+      <button type="button" class="ec-tool" id="ecEraser" aria-pressed="false">${EC_ICON.eraser}Eraser</button>
+      <button type="button" class="ec-tool" id="ecUndo">${EC_ICON.undo}Undo</button>
+    </div>
+    <div class="ec-palette">
+      <div class="ec-swatches">${EC_COLORS.map((c, i) => `<button type="button" class="ec-sw${i === 0 ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color ${i + 1}" aria-pressed="${i === 0}"></button>`).join('')}</div>
+      <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${Math.min(30, Math.round(s * 1.5 + 4))}px;height:${Math.min(30, Math.round(s * 1.5 + 4))}px"></span></button>`).join('')}</div>
+    </div>
+    <div class="namehint" id="ecHint" style="text-align:center;min-height:18px"></div>
+    <button class="btn" id="ecDone" style="margin-top:6px">${ec.turn === parts.length - 1 ? 'Done, reveal the drawing ›' : 'Done ›'}</button>
+    <div class="spacer"></div>`;
+  const board = el.querySelector('#ecBoard');
+  if(prev){
+    const strip = ecCanvas(EC_W, EC_STRIP); strip.className = 'ec-strip';
+    const D = Math.min(2, window.devicePixelRatio || 1);
+    strip.getContext('2d').drawImage(prev, 0, (EC_H - EC_STRIP) * D, EC_W * D, EC_STRIP * D, 0, 0, EC_W, EC_STRIP);
+    board.appendChild(strip);
+  } else {
+    board.appendChild(h('<div class="ec-strip ec-strip--first">You go first: start anywhere.</div>'));
+  }
+  const cv = ecCanvas(EC_W, EC_H); cv.className = 'ec-cv'; board.appendChild(cv);
+  const ctx = cv.getContext('2d');
+  let color = EC_COLORS[0], size = EC_SIZES[1];
+  let tool = 'pen', drawing = false, last = null;
+  const undos = [];
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (EC_W / r.width), y: (e.clientY - r.top) * (EC_H / r.height) }; };
+  const setTool = t => { tool = t; el.querySelector('#ecPen').classList.toggle('on', t === 'pen'); el.querySelector('#ecEraser').classList.toggle('on', t === 'eraser'); el.querySelector('#ecPen').setAttribute('aria-pressed', t === 'pen'); el.querySelector('#ecEraser').setAttribute('aria-pressed', t === 'eraser'); };
+  const applyTool = ()=>{
+    if(tool === 'eraser'){ ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = size * 2.2; }
+    else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = size; }
+  };
+  cv.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    if(undos.length >= 8) undos.shift();   // eight steps back is plenty for a doodle
+    undos.push(ctx.getImageData(0, 0, cv.width, cv.height));
+    try { cv.setPointerCapture(e.pointerId); } catch(err){}
+    drawing = true; last = pos(e); applyTool();
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(last.x + 0.01, last.y); ctx.stroke();   // a tap leaves a dot
+    el.querySelector('#ecHint').textContent = '';
+  });
+  cv.addEventListener('pointermove', e=>{
+    if(!drawing) return;
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+  });
+  const stop = ()=>{ drawing = false; last = null; };
+  cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop); cv.addEventListener('pointerleave', stop);
+  el.querySelector('#ecPen').onclick = ()=> setTool('pen');
+  el.querySelector('#ecEraser').onclick = ()=> setTool('eraser');
+  el.querySelector('#ecUndo').onclick = ()=>{ const s = undos.pop(); if(s) ctx.putImageData(s, 0, 0); };
+  // a color or size pick also puts the pencil back in hand
+  el.querySelectorAll('.ec-sw').forEach(b => b.onclick = ()=>{ color = b.dataset.c; el.querySelectorAll('.ec-sw').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); setTool('pen'); });
+  el.querySelectorAll('.ec-sz').forEach(b => b.onclick = ()=>{ size = +b.dataset.s; el.querySelectorAll('.ec-sz').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); });
+  const drewSomething = ()=>{ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for(let i = 3; i < d.length; i += 4){ if(d[i]) return true; } return false; };
+  el.querySelector('#ecDone').onclick = ()=>{
+    if(!drewSomething()){ el.querySelector('#ecHint').textContent = 'Draw something first, even a squiggle.'; return; }
+    ec.panels[ec.turn] = cv;
+    ec.turn++;
+    if(ec.turn < parts.length) go('ec_pass', { exit:true });
+    else go('ec_reveal', { exit:true });
+  };
+});
+
+reg('ec_reveal', (el)=>{
+  const parts = ecParts(), n = parts.length;
+  const fin = ecCanvas(EC_W, EC_H * n), fx = fin.getContext('2d');
+  fx.fillStyle = '#ffffff'; fx.fillRect(0, 0, EC_W, EC_H * n);
+  ec.panels.slice(0, n).forEach((p, i)=> fx.drawImage(p, 0, i * EC_H, EC_W, EC_H));
+  const url = fin.toDataURL('image/png');
+  const artists = parts.map((p, i)=> `${ecDrawer(i)}`).filter((v, i, a)=> a.indexOf(v) === i);
+  el.innerHTML = `
+    <div class="eyebrow">Exquisite Corpse · the reveal</div>
+    <h1 class="big" style="font-size:24px">${EC_SETS[ec.set].name}, by ${escHtml(artists.join(', '))}</h1>
+    <div class="ec-reveal" id="ecReveal"><img class="ec-final" src="${url}" alt="The finished drawing" /><div class="ec-curtain"></div></div>
+    <p class="lede" style="text-align:center;margin-top:4px">Tap the drawing to zoom in. Press and hold it to save it to your phone.</p>
+    <div class="ec-actions">
+      <button class="btn" id="ecAgain">Draw another ›</button>
+      <button class="btn btn--ghost" id="ecSave">Save the drawing</button>
+      <button class="btn btn--ghost" id="ecHub">Back to games</button>
+    </div>
+    <div class="spacer"></div>`;
+  el.querySelector('#ecReveal').onclick = ()=> el.querySelector('#ecReveal').classList.toggle('zoom');
+  el.querySelector('#ecAgain').onclick = ()=>{ ec.startIx = (ec.startIx + n) % ec.players.length; go('ec_options', { exit:true }); };
+  el.querySelector('#ecSave').onclick = ()=>{ const a = document.createElement('a'); a.href = url; a.download = 'exquisite-corpse.png'; document.body.appendChild(a); a.click(); a.remove(); };
+  el.querySelector('#ecHub').onclick = ()=> go('hub');
+});
 
 /* ---------- BOOT ---------- */
 const params = new URLSearchParams(location.search);

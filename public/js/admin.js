@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 27;
+const BUILD = 28;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -1073,7 +1073,7 @@ function mailto(v, subject, body){
 /* ---------------- content: game metadata shared by the pack importer
    and the custom questions manager. Field names match admin_add_content
    in 27_admin_content.sql exactly. ---------------- */
-const GAME_ORDER = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss'];
+const GAME_ORDER = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','exquisite_corpse','horse_racing','ring_toss'];
 const GAMES_META = {
   who_knows_who:        { name:'Who Knows Who',    fields:[['prompt','Prompt (use {N} for the player name)'],['a','Option A'],['b','Option B'],['c','Option C'],['d','Option D']] },
   guess_the_split:    { name:'Guess the Split',  fields:[['a','Option A'],['b','Option B']] },
@@ -1084,6 +1084,7 @@ const GAMES_META = {
   all_talk:        { name:'All Talk',         fields:[['category','Category (plural noun, e.g. dog breeds)']] },
   cornhole:        { name:'Cornhole',         fields:[] },   // content-less: toggles only, no packs/custom/retire
   quick_pour:      { name:GNAME.quick_pour,       fields:[] },   // content-less, same as cornhole
+  exquisite_corpse:{ name:'Exquisite Corpse', fields:[] },   // content-less: prompts live in the app
   horse_racing:    { name:'Horse Racing',     fields:[] },   // content-less AND venue-exclusive (38): tick it only where it is sold
   ring_toss:       { name:'Ring Toss',        fields:[] },   // content-less AND venue-exclusive (39): tick it only where it is sold
 };

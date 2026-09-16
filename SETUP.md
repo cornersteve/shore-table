@@ -1,4 +1,4 @@
-# Setup — from zero to your first table card
+# Setup: from zero to your first table card
 
 One evening of setup, on accounts you own. You will create: a GitHub fork,
 a Supabase project (the database), and a Cloudflare Pages site (the
@@ -23,10 +23,15 @@ hosting). Everything is free tier to start except Supabase Pro
    DISABLED (install.sql grants exactly what should be public), and turn
    **Enable automatic RLS ON**.
 2. Authentication > Sign In / Up: **disable public signups**.
-3. Authentication > Users: **Add user** — your operator email + a strong
+3. Authentication > Users: **Add user**: your operator email and a strong
    password. This is your dashboard login.
 4. Authentication > URL Configuration: set the Site URL to your domain
-   (step 6), and add these to Additional Redirect URLs (wildcards on purpose: hosting serves /admin and /admin.html interchangeably, and a reset link whose return address is not on the list silently falls back to the Site URL): `https://<your-domain>/*`, `https://<your-pages-project>.pages.dev/*` (add it at step 3 when you know it), and `http://localhost:5599/*`.
+   (step 3), and add these to Additional Redirect URLs (wildcards on
+   purpose: hosting serves /admin and /admin.html interchangeably, and a
+   reset link whose return address is not on the list silently falls
+   back to the Site URL): `https://<your-domain>/*` and
+   `https://<your-pages-project>.pages.dev/*` (add the second one at
+   step 3 when you know it).
 5. Storage: **New bucket** named exactly `restaurant logos`, PUBLIC.
 6. SQL Editor: open `install/install.sql` from the repo, **edit the one
    marked line** (your operator email), paste the whole file, Run.
@@ -44,14 +49,23 @@ Supabase account itself.
 
 1. Create a Cloudflare account; add your domain (registrar nameservers
    point at Cloudflare).
-2. Workers & Pages > Create > Pages > **Connect to Git** > pick your
-   fork.
+2. Workers & Pages > Create. Cloudflare steers new projects toward
+   Workers; at the bottom of that screen click **Need to use the legacy
+   Pages workflow? Continue to Pages**, then **Connect to Git** and pick
+   your fork. If your fork is not listed, the Cloudflare GitHub App has
+   not been given access to it: click the configure link in the picker
+   (or GitHub > Settings > Applications > Cloudflare > Configure), add
+   the fork under Repository access, save, and reopen the picker.
    - Production branch: `release`
-   - Build command: (none)
+   - Framework preset: None. Build command: (none)
    - Build output directory: `public`
-3. Add your custom domain to the Pages project.
+3. Add your custom domain to the Pages project (Custom domains > Set up a
+   custom domain). Cloudflare writes the DNS record itself.
 4. Security > Bot Fight Mode: ON. Consider a basic rate-limiting rule.
-5. 2FA on your Cloudflare account.
+5. SSL/TLS > Edge Certificates > HSTS: enable, max age one month,
+   subdomains off, preload off. Raise the max age later once everything
+   works.
+6. 2FA on your Cloudflare account.
 
 ## 4. Your logo files
 
@@ -104,11 +118,14 @@ Dashboard > Tools > **Platform updates**:
   any other repository you own. (If GitHub ever refuses the update with a
   fine-grained token, a classic token with the `repo` scope also works;
   it is simply broader than needed.)
-- When an update ships, press **Sync fork from upstream**. Pages
+- When an update ships, press **Update to the latest version**. Pages
   redeploys; the page reloads itself; if the update needs database
-  changes, an **Apply pending migrations** button appears — press it.
+  changes, an **Apply pending updates** button lights up: press it.
   Never paste update SQL by hand; the runner applies each migration
   exactly once, in order.
+- Once in a while, press **Download a backup** on the same page and keep
+  the file somewhere private. Supabase Pro keeps daily backups too; this
+  is the copy in your own hands.
 
 ## 8. Optional: the website autofill Worker
 
