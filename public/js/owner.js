@@ -629,6 +629,7 @@ function rememberPass(p, device){
   } catch(e){}
 }
 const REPORT_HREF = 'report.html?v=' + encodeURIComponent(V || '') + '&k=' + encodeURIComponent(K || '');
+if($('liveAppLink')) $('liveAppLink').href = 'app.html?v=' + encodeURIComponent(V || '');   // the diner app, exactly as a scanned card opens it
 if($('reportBtn')) $('reportBtn').href = REPORT_HREF;
 if($('reportBtn2')) $('reportBtn2').href = REPORT_HREF;
 
