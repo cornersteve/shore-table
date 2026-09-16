@@ -4360,6 +4360,7 @@ reg('ec_draw', (el)=>{
   });
   const stop = ()=>{ drawing = false; last = null; };
   cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop); cv.addEventListener('pointerleave', stop);
+  cv.addEventListener('contextmenu', e=> e.preventDefault());   // a long press is a held stroke, not a menu
   el.querySelector('#ecPen').onclick = ()=> setTool('pen');
   el.querySelector('#ecEraser').onclick = ()=> setTool('eraser');
   el.querySelector('#ecUndo').onclick = ()=>{ const s = undos.pop(); if(s) ctx.putImageData(s, 0, 0); };

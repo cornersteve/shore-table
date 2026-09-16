@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 31;
+const BUILD = 32;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -251,6 +251,10 @@ async function ogCardB64(b, pendingFiles){
   // the header and its cards under the two pinned rows (the app's rules)
   const demo = venueById(b.demoVenue || 'demo') || {};
   const vname = demo.name || 'Your restaurant';
+  // the phone wears the demo venue's accent, like its real app; the card around it keeps the brand's
+  const pAcc = /^#[0-9a-f]{6}$/i.test(demo.accent || '') ? demo.accent.toLowerCase() : accent;
+  const pOn = readableOn(pAcc);
+  const pDeep = (()=>{ const m2 = /^#(..)(..)(..)$/.exec(pAcc); const c = k => Math.round(parseInt(m2[k], 16) * .72).toString(16).padStart(2, '0'); return '#' + c(1) + c(2) + c(3); })();
   let vlogo = null;
   if(demo.logo && /^(https?:|images\/|data:image\/)/i.test(demo.logo)){
     try { vlogo = await new Promise((ok, no)=>{ const i = new Image(); if(/^https?:/i.test(demo.logo)) i.crossOrigin = 'anonymous'; i.onload = ()=> ok(i); i.onerror = no; i.src = demo.logo; }); } catch(e){ vlogo = null; }
@@ -262,7 +266,7 @@ async function ogCardB64(b, pendingFiles){
   ctx.shadowColor = 'transparent';
   ctx.fillStyle = '#f5f6f8'; rr(13, 13, 274, 614, 33); ctx.fill();
   ctx.save(); rr(13, 13, 274, 614, 33); ctx.clip();
-  ctx.fillStyle = '#fff'; ctx.fillRect(13, 13, 274, 62); ctx.fillStyle = accent; ctx.fillRect(13, 73, 274, 3);
+  ctx.fillStyle = '#fff'; ctx.fillRect(13, 13, 274, 62); ctx.fillStyle = pAcc; ctx.fillRect(13, 73, 274, 3);
   ctx.textAlign = 'left'; ctx.textBaseline = 'alphabetic';
   if(vlogo){
     const s = Math.min(200 / vlogo.width, 40 / vlogo.height), lw = vlogo.width * s, lh = vlogo.height * s;
@@ -279,16 +283,16 @@ async function ogCardB64(b, pendingFiles){
     if(py > 600) return;
     const h = sub ? 70 : 56;
     ctx.fillStyle = '#fff'; rr(27, py, 246, h, 16); ctx.fill();
-    ctx.fillStyle = accent; rr(39, py + (sub ? 17 : 10), 36, 36, 10); ctx.fill();
+    ctx.fillStyle = pAcc; rr(39, py + (sub ? 17 : 10), 36, 36, 10); ctx.fill();
     ctx.fillStyle = '#16110a'; ctx.fillText(clip(title, 170, "700 14px 'Bricolage Grotesque', sans-serif"), 86, py + (sub ? 30 : 34));
     if(sub){ ctx.fillStyle = '#6d6759'; ctx.fillText(clip(sub, 170, "500 11px 'Hanken Grotesk', sans-serif"), 86, py + 50); }
     py += h + 12;
   };
   const banner = (title, body, hot)=>{
     if(py > 600) return;
-    ctx.fillStyle = hot ? accent : '#fff'; rr(27, py, 246, 78, 16); ctx.fill();
-    ctx.fillStyle = hot ? onAccent : deep; ctx.fillText(clip(String(title || '').toUpperCase(), 214, "700 11px 'Bricolage Grotesque', sans-serif"), 43, py + 28);
-    ctx.fillStyle = hot ? onAccent : '#16110a'; ctx.fillText(clip(body, 214, "500 12px 'Hanken Grotesk', sans-serif"), 43, py + 50);
+    ctx.fillStyle = hot ? pAcc : '#fff'; rr(27, py, 246, 78, 16); ctx.fill();
+    ctx.fillStyle = hot ? pOn : pDeep; ctx.fillText(clip(String(title || '').toUpperCase(), 214, "700 11px 'Bricolage Grotesque', sans-serif"), 43, py + 28);
+    ctx.fillStyle = hot ? pOn : '#16110a'; ctx.fillText(clip(body, 214, "500 12px 'Hanken Grotesk', sans-serif"), 43, py + 50);
     py += 90;
   };
   const d0 = new Date();
