@@ -4154,8 +4154,12 @@ function ecJoinCopy(parts, i){
   return [top, bottom].filter(Boolean).join(' ');
 }
 const EC_PROMPTS = {
-  figure: ['a pirate','a chef','a robot','a sea captain','a lifeguard','a rock star','a mermaid','a superhero','a very sleepy tourist','a lighthouse keeper','a wizard','a hockey player'],
-  scene:  ['a beach day','a shipwreck','the boardwalk at night','a fishing trip','a thunderstorm at sea','a backyard barbecue','a parade','a snow day at the shore','a carnival','a marina at sunrise'],
+  figure: ['a pirate','a chef','a robot','a sea captain','a lifeguard','a rock star','a mermaid','a superhero','a very sleepy tourist','a lighthouse keeper','a wizard','a hockey player',
+           'a fisherman','a ballerina','a cowboy','a knight','a scuba diver','an astronaut','a surfer','a clown','a detective','a mad scientist',
+           'a construction worker','a friendly ghost','a snowman','a farmer','a viking','a cheerleader','a magician','a bartender','a marathon runner','a beekeeper'],
+  scene:  ['a beach day','a shipwreck','the boardwalk at night','a fishing trip','a thunderstorm at sea','a backyard barbecue','a parade','a snow day at the shore','a carnival','a marina at sunrise',
+           'a lighthouse in the fog','a pirate ship','a treehouse','a farmers market','a hot dog eating contest','a lemonade stand','a rainy day on the pier','a lifeguard rescue','a campfire on the beach','a crowded subway car',
+           'a jazz club','a cabin in the mountains','a volcano island','a haunted house','a rooftop party','a dog park','a sailing race','the line at the ice cream truck','a drive-in movie','a garden party'],
 };
 const EC_COLORS = ['#1b1410', '#7a4b2a', '#c0392b', '#d6a32b', '#2e9e63', '#3a6ea5', '#ffffff'];   // ink, brown, red, gold, green, blue, white
 const EC_SIZES = [2.5, 5, 9, 22];   // the last one is for filling; the eraser follows the same choice
