@@ -4144,7 +4144,7 @@ const EC_SETS = {
 // what to draw, and what to leave for the next player
 function ecTipCopy(parts, i){
   const part = parts[i], next = parts[i + 1];
-  return 'Draw ONLY ' + part.what + '.' + (next ? ' The next player draws the ' + next.t.toLowerCase() + '.' : ' You are the last drawer.');
+  return 'Draw ONLY ' + part.what + '.' + (next ? ' The NEXT player draws the ' + next.t.toLowerCase() + '.' : ' You are the last drawer.');
 }
 // how this part joins its neighbours: the whole game lives in these two edges
 function ecJoinCopy(parts, i){
