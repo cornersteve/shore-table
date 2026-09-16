@@ -176,7 +176,9 @@ function go(id, opts){
   const wasRoot = !current || ROOTS.has(current);
   if(!popping && wasRoot && !ROOTS.has(id)) pushGuard();
   current = id;
-  backBtn.style.display = ((opts && opts.back) || backTarget(id)) ? 'block' : 'none';
+  // the arrow shows before a game starts (instructions, players, options) and
+  // on screens with their own back step; once play begins only Quit remains
+  backBtn.style.display = ((opts && opts.back) || screens[id+'__back'] || /_(intro|setup|options)$/.test(id)) ? 'block' : 'none';
   exitBtn.style.display = (opts && opts.exit) ? 'block' : 'none';
   stage.innerHTML = '';
   const el = document.createElement('div');
