@@ -4133,28 +4133,30 @@ let ec = { players: [] };
 const EC_W = 320, EC_H = 250, EC_STRIP = 28;   // css px; the strip is what the next drawer gets to see
 const EC_SETS = {
   figure: { name: 'A character', parts: [
-    { t:'Head',  tip:'Draw a head and a neck. Let the neck run off the bottom edge so the next person can pick it up.' },
-    { t:'Body',  tip:'Draw the body and the arms. Start from the lines at the top and run the waist off the bottom edge.' },
-    { t:'Legs',  tip:'Draw the legs. Start from the lines at the top and run them off the bottom edge.' },
-    { t:'Feet',  tip:'Draw the feet and whatever they stand on. Start from the lines at the top.' } ] },
+    { t:'Head',  tip:'Draw a head and a neck.' },
+    { t:'Body',  tip:'Draw the body and the arms.' },
+    { t:'Legs',  tip:'Draw the legs.' },
+    { t:'Feet',  tip:'Draw the feet and whatever they stand on.' } ] },
   scene: { name: 'A scene', parts: [
-    { t:'Sky',    tip:'Draw what is up in the sky. Let something reach down past the bottom edge.' },
-    { t:'Middle', tip:'Draw the middle of the picture. Start from whatever comes down from the top.' },
-    { t:'Ground', tip:'Draw the ground and what stands on it. Start from the lines at the top.' },
-    { t:'Below',  tip:'Draw what is under the ground, or under the water. Start from the lines at the top.' } ] },
+    { t:'Sky',         tip:'Draw what is up in the sky.' },
+    { t:'Middle',      tip:'Draw the middle of the picture.' },
+    { t:'Ground',      tip:'Draw the ground and what stands on it.' },
+    { t:'Underground', tip:'Draw what is under the ground, or under the water.' } ] },
 };
+// how a part joins its neighbours: the whole game lives in these two edges
+function ecJoinCopy(i, n){
+  const top = 'The strip at the top is the bottom edge of the last drawing. Connect your lines to it.';
+  const bottom = 'Draw all the way off the bottom edge. The next drawer sees only that edge, and the drawing only connects if your lines reach it.';
+  if(i === 0) return bottom;
+  if(i === n - 1) return top;
+  return top + ' Then ' + bottom.charAt(0).toLowerCase() + bottom.slice(1);
+}
 const EC_PROMPTS = {
-  Head:   ['a pirate','someone who just heard great news','a sea captain','a robot','a very sleepy person','a chef','a lighthouse keeper','a rock star'],
-  Body:   ['wearing a Hawaiian shirt','holding a tray of drinks','in a wetsuit','wearing a tuxedo','hugging a giant fish','in a raincoat','wearing a life vest','carrying a surfboard'],
-  Legs:   ['on roller skates','in flippers','in cowboy boots','riding a tiny bike','on a skateboard','in a mermaid tail','on stilts','mid jump'],
-  Feet:   ['in flip flops','standing in a puddle','on a surfboard','in ski boots','on a dock','on a skateboard'],
-  Sky:    ['a hot air balloon','fireworks','a flock of seagulls','a kite','a blimp with a message','a thunderstorm'],
-  Middle: ['a boardwalk','a boat','a food truck','a Ferris wheel','a lifeguard stand','a very long table'],
-  Ground: ['a sandcastle','a beach full of towels','a marina','a picnic','a crowd of crabs','a parade'],
-  Below:  ['a shipwreck','a subway','buried treasure','a very surprised mole','an octopus','roots and worms'],
+  figure: ['a pirate','a chef','a robot','a sea captain','a lifeguard','a rock star','a mermaid','a superhero','a very sleepy tourist','a lighthouse keeper','a wizard','a hockey player'],
+  scene:  ['a beach day','a shipwreck','the boardwalk at night','a fishing trip','a thunderstorm at sea','a backyard barbecue','a parade','a snow day at the shore','a carnival','a marina at sunrise'],
 };
 const EC_COLORS = ['#1b1410', '#c0392b', '#3a6ea5', '#2e9e63', '#d6a32b'];   // ink, red, blue, green, gold (the app's own palette)
-const EC_SIZES = [2.5, 5, 9];
+const EC_SIZES = [2.5, 5, 9, 18];   // the last one is for filling
 const EC_ICON = {
   pencil: '<svg viewBox="0 0 24 24"><path d="M4 20l4.5-1 10-10a2.1 2.1 0 0 0-3-3l-10 10L4 20z"/><path d="M13.5 6.5l3 3"/></svg>',
   eraser: '<svg viewBox="0 0 24 24"><path d="M7 20l-3.5-3.5a2 2 0 0 1 0-2.8l8.7-8.7a2 2 0 0 1 2.8 0l4.5 4.5a2 2 0 0 1 0 2.8L12 20H7z"/><path d="M6 20h14M9.5 9.5l5 5"/></svg>',
@@ -4168,10 +4170,10 @@ function ecCanvas(w, h){
 }
 function ecParts(){ return EC_SETS[ec.set].parts.slice(0, ec.nParts); }
 function ecDrawer(i){ return ec.players[(ec.startIx + i) % ec.players.length]; }
-function ecPrompt(part){ if(!ec.prompts) return ''; const list = EC_PROMPTS[part.t] || []; return list.length ? list[Math.floor(Math.random() * list.length)] : ''; }
+function ecPrompt(){ if(!ec.prompts) return ''; const list = EC_PROMPTS[ec.set] || []; return list.length ? list[Math.floor(Math.random() * list.length)] : ''; }
 function ecBegin(){
   ec.panels = []; ec.turn = 0;
-  ec.promptFor = ecParts().map(p => ecPrompt(p));
+  ec.prompt = ecPrompt();   // one prompt for the whole drawing, so the parts belong together
   go('ec_pass', { exit:true });
 }
 
@@ -4203,15 +4205,8 @@ reg('ec_setup', (el)=>{
       <button class="btn sm" id="addBtn" style="padding-left:20px;padding-right:20px">Add</button>
     </div>
     <div class="namehint" id="nameHint"></div>
-    <div class="ec-opts">
-      <div class="ec-optrow">
-        <button type="button" class="ec-tool${ec.set === 'figure' ? ' on' : ''}" data-set="figure">A character</button>
-        <button type="button" class="ec-tool${ec.set === 'scene' ? ' on' : ''}" data-set="scene">A scene</button>
-      </div>
-      <label class="ec-check"><input type="checkbox" id="ecPrompts" ${ec.prompts ? 'checked' : ''}> Give each part a prompt to draw to</label>
-      <div class="ec-note" id="ecPartsNote"></div>
-    </div>
-    <button class="btn" id="startEc" style="margin-top:14px">Start drawing ›</button>
+    <div class="ec-note" id="ecPartsNote"></div>
+    <button class="btn" id="startEc" style="margin-top:14px">Next ›</button>
     <div class="spacer"></div>`;
   const chips = el.querySelector('#chips'), input = el.querySelector('#nameInput'), hint = el.querySelector('#nameHint');
   if(!ec.icon) ec.icon = {};
@@ -4247,18 +4242,46 @@ reg('ec_setup', (el)=>{
   el.querySelector('#addBtn').onclick = ()=>{ add(); };
   input.addEventListener('keydown', e=>{ if(e.key === 'Enter') add(); else hint.textContent = ''; });
   input.addEventListener('input', refresh);
-  el.querySelectorAll('[data-set]').forEach(b => b.onclick = ()=>{ ec.set = b.dataset.set; el.querySelectorAll('[data-set]').forEach(x => x.classList.toggle('on', x === b)); refresh(); });
-  el.querySelector('#ecPrompts').onchange = e => { ec.prompts = e.target.checked; };
   el.querySelector('#startEc').onclick = ()=>{
     if(input.value.trim() && !add()){ input.focus(); return; }
     if(ec.players.length < 2) return;
-    logPlay('exquisite_corpse');
     ec.nParts = partsFor(ec.players.length);
     ec.startIx = 0;
-    ecBegin();
+    go('ec_options', { exit:true });
   };
   renderChips(); refresh();
 });
+
+// the drawing's settings, separate from the players so they read as one
+// choice for the table, not a per-player setting
+reg('ec_options', (el)=>{
+  const partsLine = s => EC_SETS[s].parts.slice(0, ec.nParts).map(p => p.t).join(', ') + '.';
+  el.innerHTML = `
+    <div class="eyebrow">Exquisite Corpse · setup</div>
+    <h1 class="big">What are we drawing?</h1>
+    <div class="ec-optgroup">
+      <div class="ec-optlabel">The drawing</div>
+      <div class="ec-optrow">
+        <button type="button" class="ec-tool${ec.set === 'figure' ? ' on' : ''}" data-set="figure">A character</button>
+        <button type="button" class="ec-tool${ec.set === 'scene' ? ' on' : ''}" data-set="scene">A scene</button>
+      </div>
+      <div class="ec-note" id="ecPartsNote">${ec.nParts} parts: ${partsLine(ec.set)}</div>
+    </div>
+    <div class="ec-optgroup">
+      <div class="ec-optlabel">A nudge?</div>
+      <div class="ec-optrow">
+        <button type="button" class="ec-tool${ec.prompts ? ' on' : ''}" data-pr="1">Use a prompt</button>
+        <button type="button" class="ec-tool${!ec.prompts ? ' on' : ''}" data-pr="0">Freestyle</button>
+      </div>
+      <div class="ec-note">One prompt for the whole drawing, like "a pirate". Everyone draws their part to it.</div>
+    </div>
+    <button class="btn" id="startEc" style="margin-top:14px">Start drawing ›</button>
+    <div class="spacer"></div>`;
+  el.querySelectorAll('[data-set]').forEach(b => b.onclick = ()=>{ ec.set = b.dataset.set; el.querySelectorAll('[data-set]').forEach(x => x.classList.toggle('on', x === b)); el.querySelector('#ecPartsNote').textContent = ec.nParts + ' parts: ' + partsLine(ec.set); });
+  el.querySelectorAll('[data-pr]').forEach(b => b.onclick = ()=>{ ec.prompts = b.dataset.pr === '1'; el.querySelectorAll('[data-pr]').forEach(x => x.classList.toggle('on', x === b)); });
+  el.querySelector('#startEc').onclick = ()=>{ logPlay('exquisite_corpse'); ecBegin(); };
+});
+reg('ec_options__back', ()=> go('ec_setup', { exit:true }));
 
 reg('ec_pass', (el)=>{
   const part = ecParts()[ec.turn], who = ecDrawer(ec.turn), n = ecParts().length;
@@ -4267,7 +4290,7 @@ reg('ec_pass', (el)=>{
     <div class="handoff">
       <div class="handoff__pass">Pass the phone to <span class="pico34">📲</span></div>
       <div class="handoff__to">${ec.icon[who] || ''} ${escHtml(who)}</div>
-      <div class="handoff__role">${escHtml(who)} draws the <b>${part.t.toLowerCase()}</b>.${ec.turn > 0 ? ' Only the bottom edge of the last part shows. Nobody else look.' : ' Nobody else look.'}</div>
+      <div class="handoff__role">${escHtml(who)} draws the <b>${part.t.toLowerCase()}</b>${ec.prompt ? ' of <b>' + escHtml(ec.prompt) + '</b>' : ''}.${ec.turn > 0 ? ' Only the bottom edge of the last part shows. Nobody else look.' : ' Nobody else look.'}</div>
       <button class="btn" id="ecReady">I'm ${escHtml(who)}, start drawing ›</button>
     </div>`;
   el.querySelector('#ecReady').onclick = ()=> go('ec_draw', { exit:true });
@@ -4275,12 +4298,12 @@ reg('ec_pass', (el)=>{
 
 reg('ec_draw', (el)=>{
   const parts = ecParts(), part = parts[ec.turn], who = ecDrawer(ec.turn), prev = ec.panels[ec.turn - 1] || null;
-  const prompt = ec.promptFor[ec.turn];
+  const prompt = ec.prompt;
   el.innerHTML = `
     <div class="eyebrow">Exquisite Corpse · ${escHtml(who)} · part ${ec.turn + 1} of ${parts.length}</div>
-    <h1 class="big" style="font-size:24px">${part.t}</h1>
+    <h1 class="big" style="font-size:24px">${part.t}${prompt ? ` <span class="ec-of">of ${escHtml(prompt)}</span>` : ''}</h1>
     <p class="lede" style="margin-top:6px">${part.tip}</p>
-    ${prompt ? `<div class="ec-prompt">Prompt: <b>${escHtml(prompt)}</b></div>` : ''}
+    <div class="ec-join">${ecJoinCopy(ec.turn, parts.length)}</div>
     <div class="ec-board" id="ecBoard"></div>
     <div class="ec-tools">
       <button type="button" class="ec-tool on" id="ecPen" aria-pressed="true">${EC_ICON.pencil}Pencil</button>
@@ -4289,7 +4312,7 @@ reg('ec_draw', (el)=>{
     </div>
     <div class="ec-palette">
       <div class="ec-swatches">${EC_COLORS.map((c, i) => `<button type="button" class="ec-sw${i === 0 ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color ${i + 1}" aria-pressed="${i === 0}"></button>`).join('')}</div>
-      <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${s * 2 + 4}px;height:${s * 2 + 4}px"></span></button>`).join('')}</div>
+      <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${Math.min(30, Math.round(s * 1.5 + 4))}px;height:${Math.min(30, Math.round(s * 1.5 + 4))}px"></span></button>`).join('')}</div>
     </div>
     <div class="namehint" id="ecHint" style="text-align:center;min-height:18px"></div>
     <button class="btn" id="ecDone" style="margin-top:6px">Done, pass it on ›</button>
@@ -4357,12 +4380,15 @@ reg('ec_reveal', (el)=>{
   el.innerHTML = `
     <div class="eyebrow">Exquisite Corpse · the reveal</div>
     <h1 class="big" style="font-size:24px">${EC_SETS[ec.set].name}, by ${escHtml(artists.join(', '))}</h1>
-    <div class="ec-reveal"><img class="ec-final" src="${url}" alt="The finished drawing" /><div class="ec-curtain"></div></div>
-    <p class="lede" style="text-align:center;margin-top:4px">Press and hold the drawing to save it to your phone.</p>
-    <button class="btn" id="ecAgain" style="margin-top:12px">Draw another ›</button>
-    <button class="btn btn--ghost" id="ecSave">Save the drawing</button>
-    <button class="btn btn--ghost" id="ecHub">Back to games</button>
+    <div class="ec-reveal" id="ecReveal"><img class="ec-final" src="${url}" alt="The finished drawing" /><div class="ec-curtain"></div></div>
+    <p class="lede" style="text-align:center;margin-top:4px">Tap the drawing to zoom in. Press and hold it to save it to your phone.</p>
+    <div class="ec-actions">
+      <button class="btn" id="ecAgain">Draw another ›</button>
+      <button class="btn btn--ghost" id="ecSave">Save the drawing</button>
+      <button class="btn btn--ghost" id="ecHub">Back to games</button>
+    </div>
     <div class="spacer"></div>`;
+  el.querySelector('#ecReveal').onclick = ()=> el.querySelector('#ecReveal').classList.toggle('zoom');
   el.querySelector('#ecAgain').onclick = ()=>{ ec.startIx = (ec.startIx + n) % ec.players.length; ecBegin(); };
   el.querySelector('#ecSave').onclick = ()=>{ const a = document.createElement('a'); a.href = url; a.download = 'exquisite-corpse.png'; document.body.appendChild(a); a.click(); a.remove(); };
   el.querySelector('#ecHub').onclick = ()=> go('hub');
