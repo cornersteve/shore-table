@@ -714,9 +714,11 @@
   .ec-sw.on{border-color:var(--ink);box-shadow:inset 0 0 0 2px #fff}
   .ec-sz{width:40px;height:40px;border-radius:50%;border:1.5px solid var(--line-2);background:var(--bg);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
   .ec-sz span{display:block;border-radius:50%;background:var(--ink)}
-  .ec-sz.on{border-color:var(--accent);background:color-mix(in srgb, var(--accent) 8%, var(--bg))}
+  .ec-sz.on{border-color:var(--accent);background:var(--accent)}
+  .ec-sz.on span{background:var(--on-accent)}
+  .ec-done{position:sticky;bottom:0;z-index:3;background:var(--page);padding:10px 0 4px;border-top:1px solid var(--line);margin-top:8px}   /* Done stays in view while the long screen scrolls */
   .ec-tool{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 15px;border-radius:999px;border:1.5px solid var(--line-2);background:var(--bg);color:var(--ink);font-family:var(--font-b);font-weight:600;font-size:14px;cursor:pointer}
-  .ec-tool.on{border-color:var(--accent);color:var(--accent);background:color-mix(in srgb, var(--accent) 8%, var(--bg))}
+  .ec-tool.on{border-color:var(--accent);color:var(--on-accent);background:var(--accent)}   /* filled, so the live tool reads at a glance in any accent */
   .ec-tool svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
   .ec-prompt{display:inline-block;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:13.5px;margin-top:10px}
   .ec-opts{margin:6px 0 0;display:flex;flex-direction:column;gap:10px}
