@@ -26,7 +26,7 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 }
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
-const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Pass the Doodle' }, CFG.gameNames || {});
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Sketchy Telephone' }, CFG.gameNames || {});
 /* favicon from operator config (the page itself wears venue branding) */
 (function(){ try{
   const fav = document.querySelector('link[rel="icon"]'); if(!fav) return;
@@ -320,16 +320,18 @@ reg('landing', (el)=>{
     // stand out: the same row, colors inverted onto the accent
     const hot = (c.t === 'notice' && c.hot) ? ' is-hot' : '';
     if (c.t === 'notice' && (c.mode || 'inline') === 'inline'){
-      // hot = the saturated accent banner the owner promo used to be;
-      // an optional link makes the whole banner tappable, arrow and all
+      // the message sits right here: the same row as every other card, minus
+      // the arrow, because there is nothing behind it to open (an older card
+      // that carries a link stays tappable, arrow and all)
       const u = safeUrl(c.url);
-      const cls = c.hot ? 'promo' : 'ncard';
-      const inner = c.hot
-        ? `<div class="promo__k">${escHtml(c.title)}</div>${c.body ? `<div class="promo__t">${escHtml(c.body)}</div>` : ''}`
-        : `<div class="ncard__k">${escHtml(c.title)}</div>${c.body ? `<div class="ncard__t">${escHtml(c.body)}</div>` : ''}`;
+      const inner = `${icTile}
+        <span class="lo-body">
+          <div class="landing-opt__t">${escHtml(c.title)}</div>
+          ${c.body ? `<div class="landing-opt__d landing-opt__d--msg">${escHtml(c.body)}</div>` : ''}
+        </span>`;
       return u
-        ? `<a class="${cls}" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer"><span class="${c.hot ? 'promo__arrow' : 'ncard__arrow'}">›</span>${inner}</a>`
-        : `<div class="${cls}">${inner}</div>`;
+        ? `<a class="landing-opt${hot}" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">${inner}<span class="landing-opt__arrow">›</span></a>`
+        : `<div class="landing-opt landing-opt--static${hot}">${inner}</div>`;
     }
     if (c.t === 'notice' && c.mode === 'link'){
       const u = safeUrl(c.url);
@@ -4410,7 +4412,7 @@ reg('ec_reveal', (el)=>{
   el.querySelector('#ecHub').onclick = ()=> go('hub');
 });
 
-/* ---------- PASS THE DOODLE (internal id: sketch_chain) ----------
+/* ---------- SKETCHY TELEPHONE (internal id: sketch_chain) ----------
    Telephone, with drawings. The first player gets a secret word and draws it.
    The next sees only the drawing and types a guess. The next sees only that
    guess and draws it, and so on around the table, one phone, until the chain

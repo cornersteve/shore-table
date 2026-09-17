@@ -305,7 +305,7 @@ async function ogCardB64(b, pendingFiles){
   (Array.isArray(demo.cards) ? demo.cards : []).forEach(c => {
     if(!c || c.off) return;
     if(c.t === 'notice' && c.until && c.until < todayYmd) return;
-    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ banner(c.title, cardBannerText(c), !!c.hot); return; }
+    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ row(c.title, c.body || '', !!c.hot, c.icon === 'none'); return; }   // a message card is the same row
     if(c.t === 'schedule'){ const today = (c.days || {})[dayKey]; if(!today && !c.always) return; row(c.title, today ? dayName + ': ' + today : (c.desc || 'Tap to view the calendar'), false, c.icon === 'none'); return; }
     row(c.title, cardSub(c), c.t === 'notice' && !!c.hot, c.icon === 'none');
   });
@@ -546,7 +546,7 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 }
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
-const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Pass the Doodle' }, CFG.gameNames || {});
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Sketchy Telephone' }, CFG.gameNames || {});
 // The site address is wherever these pages are served from, never typed:
 // QR payloads, owner links, and signatures all derive from it.
 const DOMAIN       = location.origin;

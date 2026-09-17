@@ -8,7 +8,7 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 }
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
-const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Pass the Doodle' }, CFG.gameNames || {});
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Sketchy Telephone' }, CFG.gameNames || {});
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const params = new URLSearchParams(location.search);
