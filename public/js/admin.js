@@ -274,7 +274,7 @@ async function ogCardB64(b, pendingFiles){
   }
   if(!vlogo){
     ctx.fillStyle = '#16110a'; ctx.font = "700 14px 'Bricolage Grotesque', sans-serif"; ctx.textAlign = 'center';
-    let vn = vname.toUpperCase(); while(ctx.measureText(vn).width > 240 && vn.length > 4) vn = vn.slice(0, -2) + '…';
+    let vn = ((demo.logo && !/^(https?:|images\/|data:image\/)/i.test(demo.logo)) ? demo.logo : vname).toUpperCase(); while(ctx.measureText(vn).width > 240 && vn.length > 4) vn = vn.slice(0, -2) + '…';
     ctx.fillText(vn, 150, 50); ctx.textAlign = 'left';
   }
   const clip = (s, maxW, font)=>{ ctx.font = font; let x = String(s || ''); while(ctx.measureText(x).width > maxW && x.length > 3) x = x.slice(0, -2) + '…'; return x; };
@@ -1386,7 +1386,7 @@ function form(existing){
           <div class="swatches" id="swatches"></div>
         </div>
         <div id="logoTextRow" style="display:none;margin-top:8px">
-          <input type="text" id="fLogoText" placeholder="BAHRS LANDING" value="${esc(!/^https?:\/\//i.test(v.logo||'') ? (v.logo||'') : '')}" />
+          <input type="text" id="fLogoText" placeholder="Ex. BAHRS LANDING" maxlength="40" value="${esc(!/^(https?:\/\/|images\/)/i.test(v.logo||'') ? (v.logo||'') : '')}" />
         </div>
         <label class="f">Accent color</label>
         <div class="frow">
@@ -1433,7 +1433,8 @@ function form(existing){
   const draftRaw = loadDraft();
   const draft = draftRaw && (editing ? (draftRaw.mode === 'edit' && draftRaw.vid === v.id)
                                      : (draftRaw.mode !== 'edit')) ? draftRaw : null;
-  let logoMode = editing ? 'keep' : 'upload';
+  const savedWordmark = editing && v.logo && !/^(https?:\/\/|images\/)/i.test(v.logo) ? v.logo : '';
+  let logoMode = editing ? (savedWordmark ? 'text' : 'keep') : 'upload';
   let logoBlob = null;              // processed PNG waiting for upload
   let logoPreviewUrl = /^https?:\/\//i.test(v.logo||'') ? v.logo : '';
   let draftLogoDataUrl = (draft && draft.logoData) || null;
@@ -1548,6 +1549,8 @@ function form(existing){
     paint();
   }));
   $('logoUploadRow').style.display = logoMode==='upload' ? '' : 'none';
+  $('logoTextRow').style.display   = logoMode==='text'   ? '' : 'none';
+  if(logoMode === 'text'){ const tr = document.querySelector('#logoMode input[value=text]'); if(tr) tr.checked = true; }
   // Shared by the file input and the autofill candidate picker: normalize
   // the image, preview it, and offer its colors as accent swatches.
   async function applyLogoBlob(raw){

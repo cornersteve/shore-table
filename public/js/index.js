@@ -61,7 +61,9 @@ function mkHome(v){
     const L = .2126 * lin(m[1]) + .7152 * lin(m[2]) + .0722 * lin(m[3]); return (1.05 / (L + .05)) >= 4.5 ? '#ffffff' : '#16110a'; };
   const fill = v => {
     if(!v || !v.name) return false;
-    document.querySelectorAll('.mk-name').forEach(e => e.textContent = v.name);
+    // a text wordmark is the venue's logo: the phone headers print it, like the real app does
+    const wordmark = (v.logo && !/^(https?:|images\/|data:image\/)/i.test(v.logo)) ? v.logo : v.name;
+    document.querySelectorAll('.mk-name').forEach(e => e.textContent = wordmark);
     const home = document.querySelector('.mk-home'); if(home) home.innerHTML = mkHome(v);
     if(/^#[0-9a-f]{6}$/i.test(v.accent || '')) document.querySelectorAll('.phones, .report-fig').forEach(e => {
       e.style.setProperty('--accent', v.accent);
