@@ -343,8 +343,8 @@ function cardBody(c, ix){
     <input type="text" class="promo-head" spellcheck="true" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
   const iconField = `
     <label class="cfl">Icon</label>
-    <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
-    <div class="mini" style="margin-top:6px">Icon: ${esc(c.icon || 'star')}</div>`;
+    <div class="icongrid"><button type="button" class="icopt icopt--none${c.icon === 'none' ? ' sel' : ''}" data-icon="none" data-ix="${ix}" aria-label="No icon" title="No icon" aria-pressed="${c.icon === 'none'}"></button>${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
+    <div class="mini" style="margin-top:6px">Icon: ${esc(c.icon === 'none' ? 'no icon' : (c.icon || 'star'))}</div>`;
   const common = nameField + iconField;
   if (c.t === 'schedule') return common + `
     <label class="cfl">The week</label>
@@ -405,7 +405,7 @@ function renderCards(){
     <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
       <div class="cbox__head">
         <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
-          <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
+          <span class="cbox__ic${c.icon === 'none' ? ' cbox__ic--none' : ''}">${cardIcon(c)}</span>
           <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(cardSub(c) || CARD_TYPES[c.t])}${cardSuffix(c)}</span>${cardExpired(c) ? `<span class="cbox__why">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>` : ''}</span>
           <span class="cbox__chev" aria-hidden="true">›</span>
         </button>

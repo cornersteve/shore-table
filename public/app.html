@@ -570,10 +570,17 @@
   .promo__k{color:var(--on-accent);opacity:.85;font-size:14px;letter-spacing:.13em}
   .promo__t{color:var(--on-accent)}
   a.promo{padding-right:48px}
-  /* a stand-out announcement that opens a details page: the banner as a button */
-  button.promo{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;padding-right:48px;-webkit-appearance:none;appearance:none;transition:transform .14s var(--ease)}
-  button.promo:active{transform:scale(.99)}
-  button.promo:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+  /* a stand-out card that opens a link or a page: the same row, colors
+     inverted onto the accent (icon tile and arrow flip with it) */
+  .landing-opt.is-hot, html.dark .landing-opt.is-hot{background:var(--accent);border-color:transparent;color:var(--on-accent)}
+  .landing-opt.is-hot:hover{border-color:transparent}
+  .landing-opt.is-hot .landing-opt__d{color:var(--on-accent);opacity:.92}
+  .landing-opt.is-hot .lo-ic, html.dark .landing-opt.is-hot .lo-ic{background:var(--on-accent);color:var(--accent);box-shadow:none}
+  .landing-opt.is-hot .landing-opt__arrow, html.dark .landing-opt.is-hot .landing-opt__arrow{background:transparent;color:var(--on-accent)}
+  @supports (color: color-mix(in srgb, red 50%, white)){
+    .landing-opt.is-hot{box-shadow:0 4px 10px color-mix(in srgb, var(--accent) 32%, rgba(22,17,10,.05)), 0 14px 34px color-mix(in srgb, var(--accent) 20%, transparent)}
+    .landing-opt.is-hot .landing-opt__arrow, html.dark .landing-opt.is-hot .landing-opt__arrow{background:color-mix(in srgb, var(--on-accent) 18%, transparent)}
+  }
   .promo__arrow{color:var(--on-accent);opacity:.9}
 
   /* inputs and answer surfaces */
@@ -764,7 +771,7 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=36"></script>
-<script src="js/app.js?v=36"></script>
+<script src="js/shared.js?v=37"></script>
+<script src="js/app.js?v=37"></script>
 </body>
 </html>

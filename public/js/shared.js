@@ -37,6 +37,9 @@ function cardSwitchMode(c, next){
   if(prev === 'link' && next === 'page'){ c.body = c._page || ''; delete c._page; }
   c.mode = next;
 }
+// a card's icon markup; 'none' is the owner choosing no icon at all, and an
+// unknown key still falls back to the star
+const cardIcon = c => (c && c.icon === 'none') ? '' : (CARD_ICONS[c && c.icon] || CARD_ICONS.star);
 // what a banner announcement prints under its name, whichever kind it is
 const cardBannerText = c => (c && (c.mode || 'inline') === 'inline') ? (c.body || '') : cardSub(c);
 const CARD_ICONS = {

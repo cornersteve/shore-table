@@ -315,7 +315,10 @@ reg('landing', (el)=>{
   const cardsHtml = (V.cards || []).map((c, ix) => {
     if (!c || c.off) return '';
     if (c.t === 'notice' && c.until && c.until < todayYmd) return '';
-    const ic = CARD_ICONS[c.icon] || CARD_ICONS.star;
+    const ic = cardIcon(c);
+    const icTile = ic ? `<span class="lo-ic" aria-hidden="true">${ic}</span>` : '';
+    // stand out: the same row, colors inverted onto the accent
+    const hot = (c.t === 'notice' && c.hot) ? ' is-hot' : '';
     if (c.t === 'notice' && (c.mode || 'inline') === 'inline'){
       // hot = the saturated accent banner the owner promo used to be;
       // an optional link makes the whole banner tappable, arrow and all
@@ -331,11 +334,9 @@ reg('landing', (el)=>{
     if (c.t === 'notice' && c.mode === 'link'){
       const u = safeUrl(c.url);
       if (!u) return '';
-      // stand out: the same accent banner an inline announcement gets, tappable
-      if (c.hot) return `<a class="promo" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer"><span class="promo__arrow">›</span><div class="promo__k">${escHtml(c.title)}</div>${cardSub(c) ? `<div class="promo__t">${escHtml(cardSub(c))}</div>` : ''}</a>`;
       return `
-      <a class="landing-opt" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">
-        <span class="lo-ic" aria-hidden="true">${ic}</span>
+      <a class="landing-opt${hot}" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">
+        ${icTile}
         <span class="lo-body">
           <div class="landing-opt__t">${escHtml(c.title)}</div>
           ${cardSub(c) ? `<div class="landing-opt__d">${escHtml(cardSub(c))}</div>` : ''}
@@ -343,7 +344,6 @@ reg('landing', (el)=>{
         <span class="landing-opt__arrow">›</span>
       </a>`;
     }
-    if (c.t === 'notice' && c.hot) return `<button type="button" class="promo" data-cardix="${ix}"><span class="promo__arrow">›</span><div class="promo__k">${escHtml(c.title)}</div>${c.desc ? `<div class="promo__t">${escHtml(c.desc)}</div>` : ''}</button>`;
     let sub = c.desc ? `<div class="landing-opt__d">${escHtml(c.desc)}</div>` : '';
     if (c.t === 'schedule'){
       const today = (c.days || {})[dayKey];
@@ -355,8 +355,8 @@ reg('landing', (el)=>{
                   : `<div class="landing-opt__d">${escHtml(c.desc || 'Tap to view the calendar')}</div>`;
     }
     return `
-      <button class="landing-opt" data-cardix="${ix}">
-        <span class="lo-ic" aria-hidden="true">${ic}</span>
+      <button class="landing-opt${hot}" data-cardix="${ix}">
+        ${icTile}
         <span class="lo-body">
           <div class="landing-opt__t">${escHtml(c.title)}</div>
           ${sub}
