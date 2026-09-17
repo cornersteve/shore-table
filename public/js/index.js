@@ -30,9 +30,9 @@ function mkHome(v){
     if(!c || c.off) return;
     if(c.t === 'notice' && c.until && c.until < todayYmd) return;
     const ic = CARD_ICONS[c.icon] || CARD_ICONS.star;
-    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){
+    if(c.t === 'notice' && ((c.mode || 'inline') === 'inline' || c.hot)){
       out += c.hot
-        ? '<div class="mk-promo"><b>' + esc(c.title) + '</b>' + (c.body ? '<i>' + esc(c.body) + '</i>' : '') + '</div>'
+        ? '<div class="mk-promo"><b>' + esc(c.title) + '</b>' + (cardBannerText(c) ? '<i>' + esc(cardBannerText(c)) + '</i>' : '') + '</div>'
         : '<div class="mk-note"><b>' + esc(c.title) + '</b>' + (c.body ? '<i>' + esc(c.body) + '</i>' : '') + '</div>';
       return;
     }
@@ -42,7 +42,7 @@ function mkHome(v){
       out += row(ic, c.title, today ? { text: today, special: true } : { text: c.desc || 'Tap to view the calendar' });
       return;
     }
-    out += row(ic, c.title, c.desc ? { text: c.desc } : null);
+    out += row(ic, c.title, cardSub(c) ? { text: cardSub(c) } : null);
   });
   return out;
 }

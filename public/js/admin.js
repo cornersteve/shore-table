@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 34;
+const BUILD = 35;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -304,9 +304,9 @@ async function ogCardB64(b, pendingFiles){
   (Array.isArray(demo.cards) ? demo.cards : []).forEach(c => {
     if(!c || c.off) return;
     if(c.t === 'notice' && c.until && c.until < todayYmd) return;
-    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ banner(c.title, c.body, !!c.hot); return; }
+    if(c.t === 'notice' && ((c.mode || 'inline') === 'inline' || c.hot)){ banner(c.title, cardBannerText(c), !!c.hot); return; }
     if(c.t === 'schedule'){ const today = (c.days || {})[dayKey]; if(!today && !c.always) return; row(c.title, today ? dayName + ': ' + today : (c.desc || 'Tap to view the calendar')); return; }
-    row(c.title, c.desc || '');
+    row(c.title, cardSub(c));
   });
   ctx.restore(); ctx.restore();
   try { return cnv.toDataURL('image/png').split(',')[1]; } catch(e){ return null; }
@@ -2137,12 +2137,12 @@ ${SIG}`);
 
   function cardBody(c, ix){
     const mode = c.mode || 'inline';
-    const short = (c.t === 'list' || (c.t === 'notice' && mode !== 'inline')) ? `
+    const short = (c.t === 'list' || (c.t === 'notice' && mode === 'page')) ? `
       <label class="cfl">Short line under the name (optional)</label>
-      <input type="text" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
+      <input type="text" spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
     const nameField = `
       <label class="cfl">Card name</label>
-      <input type="text" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
+      <input type="text" spellcheck="true" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
     const iconField = `
       <label class="cfl">Icon</label>
       <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
@@ -2154,7 +2154,7 @@ ${SIG}`);
       ${SP_DAYS.map(([k, label]) => `
         <div class="sprow${k === SP_TODAY ? ' today' : ''}">
           <label>${label}</label>
-          <input type="text" maxlength="200" data-day="${k}" data-ix="${ix}" value="${esc((c.days || {})[k] || '')}" placeholder="${k === 'mon' ? 'Ex. Half price specialty cocktails, $2 off Modelo drafts' : ''}">
+          <input type="text" spellcheck="true" maxlength="200" data-day="${k}" data-ix="${ix}" value="${esc((c.days || {})[k] || '')}" placeholder="${k === 'mon' ? 'Ex. Half price specialty cocktails, $2 off Modelo drafts' : ''}">
         </div>`).join('')}
       <label class="ck"><input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''}> Keep the card on the home screen even on blank days, so diners can still open the week</label>`;
     if (c.t === 'list') return common + `
@@ -2162,10 +2162,10 @@ ${SIG}`);
       <div class="hint" style="margin-bottom:2px">Prices get a dollar sign in the app. Type just the number, or words like "Market price".</div>
       ${(c.items || []).map((i, j) => `
         <div class="lirow">
-          <input class="li-n" type="text" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness">
+          <input class="li-n" type="text" spellcheck="true" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness">
           <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" inputmode="decimal">
           <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
-          <input class="li-d" type="text" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
+          <input class="li-d" type="text" spellcheck="true" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
         </div>`).join('')}
       <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" data-additem="${ix}">+ Add a row</button></div>`;
     const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
@@ -2177,18 +2177,20 @@ ${SIG}`);
       <label class="ck"><input type="radio" name="cmode_${ix}" value="page" data-ix="${ix}" ${mode === 'page' ? 'checked' : ''}> Tapping it opens a page on the app with more details</label>` + nameField + `
       ${mode === 'inline' ? `
         <label class="cfl">Message</label>
-        <textarea data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>
-        <label class="ck"><input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''}> Make it stand out: a banner in the accent color</label>` : ''}
+        <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>` : ''}
       ${mode === 'link' ? `
+        <label class="cfl">Message</label>
+        <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
         <label class="cfl">Link</label>
         ${urlField}` : ''}
       ${mode === 'page' ? `
         <label class="cfl">The details page</label>
-        <textarea data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Ex. Doors at 7, $10 cover, 21 and over. Reserve a table by Thursday.">${esc(c.body || '')}</textarea>
+        <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="1500" style="min-height:120px" placeholder="Ex. Doors at 7, $10 cover, 21 and over. Reserve a table by Thursday.">${esc(c.body || '')}</textarea>
         <label class="cfl">Button link at the bottom of the page (optional)</label>
         ${urlField}
         <label class="cfl">Button text</label>
         <input type="text" style="max-width:260px" data-f="btn" data-ix="${ix}" maxlength="30" value="${esc(c.btn || '')}" placeholder="Ex. Learn More">` : ''}
+      <label class="ck"><input type="checkbox" data-f="hot" data-ix="${ix}" ${c.hot ? 'checked' : ''}> Make it stand out: a banner in the accent color</label>
 ` + iconField + `
       <label class="cfl">Hide message after this date (optional)</label>
       <input type="date" style="max-width:200px" data-f="until" data-ix="${ix}" value="${esc(c.until || '')}">
@@ -2205,7 +2207,7 @@ ${SIG}`);
         <div class="cbox__head">
           <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
             <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
-            <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(c.desc || CARD_TYPES[c.t])}${c.off ? ' · hidden' : ''}</span>${cardExpired(c) ? `<span class="cbox__why">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>` : ''}</span>
+            <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(cardSub(c) || CARD_TYPES[c.t])}${c.off ? ' · hidden' : ''}</span>${cardExpired(c) ? `<span class="cbox__why">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>` : ''}</span>
             <span class="cbox__chev" aria-hidden="true">›</span>
           </button>
           <span class="cbox__ctl"><button type="button" class="iconbtn" data-up="${ix}" title="Move up" aria-label="Move up" ${ix === 0 ? 'disabled' : ''}>${ARR_UP}</button>
@@ -2239,7 +2241,8 @@ ${SIG}`);
       const c = CARDS[+i.dataset.ix];
       if(i.type === 'checkbox') c[i.dataset.f] = i.checked; else c[i.dataset.f] = i.value;
       if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
-      if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
+      if(i.dataset.f === 'body' && c.mode === 'link') c.desc = '';
+      if(i.dataset.f === 'desc' || (i.dataset.f === 'body' && c.mode === 'link')){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
       if(i.dataset.f === 'until'){ cardSaveDraft(); renderCards(); return; }
       cardSaveDraft();
     }));

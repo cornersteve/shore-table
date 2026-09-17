@@ -570,6 +570,10 @@
   .promo__k{color:var(--on-accent);opacity:.85;font-size:14px;letter-spacing:.13em}
   .promo__t{color:var(--on-accent)}
   a.promo{padding-right:48px}
+  /* a stand-out announcement that opens a details page: the banner as a button */
+  button.promo{display:block;width:100%;text-align:left;font:inherit;cursor:pointer;padding-right:48px;-webkit-appearance:none;appearance:none;transition:transform .14s var(--ease)}
+  button.promo:active{transform:scale(.99)}
+  button.promo:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
   .promo__arrow{color:var(--on-accent);opacity:.9}
 
   /* inputs and answer surfaces */
@@ -760,7 +764,7 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=34"></script>
-<script src="js/app.js?v=34"></script>
+<script src="js/shared.js?v=35"></script>
+<script src="js/app.js?v=35"></script>
 </body>
 </html>
