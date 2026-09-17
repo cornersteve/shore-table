@@ -19,6 +19,11 @@ function readableOn(hex){
    Keys are what the owner editors save; an unknown key falls back to the
    star, so removing an icon from this set can never blank a card. */
 const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
+// the line under a card's name on the home screen. A link announcement
+// carries its message in body, like an inline one (older ones saved desc).
+const cardSub = c => !c ? '' : (c.t === 'notice' && c.mode === 'link') ? (c.body || c.desc || '') : (c.desc || '');
+// what a banner announcement prints under its name, whichever kind it is
+const cardBannerText = c => (c && (c.mode || 'inline') === 'inline') ? (c.body || '') : cardSub(c);
 const CARD_ICONS = {
   calendar: CI('<rect x="3" y="4.5" width="18" height="16.5" rx="3"/><path d="M8 2.5v4M16 2.5v4M3 10h18"/>'),
   clock: CI('<circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3.2 1.9"/>'),
