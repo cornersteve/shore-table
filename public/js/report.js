@@ -9,7 +9,7 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 }
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
-const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Pass the Doodle' }, CFG.gameNames || {});
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const params = new URLSearchParams(location.search);
@@ -181,7 +181,7 @@ function render(d, r){
     ${(d.games||[]).length ? `
     <div class="sec">
       <h2>Game starts · all time</h2>
-      ${bars(d.games.map(g=>({k:({guess_the_split:'Guess the Split',who_knows_who:'Who Knows Who',wordy:'Wordy',trivia:'Trivia',who_invited_you:'Who Invited You?',fortune_teller:'Fortune Teller',all_talk:'All Talk',cornhole:'Cornhole',quick_pour:GNAME.quick_pour})[g.game]||g.game, n:g.plays})), d.games.reduce((a,b)=>a+b.plays,0))}
+      ${bars(d.games.map(g=>({k:({guess_the_split:'Guess the Split',who_knows_who:'Who Knows Who',wordy:'Wordy',trivia:'Trivia',who_invited_you:'Who Invited You?',fortune_teller:'Fortune Teller',all_talk:'All Talk',cornhole:'Cornhole',quick_pour:GNAME.quick_pour,horse_racing:'Horse Racing',ring_toss:'Ring Toss',exquisite_corpse:'Exquisite Corpse',sketch_chain:GNAME.sketch_chain})[g.game]||g.game, n:g.plays})), d.games.reduce((a,b)=>a+b.plays,0))}
     </div>` : ''}
 
     ${customAgg ? `
