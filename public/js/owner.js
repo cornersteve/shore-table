@@ -334,10 +334,10 @@ function defaultCard(t){
 
 function cardBody(c, ix){
   const mode = c.mode || 'inline';
-  // the short line sits right under the name, the same order diners see it
+  // the message sits right under the name, the same order diners see it
   const short = (c.t === 'list' || (c.t === 'notice' && mode === 'page')) ? `
-    <label class="cfl">Short line under the name (optional)</label>
-    <input type="text" class="promo-head" spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
+    <label class="cfl">Message (optional)</label>
+    <textarea spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="240" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">${esc(c.desc || '')}</textarea>` : '';
   const nameField = `
     <label class="cfl">Card name</label>
     <input type="text" class="promo-head" spellcheck="true" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
