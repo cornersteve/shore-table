@@ -247,7 +247,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8), (9);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -927,7 +927,7 @@ begin
       't', v_t, 'title', v_title,
       'icon', case when coalesce(v_el->>'icon', '') ~ '^[a-z0-9_]{1,24}$' then v_el->>'icon' end,
       'off',  v_el->'off' = 'true'::jsonb,
-      'desc', nullif(left(btrim(coalesce(v_el->>'desc', '')), 120), ''));
+      'desc', nullif(left(btrim(coalesce(v_el->>'desc', '')), 240), ''));
 
     if v_t = 'schedule' then
       select jsonb_object_agg(d.k, left(btrim(v_el->'days'->>d.k), 200))

@@ -22,15 +22,15 @@ function mkHome(v){
   const dayKey = ['sun','mon','tue','wed','thu','fri','sat'][d0.getDay()];
   const dayName = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][d0.getDay()];
   const todayYmd = d0.getFullYear() + '-' + String(d0.getMonth() + 1).padStart(2, '0') + '-' + String(d0.getDate()).padStart(2, '0');
-  const row = (ic, title, sub) => '<div class="mk-opt"><span class="mk-ic">' + ic + '</span><span><b>' + esc(title) + '</b>' + (sub ? '<i' + (sub.special ? ' class="special"' : '') + '>' + (sub.special ? '<b>' + esc(dayName) + ':</b> ' + esc(sub.text) : esc(sub.text)) + '</i>' : '') + '</span><em>›</em></div>';
+  const row = (ic, title, sub, hot) => '<div class="mk-opt' + (hot ? ' hot' : '') + '">' + (ic ? '<span class="mk-ic">' + ic + '</span>' : '') + '<span><b>' + esc(title) + '</b>' + (sub ? '<i' + (sub.special ? ' class="special"' : '') + '>' + (sub.special ? '<b>' + esc(dayName) + ':</b> ' + esc(sub.text) : esc(sub.text)) + '</i>' : '') + '</span><em>›</em></div>';
   let out = '';
   if(v.games_enabled !== false) out += row(CARD_ICONS.dice, 'Play a game', { text: 'Pass the time, solo or with the whole table.' });
   out += '<div class="mk-opt"><span class="mk-ic"><svg viewBox="0 0 24 24"><path d="M21 11.5c0 4.14-4.03 7.5-9 7.5-1.02 0-2-.14-2.91-.4L4 20l1.18-3.53C3.83 15.15 3 13.4 3 11.5 3 7.36 7.03 4 12 4s9 3.36 9 7.5z"/></svg></span><span><b>Share feedback</b><i>Anonymous, and seen only by ' + esc(v.name) + '.</i></span><em>›</em></div>';
   (Array.isArray(v.cards) ? v.cards : []).forEach(c => {
     if(!c || c.off) return;
     if(c.t === 'notice' && c.until && c.until < todayYmd) return;
-    const ic = CARD_ICONS[c.icon] || CARD_ICONS.star;
-    if(c.t === 'notice' && ((c.mode || 'inline') === 'inline' || c.hot)){
+    const ic = cardIcon(c);
+    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){
       out += c.hot
         ? '<div class="mk-promo"><b>' + esc(c.title) + '</b>' + (cardBannerText(c) ? '<i>' + esc(cardBannerText(c)) + '</i>' : '') + '</div>'
         : '<div class="mk-note"><b>' + esc(c.title) + '</b>' + (c.body ? '<i>' + esc(c.body) + '</i>' : '') + '</div>';
@@ -42,7 +42,7 @@ function mkHome(v){
       out += row(ic, c.title, today ? { text: today, special: true } : { text: c.desc || 'Tap to view the calendar' });
       return;
     }
-    out += row(ic, c.title, cardSub(c) ? { text: cardSub(c) } : null);
+    out += row(ic, c.title, cardSub(c) ? { text: cardSub(c) } : null, c.t === 'notice' && c.hot);
   });
   return out;
 }

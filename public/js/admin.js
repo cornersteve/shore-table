@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 35;
+const BUILD = 37;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -279,13 +279,14 @@ async function ogCardB64(b, pendingFiles){
   }
   const clip = (s, maxW, font)=>{ ctx.font = font; let x = String(s || ''); while(ctx.measureText(x).width > maxW && x.length > 3) x = x.slice(0, -2) + '…'; return x; };
   let py = 94;
-  const row = (title, sub)=>{
+  // hot = a stand-out card: same row, inverted onto the accent. noIcon = the owner chose no icon.
+  const row = (title, sub, hot, noIcon)=>{
     if(py > 600) return;
-    const h = sub ? 70 : 56;
-    ctx.fillStyle = '#fff'; rr(27, py, 246, h, 16); ctx.fill();
-    ctx.fillStyle = pAcc; rr(39, py + (sub ? 17 : 10), 36, 36, 10); ctx.fill();
-    ctx.fillStyle = '#16110a'; ctx.fillText(clip(title, 170, "700 14px 'Bricolage Grotesque', sans-serif"), 86, py + (sub ? 30 : 34));
-    if(sub){ ctx.fillStyle = '#6d6759'; ctx.fillText(clip(sub, 170, "500 11px 'Hanken Grotesk', sans-serif"), 86, py + 50); }
+    const h = sub ? 70 : 56, tx = noIcon ? 43 : 86, tw = noIcon ? 213 : 170;
+    ctx.fillStyle = hot ? pAcc : '#fff'; rr(27, py, 246, h, 16); ctx.fill();
+    if(!noIcon){ ctx.fillStyle = hot ? pOn : pAcc; rr(39, py + (sub ? 17 : 10), 36, 36, 10); ctx.fill(); }
+    ctx.fillStyle = hot ? pOn : '#16110a'; ctx.fillText(clip(title, tw, "700 14px 'Bricolage Grotesque', sans-serif"), tx, py + (sub ? 30 : 34));
+    if(sub){ ctx.fillStyle = hot ? pOn : '#6d6759'; ctx.fillText(clip(sub, tw, "500 11px 'Hanken Grotesk', sans-serif"), tx, py + 50); }
     py += h + 12;
   };
   const banner = (title, body, hot)=>{
@@ -304,9 +305,9 @@ async function ogCardB64(b, pendingFiles){
   (Array.isArray(demo.cards) ? demo.cards : []).forEach(c => {
     if(!c || c.off) return;
     if(c.t === 'notice' && c.until && c.until < todayYmd) return;
-    if(c.t === 'notice' && ((c.mode || 'inline') === 'inline' || c.hot)){ banner(c.title, cardBannerText(c), !!c.hot); return; }
-    if(c.t === 'schedule'){ const today = (c.days || {})[dayKey]; if(!today && !c.always) return; row(c.title, today ? dayName + ': ' + today : (c.desc || 'Tap to view the calendar')); return; }
-    row(c.title, cardSub(c));
+    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ banner(c.title, cardBannerText(c), !!c.hot); return; }
+    if(c.t === 'schedule'){ const today = (c.days || {})[dayKey]; if(!today && !c.always) return; row(c.title, today ? dayName + ': ' + today : (c.desc || 'Tap to view the calendar'), false, c.icon === 'none'); return; }
+    row(c.title, cardSub(c), c.t === 'notice' && !!c.hot, c.icon === 'none');
   });
   ctx.restore(); ctx.restore();
   try { return cnv.toDataURL('image/png').split(',')[1]; } catch(e){ return null; }
@@ -2138,15 +2139,15 @@ ${SIG}`);
   function cardBody(c, ix){
     const mode = c.mode || 'inline';
     const short = (c.t === 'list' || (c.t === 'notice' && mode === 'page')) ? `
-      <label class="cfl">Short line under the name (optional)</label>
-      <input type="text" spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
+      <label class="cfl">Message (optional)</label>
+      <textarea spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="240" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">${esc(c.desc || '')}</textarea>` : '';
     const nameField = `
       <label class="cfl">Card name</label>
       <input type="text" spellcheck="true" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
     const iconField = `
       <label class="cfl">Icon</label>
-      <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
-      <div class="hint" style="margin:6px 0 0">Icon: ${esc(c.icon || 'star')}</div>`;
+      <div class="icongrid"><button type="button" class="icopt icopt--none${c.icon === 'none' ? ' sel' : ''}" data-icon="none" data-ix="${ix}" aria-label="No icon" title="No icon" aria-pressed="${c.icon === 'none'}"></button>${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
+      <div class="hint" style="margin:6px 0 0">Icon: ${esc(c.icon === 'none' ? 'no icon' : (c.icon || 'star'))}</div>`;
     const common = nameField + iconField;
     if (c.t === 'schedule') return common + `
       <label class="cfl">The week</label>
@@ -2180,7 +2181,7 @@ ${SIG}`);
         <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>` : ''}
       ${mode === 'link' ? `
         <label class="cfl">Message</label>
-        <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
+        <textarea spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
         <label class="cfl">Link</label>
         ${urlField}` : ''}
       ${mode === 'page' ? `
@@ -2206,7 +2207,7 @@ ${SIG}`);
       <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
         <div class="cbox__head">
           <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
-            <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
+            <span class="cbox__ic${c.icon === 'none' ? ' cbox__ic--none' : ''}">${cardIcon(c)}</span>
             <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(cardSub(c) || CARD_TYPES[c.t])}${c.off ? ' · hidden' : ''}</span>${cardExpired(c) ? `<span class="cbox__why">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>` : ''}</span>
             <span class="cbox__chev" aria-hidden="true">›</span>
           </button>
@@ -2241,13 +2242,13 @@ ${SIG}`);
       const c = CARDS[+i.dataset.ix];
       if(i.type === 'checkbox') c[i.dataset.f] = i.checked; else c[i.dataset.f] = i.value;
       if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
-      if(i.dataset.f === 'body' && c.mode === 'link') c.desc = '';
-      if(i.dataset.f === 'desc' || (i.dataset.f === 'body' && c.mode === 'link')){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
+      if(i.dataset.f === 'desc' && c.mode === 'link') c.body = '';   // a build 35 link card: the message now lives in desc
+      if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
       if(i.dataset.f === 'until'){ cardSaveDraft(); renderCards(); return; }
       cardSaveDraft();
     }));
     L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{ const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft(); }));
-    L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards(); }));
+    L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ cardSwitchMode(CARDS[+r.dataset.ix], r.value); cardSaveDraft(); renderCards(); }));
     L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{ CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft(); }));
     L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });

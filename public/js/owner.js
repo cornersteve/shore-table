@@ -334,17 +334,17 @@ function defaultCard(t){
 
 function cardBody(c, ix){
   const mode = c.mode || 'inline';
-  // the short line sits right under the name, the same order diners see it
+  // the message sits right under the name, the same order diners see it
   const short = (c.t === 'list' || (c.t === 'notice' && mode === 'page')) ? `
-    <label class="cfl">Short line under the name (optional)</label>
-    <input type="text" class="promo-head" spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="120" value="${esc(c.desc || '')}" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">` : '';
+    <label class="cfl">Message (optional)</label>
+    <textarea spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="240" placeholder="${c.t === 'list' ? 'Ex. Rotating drafts, updated often' : 'Ex. Friday at 8, no cover'}">${esc(c.desc || '')}</textarea>` : '';
   const nameField = `
     <label class="cfl">Card name</label>
     <input type="text" class="promo-head" spellcheck="true" data-f="title" data-ix="${ix}" maxlength="40" value="${esc(c.title || '')}" placeholder="${c.t === 'list' ? 'Ex. On tap this week' : c.t === 'notice' ? 'Ex. Trivia night is back' : 'Ex. Daily specials'}">${short}`;
   const iconField = `
     <label class="cfl">Icon</label>
-    <div class="icongrid">${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
-    <div class="mini" style="margin-top:6px">Icon: ${esc(c.icon || 'star')}</div>`;
+    <div class="icongrid"><button type="button" class="icopt icopt--none${c.icon === 'none' ? ' sel' : ''}" data-icon="none" data-ix="${ix}" aria-label="No icon" title="No icon" aria-pressed="${c.icon === 'none'}"></button>${Object.keys(CARD_ICONS).map(k => `<button type="button" class="icopt${(c.icon || 'star') === k ? ' sel' : ''}" data-icon="${k}" data-ix="${ix}" aria-label="${k}" aria-pressed="${(c.icon || 'star') === k}">${CARD_ICONS[k]}</button>`).join('')}</div>
+    <div class="mini" style="margin-top:6px">Icon: ${esc(c.icon === 'none' ? 'no icon' : (c.icon || 'star'))}</div>`;
   const common = nameField + iconField;
   if (c.t === 'schedule') return common + `
     <label class="cfl">The week</label>
@@ -379,7 +379,7 @@ function cardBody(c, ix){
       <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>` : ''}
     ${mode === 'link' ? `
       <label class="cfl">Message</label>
-      <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
+      <textarea spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
       <label class="cfl">Link</label>
       ${urlField}` : ''}
     ${mode === 'page' ? `
@@ -405,7 +405,7 @@ function renderCards(){
     <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
       <div class="cbox__head">
         <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
-          <span class="cbox__ic">${CARD_ICONS[c.icon] || CARD_ICONS.star}</span>
+          <span class="cbox__ic${c.icon === 'none' ? ' cbox__ic--none' : ''}">${cardIcon(c)}</span>
           <span class="cbox__tt"><span class="cbox__t">${esc(c.title || 'Untitled card')}</span><span class="cbox__type">${esc(cardSub(c) || CARD_TYPES[c.t])}${cardSuffix(c)}</span>${cardExpired(c) ? `<span class="cbox__why">(Card is hidden because selected hide date has passed. Edit the date to unhide)</span>` : ''}</span>
           <span class="cbox__chev" aria-hidden="true">›</span>
         </button>
@@ -443,8 +443,8 @@ function wireCards(){
     else c[i.dataset.f] = i.value;
     if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
     // the short line mirrors into the card row as it is typed, like the name
-    if(i.dataset.f === 'body' && c.mode === 'link') c.desc = '';
-    if(i.dataset.f === 'desc' || (i.dataset.f === 'body' && c.mode === 'link')){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + cardSuffix(c); }
+    if(i.dataset.f === 'desc' && c.mode === 'link') c.body = '';   // a build 35 link card: the message now lives in desc
+    if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + cardSuffix(c); }
     // the date decides whether the card is hidden: the row dims in place while
     // the picker is open, and the full row (with the note) re-renders on commit
     if(i.dataset.f === 'until'){ cardSaveDraft(); const box = i.closest('.cbox'); if(box) box.classList.toggle('isoff', !!(c.off || cardExpired(c))); return; }
@@ -455,7 +455,7 @@ function wireCards(){
     const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft();
   }));
   L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{
-    CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards();
+    cardSwitchMode(CARDS[+r.dataset.ix], r.value); cardSaveDraft(); renderCards();
   }));
   L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{
     CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft();

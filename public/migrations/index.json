@@ -27,6 +27,10 @@
   {
    "version": 8,
    "file": "007.json"
+  },
+  {
+   "version": 9,
+   "file": "008.json"
   }
  ]
 }

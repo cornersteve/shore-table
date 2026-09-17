@@ -19,9 +19,27 @@ function readableOn(hex){
    Keys are what the owner editors save; an unknown key falls back to the
    star, so removing an icon from this set can never blank a card. */
 const CI = inner => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${inner}</svg>`;
-// the line under a card's name on the home screen. A link announcement
-// carries its message in body, like an inline one (older ones saved desc).
-const cardSub = c => !c ? '' : (c.t === 'notice' && c.mode === 'link') ? (c.body || c.desc || '') : (c.desc || '');
+// Card text, one rule: desc is the message under the name (lists, link and
+// details-page announcements); body is the main content (the home-screen
+// message, or the details page). A link card saved during build 35 kept its
+// message in body, so that still shows until the card is next edited.
+const cardSub = c => !c ? '' : (c.t === 'notice' && c.mode === 'link') ? (c.desc || c.body || '') : (c.desc || '');
+// the editors call this when an announcement changes kind, so what was typed
+// follows the box it was typed in. _page parks a details page while the card
+// is a link (the server drops unknown keys on save).
+function cardSwitchMode(c, next){
+  const prev = c.mode || 'inline';
+  if(prev === next) return;
+  if(prev === 'link' && !c.desc && c.body){ c.desc = c.body; c.body = ''; }   // build 35 link card
+  if(prev === 'inline' && next === 'link'){ if(!c.desc) c.desc = (c.body || '').slice(0, 240); c.body = ''; }
+  if(prev === 'link' && next === 'inline'){ c.body = c.desc || ''; c.desc = ''; }
+  if(prev === 'page' && next === 'link'){ c._page = c.body || ''; c.body = ''; }
+  if(prev === 'link' && next === 'page'){ c.body = c._page || ''; delete c._page; }
+  c.mode = next;
+}
+// a card's icon markup; 'none' is the owner choosing no icon at all, and an
+// unknown key still falls back to the star
+const cardIcon = c => (c && c.icon === 'none') ? '' : (CARD_ICONS[c && c.icon] || CARD_ICONS.star);
 // what a banner announcement prints under its name, whichever kind it is
 const cardBannerText = c => (c && (c.mode || 'inline') === 'inline') ? (c.body || '') : cardSub(c);
 const CARD_ICONS = {
