@@ -4413,7 +4413,7 @@ reg('ec_reveal', (el)=>{
 });
 
 /* ---------- SKETCHY TELEPHONE (internal id: sketch_chain) ----------
-   Telephone, with drawings. The first player gets a secret word and draws it.
+   Telephone, with drawings. The first player gets a word and draws it.
    The next sees only the drawing and types a guess. The next sees only that
    guess and draws it, and so on around the table, one phone, until the chain
    is back at the player who started. Then the whole chain is read out, one
@@ -4451,7 +4451,7 @@ function scBegin(){
   sc.turn = 0;
   go('sc_pass', { exit:true });
 }
-// what the player at this turn is answering: the secret word, or the last link
+// what the player at this turn is answering: the starting word, or the last link
 const scTarget = ()=> sc.turn === 0 ? sc.word : (sc.chain[sc.turn - 1] || {}).text || '';
 
 /* The drawing pad: canvas, pencil / eraser / undo, colors, sizes. Same tools
@@ -4516,7 +4516,7 @@ reg('sc_intro', (el)=>{
     <div class="eyebrow">${escHtml(GNAME.sketch_chain)}</div>
     <h1 class="big">Draw it. Guess it. Pass it on.</h1>
     <div class="howto">
-      <div class="howto__step"><span class="howto__n">1</span><span>The first player gets a secret word and draws it, then hands the phone over.</span></div>
+      <div class="howto__step"><span class="howto__n">1</span><span>The first player gets a word to draw, then hands the phone over.</span></div>
       <div class="howto__step"><span class="howto__n">2</span><span>The next player sees only the drawing and types what they think it is. The player after that sees only the guess, and draws it.</span></div>
       <div class="howto__step"><span class="howto__n">3</span><span>Draw, guess, draw, guess, all the way around the table. Then everyone sees how far the word wandered.</span></div>
     </div>
@@ -4579,7 +4579,7 @@ reg('sc_setup', (el)=>{
 
 reg('sc_pass', (el)=>{
   const who = scWho(sc.turn), n = scN();
-  const role = sc.turn === 0 ? 'gets a secret word and draws it'
+  const role = sc.turn === 0 ? 'gets a word and draws it'
              : scIsDraw(sc.turn) ? 'sees a guess and draws it'
              : 'sees a drawing and guesses what it is';
   el.innerHTML = `
@@ -4606,7 +4606,7 @@ reg('sc_draw', (el)=>{
       <button type="button" class="btn sm" id="scDoneTop">${last ? 'Reveal ›' : 'Done ›'}</button>
     </div>
     <h1 class="big" style="font-size:24px">Draw <span class="ec-of" id="scWord">${escHtml(scTarget())}</span></h1>
-    <p class="lede" style="margin-top:6px">${first ? 'This is the secret word. ' : 'This is what the last player guessed. '}No letters or numbers, just the drawing.${first ? ' <button type="button" class="sc-swap" id="scSwap">Give me a different word</button>' : ''}</p>
+    <p class="lede" style="margin-top:6px">${first ? 'This is your word. ' : 'This is what the last player guessed. '}No letters or numbers, just the drawing.${first ? ' <button type="button" class="sc-swap" id="scSwap">Give me a different word</button>' : ''}</p>
     <div id="scPadHost"></div>
     <div class="spacer"></div>
     <div class="ec-done">
@@ -4666,7 +4666,7 @@ reg('sc_reveal', (el)=>{
     <div class="eyebrow">${escHtml(GNAME.sketch_chain)} · the chain</div>
     <h1 class="big" style="font-size:24px">Here's how it went</h1>
     <div class="sc-chain" id="scChain">
-      <div class="sc-item"><div class="sc-item__k">The secret word, given to ${escHtml(scWho(0))}</div><div class="sc-item__t ec-of">${escHtml(sc.word)}</div></div>
+      <div class="sc-item"><div class="sc-item__k">${escHtml(scWho(0))} started with</div><div class="sc-item__t ec-of">${escHtml(sc.word)}</div></div>
     </div>
     <div class="ec-actions" id="scActions">
       <button class="btn" id="scShow">Show what ${escHtml(links[0].by)} drew ›</button>
@@ -4680,7 +4680,7 @@ reg('sc_reveal', (el)=>{
     actions.innerHTML = `
       <button class="btn" id="scAgain">Play another round ›</button>
       <button class="btn btn--ghost" id="scHub">Back to games</button>`;
-    // the next round starts with the next player, so everyone gets a turn with the secret word
+    // the next round starts with the next player, so everyone gets a turn starting the chain
     actions.querySelector('#scAgain').onclick = ()=>{ sc.startIx = (sc.startIx + 1) % scN(); scBegin(); };
     actions.querySelector('#scHub').onclick = ()=> go('hub');
   };
