@@ -379,7 +379,7 @@ function cardBody(c, ix){
       <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>` : ''}
     ${mode === 'link' ? `
       <label class="cfl">Message</label>
-      <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
+      <textarea spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
       <label class="cfl">Link</label>
       ${urlField}` : ''}
     ${mode === 'page' ? `
@@ -443,8 +443,8 @@ function wireCards(){
     else c[i.dataset.f] = i.value;
     if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
     // the short line mirrors into the card row as it is typed, like the name
-    if(i.dataset.f === 'body' && c.mode === 'link') c.desc = '';
-    if(i.dataset.f === 'desc' || (i.dataset.f === 'body' && c.mode === 'link')){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + cardSuffix(c); }
+    if(i.dataset.f === 'desc' && c.mode === 'link') c.body = '';   // a build 35 link card: the message now lives in desc
+    if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + cardSuffix(c); }
     // the date decides whether the card is hidden: the row dims in place while
     // the picker is open, and the full row (with the note) re-renders on commit
     if(i.dataset.f === 'until'){ cardSaveDraft(); const box = i.closest('.cbox'); if(box) box.classList.toggle('isoff', !!(c.off || cardExpired(c))); return; }
@@ -455,7 +455,7 @@ function wireCards(){
     const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft();
   }));
   L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{
-    CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards();
+    cardSwitchMode(CARDS[+r.dataset.ix], r.value); cardSaveDraft(); renderCards();
   }));
   L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{
     CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft();

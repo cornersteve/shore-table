@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 35;
+const BUILD = 36;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -2180,7 +2180,7 @@ ${SIG}`);
         <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(c.body || '')}</textarea>` : ''}
       ${mode === 'link' ? `
         <label class="cfl">Message</label>
-        <textarea spellcheck="true" data-f="body" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
+        <textarea spellcheck="true" data-f="desc" data-ix="${ix}" maxlength="240" placeholder="Ex. Live music this Friday 7pm, no cover.">${esc(cardSub(c))}</textarea>
         <label class="cfl">Link</label>
         ${urlField}` : ''}
       ${mode === 'page' ? `
@@ -2241,13 +2241,13 @@ ${SIG}`);
       const c = CARDS[+i.dataset.ix];
       if(i.type === 'checkbox') c[i.dataset.f] = i.checked; else c[i.dataset.f] = i.value;
       if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
-      if(i.dataset.f === 'body' && c.mode === 'link') c.desc = '';
-      if(i.dataset.f === 'desc' || (i.dataset.f === 'body' && c.mode === 'link')){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
+      if(i.dataset.f === 'desc' && c.mode === 'link') c.body = '';   // a build 35 link card: the message now lives in desc
+      if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
       if(i.dataset.f === 'until'){ cardSaveDraft(); renderCards(); return; }
       cardSaveDraft();
     }));
     L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{ const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft(); }));
-    L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ CARDS[+r.dataset.ix].mode = r.value; cardSaveDraft(); renderCards(); }));
+    L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ cardSwitchMode(CARDS[+r.dataset.ix], r.value); cardSaveDraft(); renderCards(); }));
     L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{ CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft(); }));
     L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
