@@ -26,7 +26,7 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 }
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
-const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Sketchy Telephone' }, CFG.gameNames || {});
 /* favicon from operator config (the page itself wears venue branding) */
 (function(){ try{
   const fav = document.querySelector('link[rel="icon"]'); if(!fav) return;
@@ -158,7 +158,7 @@ window.addEventListener('popstate', ()=>{
 // __back if it has one ('own'); otherwise, inside a game, that game's first
 // screen (a clean restart), and from a game's first screen the hub. A big
 // visible arrow of ours keeps thumbs off the browser's, which would leave.
-const GAME_HOME = { tot:'tot_intro', gs:'tot_intro', hs:'hs_setup', wiy:'wiy_intro', ch:'ch_intro', pp:'pp_intro', hr:'hr_intro', rt:'rt_intro', trivia:'trivia_intro', tv:'trivia_intro', fortune:'fortune_intro', at:'at_intro', wordle:'hub', ec:'ec_intro' };
+const GAME_HOME = { tot:'tot_intro', gs:'tot_intro', hs:'hs_setup', wiy:'wiy_intro', ch:'ch_intro', pp:'pp_intro', hr:'hr_intro', rt:'rt_intro', trivia:'trivia_intro', tv:'trivia_intro', fortune:'fortune_intro', at:'at_intro', wordle:'hub', ec:'ec_intro', sc:'sc_intro' };
 function backTarget(id){
   if(!id) return null;
   if(screens[id+'__back']) return 'own';
@@ -320,16 +320,18 @@ reg('landing', (el)=>{
     // stand out: the same row, colors inverted onto the accent
     const hot = (c.t === 'notice' && c.hot) ? ' is-hot' : '';
     if (c.t === 'notice' && (c.mode || 'inline') === 'inline'){
-      // hot = the saturated accent banner the owner promo used to be;
-      // an optional link makes the whole banner tappable, arrow and all
+      // the message sits right here: the same row as every other card, minus
+      // the arrow, because there is nothing behind it to open (an older card
+      // that carries a link stays tappable, arrow and all)
       const u = safeUrl(c.url);
-      const cls = c.hot ? 'promo' : 'ncard';
-      const inner = c.hot
-        ? `<div class="promo__k">${escHtml(c.title)}</div>${c.body ? `<div class="promo__t">${escHtml(c.body)}</div>` : ''}`
-        : `<div class="ncard__k">${escHtml(c.title)}</div>${c.body ? `<div class="ncard__t">${escHtml(c.body)}</div>` : ''}`;
+      const inner = `${icTile}
+        <span class="lo-body">
+          <div class="landing-opt__t">${escHtml(c.title)}</div>
+          ${c.body ? `<div class="landing-opt__d landing-opt__d--msg">${escHtml(c.body)}</div>` : ''}
+        </span>`;
       return u
-        ? `<a class="${cls}" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer"><span class="${c.hot ? 'promo__arrow' : 'ncard__arrow'}">›</span>${inner}</a>`
-        : `<div class="${cls}">${inner}</div>`;
+        ? `<a class="landing-opt${hot}" data-cardix="${ix}" href="${escHtml(u)}" target="_blank" rel="noopener noreferrer">${inner}<span class="landing-opt__arrow">›</span></a>`
+        : `<div class="landing-opt landing-opt--static${hot}">${inner}</div>`;
     }
     if (c.t === 'notice' && c.mode === 'link'){
       const u = safeUrl(c.url);
@@ -478,7 +480,7 @@ reg('hub__back', ()=> go('landing'));
 // GAME_IDS so a venue that carries one renders the card, but NOT in
 // DEFAULT_ORDER, so the fail-open full library never shows them at other
 // venues.
-const GAME_IDS = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss','exquisite_corpse'];
+const GAME_IDS = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss','exquisite_corpse','sketch_chain'];
 reg('hub', (el)=>{
   backBtn.style.display='block';   // chooser is home, reachable from any entry mode
   // One template per game; `ok` is the content check (a game with no rows
@@ -503,6 +505,7 @@ reg('hub', (el)=>{
     horse_racing:    { ok: true,            html: gcard('gcHr',     'Solo or up to 8 · dice decide',   'Horse Racing',     'Buy tickets on a horse and cheer it home.') },
     ring_toss:       { ok: true,            html: gcard('gcRt',     'Solo · hold and release',         'Ring Toss',        'Swing the ring on its string and catch the hook.') },
     exquisite_corpse:{ ok: true,            html: gcard('gcEc',     '2 or 3 players · pass and draw',  'Exquisite Corpse', 'Draw one part, pass it on. See what the table made.') },
+    sketch_chain:    { ok: true,            html: gcard('gcSc',     '2 to 8 players · draw and guess', escHtml(GNAME.sketch_chain), 'Telephone, with drawings. See how far the word wanders.') },
   };
   // The venue's saved list IS the display order (33_game_order.sql preserves
   // it server-side). Fail-open rule unchanged: a null, empty, or all-junk
@@ -532,6 +535,7 @@ reg('hub', (el)=>{
   wire('#gcFor',   ()=> go('fortune_intro',{exit:true}));
   wire('#gcAt',    ()=> go('at_intro',{exit:true}));
   wire('#gcEc',    ()=> go('ec_intro',{exit:true}));
+  wire('#gcSc',    ()=> go('sc_intro',{exit:true}));
 });
 
 /* ---------- GUESS THE SPLIT (internal id: guess_the_split) ----------
@@ -4406,6 +4410,286 @@ reg('ec_reveal', (el)=>{
   el.querySelector('#ecAgain').onclick = ()=>{ ec.startIx = (ec.startIx + n) % ec.players.length; go('ec_options', { exit:true }); };
   el.querySelector('#ecSave').onclick = ()=>{ const a = document.createElement('a'); a.href = url; a.download = 'exquisite-corpse.png'; document.body.appendChild(a); a.click(); a.remove(); };
   el.querySelector('#ecHub').onclick = ()=> go('hub');
+});
+
+/* ---------- SKETCHY TELEPHONE (internal id: sketch_chain) ----------
+   Telephone, with drawings. The first player gets a word and draws it.
+   The next sees only the drawing and types a guess. The next sees only that
+   guess and draws it, and so on around the table, one phone, until the chain
+   is back at the player who started. Then the whole chain is read out, one
+   link at a time. Nothing is saved anywhere: drawings and guesses live in
+   memory for the round. Ships OFF everywhere; operators tick it on per venue.
+   The name diners see is GNAME.sketch_chain. */
+let sc = { players: [] };
+const SC_W = 320, SC_H = 300;
+// easy on purpose: a finger on a phone screen is a blunt pencil
+const SC_WORDS = [
+  'a cat','a dog','a fish','a bird','a snake','a turtle','a spider','a bee','a butterfly','a snail',
+  'an octopus','a shark','a whale','a crab','a duck','a pig','a cow','a giraffe','an elephant','a penguin',
+  'a house','a tree','a flower','the sun','the moon','a star','a rain cloud','a rainbow','a mountain','a volcano',
+  'a lighthouse','a sailboat','a car','a bus','a bike','a train','an airplane','a rocket','a hot air balloon','an anchor',
+  'a pizza','a burger','an ice cream cone','a hot dog','a taco','a donut','a birthday cake','a banana','an apple','a cup of coffee',
+  'a snowman','a ghost','a robot','a crown','a key','an umbrella','a pair of glasses','a hat','a guitar','a drum',
+  'a balloon','a kite','a clock','a light bulb','a candle','a campfire','a tent','a ladder','a bridge','a castle',
+  'a beach ball','a surfboard','a cactus','a palm tree','a mushroom','a heart','a smiley face','a football','a fishing rod','a bathtub',
+];
+const scN = ()=> sc.players.length;
+const scWho = i => sc.players[(sc.startIx + i) % scN()];
+const scIsDraw = i => i % 2 === 0;               // draw, guess, draw, guess...
+function scPickWord(){
+  if(!sc.used) sc.used = [];
+  let pool = SC_WORDS.filter(w => !sc.used.includes(w));
+  if(!pool.length){ sc.used = []; pool = SC_WORDS.slice(); }
+  const w = pool[Math.floor(Math.random() * pool.length)];
+  sc.used.push(w);
+  return w;
+}
+function scBegin(){
+  logPlay('sketch_chain');
+  sc.word = scPickWord(); sc.swaps = 0;
+  sc.chain = [];          // [{ kind:'draw'|'guess', by, url|text }]
+  sc.turn = 0;
+  go('sc_pass', { exit:true });
+}
+// what the player at this turn is answering: the starting word, or the last link
+const scTarget = ()=> sc.turn === 0 ? sc.word : (sc.chain[sc.turn - 1] || {}).text || '';
+
+/* The drawing pad: canvas, pencil / eraser / undo, colors, sizes. Same tools
+   and the same look as Exquisite Corpse's board (its classes are reused). */
+function scPad(host, onInk){
+  host.innerHTML = `
+    <div class="ec-board"></div>
+    <div class="namehint" data-hint style="text-align:center;min-height:18px;margin:8px 0 0"></div>
+    <div class="ec-tools">
+      <button type="button" class="ec-tool on" data-tool="pen" aria-pressed="true">${EC_ICON.pencil}Pencil</button>
+      <button type="button" class="ec-tool" data-tool="eraser" aria-pressed="false">${EC_ICON.eraser}Eraser</button>
+      <button type="button" class="ec-tool" data-undo>${EC_ICON.undo}Undo</button>
+    </div>
+    <div class="ec-palette">
+      <div class="ec-swatches">${EC_COLORS.map((c, i) => `<button type="button" class="ec-sw${i === 0 ? ' on' : ''}" data-c="${c}" style="background:${c}" aria-label="Color ${i + 1}" aria-pressed="${i === 0}"></button>`).join('')}</div>
+      <div class="ec-sizes">${EC_SIZES.map((s, i) => `<button type="button" class="ec-sz${i === 1 ? ' on' : ''}" data-s="${s}" aria-label="Pencil size ${i + 1}" aria-pressed="${i === 1}"><span style="width:${Math.min(30, Math.round(s * 1.5 + 4))}px;height:${Math.min(30, Math.round(s * 1.5 + 4))}px"></span></button>`).join('')}</div>
+    </div>`;
+  const cv = ecCanvas(SC_W, SC_H); cv.className = 'ec-cv sc-cv'; host.querySelector('.ec-board').appendChild(cv);
+  const ctx = cv.getContext('2d'), hint = host.querySelector('[data-hint]');
+  let color = EC_COLORS[0], size = EC_SIZES[1], tool = 'pen', drawing = false, last = null;
+  const undos = [];
+  const pos = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) * (SC_W / r.width), y: (e.clientY - r.top) * (SC_H / r.height) }; };
+  const setTool = t => { tool = t; host.querySelectorAll('[data-tool]').forEach(b => { b.classList.toggle('on', b.dataset.tool === t); b.setAttribute('aria-pressed', b.dataset.tool === t); }); };
+  const applyTool = ()=>{
+    if(tool === 'eraser'){ ctx.globalCompositeOperation = 'destination-out'; ctx.lineWidth = size * 2.2; }
+    else { ctx.globalCompositeOperation = 'source-over'; ctx.strokeStyle = color; ctx.lineWidth = size; }
+  };
+  cv.addEventListener('pointerdown', e=>{
+    e.preventDefault();
+    if(undos.length >= 8) undos.shift();
+    undos.push(ctx.getImageData(0, 0, cv.width, cv.height));
+    try { cv.setPointerCapture(e.pointerId); } catch(err){}
+    drawing = true; last = pos(e); applyTool();
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(last.x + 0.01, last.y); ctx.stroke();   // a tap leaves a dot
+    hint.textContent = '';
+    if(onInk) onInk();
+  });
+  cv.addEventListener('pointermove', e=>{
+    if(!drawing) return;
+    const p = pos(e);
+    ctx.beginPath(); ctx.moveTo(last.x, last.y); ctx.lineTo(p.x, p.y); ctx.stroke();
+    last = p;
+  });
+  const stop = ()=>{ drawing = false; last = null; };
+  cv.addEventListener('pointerup', stop); cv.addEventListener('pointercancel', stop); cv.addEventListener('pointerleave', stop);
+  cv.addEventListener('contextmenu', e=> e.preventDefault());   // a long press is a held stroke, not a menu
+  host.querySelectorAll('[data-tool]').forEach(b => b.onclick = ()=> setTool(b.dataset.tool));
+  host.querySelector('[data-undo]').onclick = ()=>{ const s = undos.pop(); if(s) ctx.putImageData(s, 0, 0); };
+  // a color pick also puts the pencil back in hand
+  host.querySelectorAll('.ec-sw').forEach(b => b.onclick = ()=>{ color = b.dataset.c; host.querySelectorAll('.ec-sw').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); setTool('pen'); });
+  host.querySelectorAll('.ec-sz').forEach(b => b.onclick = ()=>{ size = +b.dataset.s; host.querySelectorAll('.ec-sz').forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-pressed', x === b); }); });
+  return {
+    drew(){ const d = ctx.getImageData(0, 0, cv.width, cv.height).data; for(let i = 3; i < d.length; i += 4){ if(d[i]) return true; } return false; },
+    hint(t){ hint.textContent = t; },
+    // the drawing on white paper, as an image the next screens can show
+    url(){ const out = ecCanvas(SC_W, SC_H), x = out.getContext('2d'); x.fillStyle = '#ffffff'; x.fillRect(0, 0, SC_W, SC_H); x.drawImage(cv, 0, 0, SC_W, SC_H); return out.toDataURL('image/png'); },
+  };
+}
+
+reg('sc_intro', (el)=>{
+  el.innerHTML = `
+    <div class="eyebrow">${escHtml(GNAME.sketch_chain)}</div>
+    <h1 class="big">Draw it. Guess it. Pass it on.</h1>
+    <div class="howto">
+      <div class="howto__step"><span class="howto__n">1</span><span>The first player gets a word to draw, then hands the phone over.</span></div>
+      <div class="howto__step"><span class="howto__n">2</span><span>The next player sees only the drawing and types what they think it is. The player after that sees only the guess, and draws it.</span></div>
+      <div class="howto__step"><span class="howto__n">3</span><span>Draw, guess, draw, guess, all the way around the table. Then everyone sees how far the word wandered.</span></div>
+    </div>
+    <p class="lede">Two to eight players, one phone. No art skills needed. Bad drawings make it better.</p>
+    <button class="btn" id="scToSetup" style="margin-top:14px">Add players ›</button>
+    <div class="spacer"></div>`;
+  el.querySelector('#scToSetup').onclick = ()=>{ sc = { players: [], used: sc.used || [] }; go('sc_setup', { exit:true }); };
+});
+
+reg('sc_setup', (el)=>{
+  el.innerHTML = `
+    <div class="eyebrow">${escHtml(GNAME.sketch_chain)} · setup</div>
+    <h1 class="big">Who's playing?</h1>
+    <p class="lede">Add everyone in the order the phone will go around the table. Two to eight players.</p>
+    <div class="players" id="chips"></div>
+    <div class="nameadd">
+      <input id="nameInput" placeholder="Add a name" autocomplete="off" maxlength="14" />
+      <button class="btn sm" id="addBtn" style="padding-left:20px;padding-right:20px">Add</button>
+    </div>
+    <div class="namehint" id="nameHint"></div>
+    <button class="btn" id="startSc" style="margin-top:14px">Start ›</button>
+    <div class="spacer"></div>`;
+  const chips = el.querySelector('#chips'), input = el.querySelector('#nameInput'), hint = el.querySelector('#nameHint');
+  if(!sc.icon) sc.icon = {};
+  if(!sc.iconPool) sc.iconPool = shuffle(HS_ICONS);
+  function renderChips(){
+    chips.innerHTML = '';
+    sc.players.forEach((p, idx)=>{
+      const c = h(`<span class="namechip"><span class="pico">${sc.icon[p] || ''}</span> ${escHtml(p)}<button aria-label="Remove ${escHtml(p)}">×</button></span>`);
+      c.querySelector('button').onclick = ()=>{ const nm = sc.players[idx]; sc.players.splice(idx, 1); delete sc.icon[nm]; renderChips(); refresh(); };
+      chips.appendChild(c);
+    });
+  }
+  function refresh(){
+    const n = sc.players.length + (input.value.trim() ? 1 : 0);
+    const b = el.querySelector('#startSc'); const ok = n >= 2;
+    b.disabled = !ok; b.style.opacity = ok ? '1' : '.4';
+  }
+  function add(){
+    const v = input.value.trim();
+    if(!v) return false;
+    if(sc.players.length >= 8){ hint.textContent = "That's the max of 8 players."; return false; }
+    if(sc.players.some(p => p.toLowerCase() === v.toLowerCase())){ hint.textContent = 'Someone already has that name. Add a last initial?'; return false; }
+    const used = new Set(Object.values(sc.icon));
+    sc.icon[v] = sc.iconPool.find(x => !used.has(x)) || HS_ICONS[Object.keys(sc.icon).length % HS_ICONS.length];
+    hint.textContent = ''; sc.players.push(v); input.value = ''; input.focus(); renderChips(); refresh();
+    return true;
+  }
+  el.querySelector('#addBtn').onclick = ()=>{ add(); };
+  input.addEventListener('keydown', e=>{ if(e.key === 'Enter') add(); else hint.textContent = ''; });
+  input.addEventListener('input', refresh);
+  el.querySelector('#startSc').onclick = ()=>{
+    if(input.value.trim() && !add()){ input.focus(); return; }
+    if(sc.players.length < 2) return;
+    sc.startIx = 0;
+    scBegin();
+  };
+  renderChips(); refresh();
+});
+
+reg('sc_pass', (el)=>{
+  const who = scWho(sc.turn), n = scN();
+  const role = sc.turn === 0 ? 'gets a word and draws it'
+             : scIsDraw(sc.turn) ? 'sees a guess and draws it'
+             : 'sees a drawing and guesses what it is';
+  el.innerHTML = `
+    <div class="eyebrow">${escHtml(GNAME.sketch_chain)} · turn ${sc.turn + 1} of ${n}</div>
+    <div class="handoff">
+      <div class="handoff__pass">Pass the phone to <span class="pico34">📲</span></div>
+      <div class="handoff__to">${sc.icon[who] || ''} ${escHtml(who)}</div>
+      <div class="handoff__role">${escHtml(who)} ${role}. Nobody else look.</div>
+      <button class="btn" id="scReady">I'm ${escHtml(who)}, show me ›</button>
+    </div>`;
+  el.querySelector('#scReady').onclick = ()=> go(scIsDraw(sc.turn) ? 'sc_draw' : 'sc_guess', { exit:true });
+});
+
+function scNext(){
+  sc.turn++;
+  go(sc.turn < scN() ? 'sc_pass' : 'sc_reveal', { exit:true });
+}
+
+reg('sc_draw', (el)=>{
+  const who = scWho(sc.turn), n = scN(), last = sc.turn === n - 1, first = sc.turn === 0;
+  el.innerHTML = `
+    <div class="ec-top">
+      <div class="eyebrow" style="margin:0">${escHtml(GNAME.sketch_chain)} · ${escHtml(who)} · turn ${sc.turn + 1} of ${n}</div>
+      <button type="button" class="btn sm" id="scDoneTop">${last ? 'Reveal ›' : 'Done ›'}</button>
+    </div>
+    <h1 class="big" style="font-size:24px">Draw <span class="ec-of" id="scWord">${escHtml(scTarget())}</span></h1>
+    <p class="lede" style="margin-top:6px">${first ? 'This is your word. ' : 'This is what the last player guessed. '}No letters or numbers, just the drawing.${first ? ' <button type="button" class="sc-swap" id="scSwap">Give me a different word</button>' : ''}</p>
+    <div id="scPadHost"></div>
+    <div class="spacer"></div>
+    <div class="ec-done">
+      <button class="btn" id="scDone">${last ? 'Done, reveal the chain ›' : 'Done ›'}</button>
+    </div>`;
+  const swap = el.querySelector('#scSwap');
+  const pad = scPad(el.querySelector('#scPadHost'), ()=>{ if(swap) swap.style.display = 'none'; });   // no swapping once the pencil is down
+  if(swap) swap.onclick = ()=>{
+    sc.word = scPickWord(); sc.swaps++;
+    el.querySelector('#scWord').textContent = sc.word;
+    if(sc.swaps >= 3) swap.style.display = 'none';
+  };
+  const finish = ()=>{
+    if(!pad.drew()){ pad.hint('Draw something first.'); return; }
+    sc.chain[sc.turn] = { kind:'draw', by: who, url: pad.url(), text: '' };
+    scNext();
+  };
+  el.querySelector('#scDone').onclick = finish;
+  el.querySelector('#scDoneTop').onclick = finish;
+});
+
+reg('sc_guess', (el)=>{
+  const who = scWho(sc.turn), n = scN(), last = sc.turn === n - 1, prev = sc.chain[sc.turn - 1];
+  el.innerHTML = `
+    <div class="eyebrow">${escHtml(GNAME.sketch_chain)} · ${escHtml(who)} · turn ${sc.turn + 1} of ${n}</div>
+    <h1 class="big" style="font-size:24px">What is this?</h1>
+    <img class="sc-pic" src="${prev.url}" alt="The last player's drawing" />
+    <input class="sc-input" id="scGuess" type="text" maxlength="40" autocomplete="off" autocapitalize="off" placeholder="Ex. a snowman" />
+    <div class="namehint" id="scGuessHint" style="min-height:18px"></div>
+    <button class="btn" id="scGuessDone">${last ? 'Done, reveal the chain ›' : 'Done ›'}</button>
+    <div class="spacer"></div>`;
+  const input = el.querySelector('#scGuess'), hint = el.querySelector('#scGuessHint');
+  const finish = ()=>{
+    const v = input.value.trim().replace(/\s+/g, ' ');
+    if(!v){ hint.textContent = 'Type your best guess. Anything counts.'; input.focus(); return; }
+    input.blur();
+    sc.chain[sc.turn] = { kind:'guess', by: who, text: v };
+    scNext();
+  };
+  input.addEventListener('keydown', e=>{ if(e.key === 'Enter') finish(); else hint.textContent = ''; });
+  el.querySelector('#scGuessDone').onclick = finish;
+});
+
+reg('sc_reveal', (el)=>{
+  const links = sc.chain.slice(0, scN());
+  const norm = s => String(s || '').toLowerCase().replace(/^(a|an|the)\s+/, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  const lastGuess = links.filter(l => l.kind === 'guess').pop();
+  const endsOnGuess = links.length && links[links.length - 1].kind === 'guess';
+  const verdict = !lastGuess ? ''
+    : (endsOnGuess && norm(lastGuess.text) === norm(sc.word)) ? 'It made it all the way around. Nice work, everyone.'
+    : endsOnGuess ? `It started as "${sc.word}" and came back as "${lastGuess.text}".`
+    : `It started as "${sc.word}". Does that last drawing still look like it?`;
+  const item = (l, i)=> l.kind === 'draw'
+    ? `<div class="sc-item"><div class="sc-item__k">${i + 1}. ${escHtml(l.by)} drew</div><img class="sc-pic" src="${l.url}" alt="${escHtml(l.by)}'s drawing" /></div>`
+    : `<div class="sc-item"><div class="sc-item__k">${i + 1}. ${escHtml(l.by)} guessed</div><div class="sc-item__t">${escHtml(l.text)}</div></div>`;
+  el.innerHTML = `
+    <div class="eyebrow">${escHtml(GNAME.sketch_chain)} · the chain</div>
+    <h1 class="big" style="font-size:24px">Here's how it went</h1>
+    <div class="sc-chain" id="scChain">
+      <div class="sc-item"><div class="sc-item__k">${escHtml(scWho(0))} started with</div><div class="sc-item__t ec-of">${escHtml(sc.word)}</div></div>
+    </div>
+    <div class="ec-actions" id="scActions">
+      <button class="btn" id="scShow">Show what ${escHtml(links[0].by)} drew ›</button>
+    </div>
+    <div class="spacer"></div>`;
+  const list = el.querySelector('#scChain'), actions = el.querySelector('#scActions');
+  let shown = 0;
+  const label = ()=>{ const l = links[shown]; return `Show what ${escHtml(l.by)} ${l.kind === 'draw' ? 'drew' : 'guessed'} ›`; };
+  const end = ()=>{
+    if(verdict) list.appendChild(h(`<div class="sc-item sc-item--end"><div class="sc-item__t">${escHtml(verdict)}</div></div>`));
+    actions.innerHTML = `
+      <button class="btn" id="scAgain">Play another round ›</button>
+      <button class="btn btn--ghost" id="scHub">Back to games</button>`;
+    // the next round starts with the next player, so everyone gets a turn starting the chain
+    actions.querySelector('#scAgain').onclick = ()=>{ sc.startIx = (sc.startIx + 1) % scN(); scBegin(); };
+    actions.querySelector('#scHub').onclick = ()=> go('hub');
+  };
+  el.querySelector('#scShow').onclick = ()=>{
+    const node = h(item(links[shown], shown)); list.appendChild(node); shown++;
+    if(shown < links.length) el.querySelector('#scShow').innerHTML = label(); else end();
+    const target = list.lastElementChild;
+    try { target.scrollIntoView({ block: 'center', behavior: 'smooth' }); } catch(e){}
+  };
 });
 
 /* ---------- BOOT ---------- */

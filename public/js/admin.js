@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 37;
+const BUILD = 38;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -305,7 +305,7 @@ async function ogCardB64(b, pendingFiles){
   (Array.isArray(demo.cards) ? demo.cards : []).forEach(c => {
     if(!c || c.off) return;
     if(c.t === 'notice' && c.until && c.until < todayYmd) return;
-    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ banner(c.title, cardBannerText(c), !!c.hot); return; }
+    if(c.t === 'notice' && (c.mode || 'inline') === 'inline'){ row(c.title, c.body || '', !!c.hot, c.icon === 'none'); return; }   // a message card is the same row
     if(c.t === 'schedule'){ const today = (c.days || {})[dayKey]; if(!today && !c.always) return; row(c.title, today ? dayName + ': ' + today : (c.desc || 'Tap to view the calendar'), false, c.icon === 'none'); return; }
     row(c.title, cardSub(c), c.t === 'notice' && !!c.hot, c.icon === 'none');
   });
@@ -546,7 +546,7 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 }
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
-const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Sketchy Telephone' }, CFG.gameNames || {});
 // The site address is wherever these pages are served from, never typed:
 // QR payloads, owner links, and signatures all derive from it.
 const DOMAIN       = location.origin;
@@ -1078,7 +1078,7 @@ function mailto(v, subject, body){
 /* ---------------- content: game metadata shared by the pack importer
    and the custom questions manager. Field names match admin_add_content
    in 27_admin_content.sql exactly. ---------------- */
-const GAME_ORDER = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','exquisite_corpse','horse_racing','ring_toss'];
+const GAME_ORDER = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','exquisite_corpse','sketch_chain','horse_racing','ring_toss'];
 const GAMES_META = {
   who_knows_who:        { name:'Who Knows Who',    fields:[['prompt','Prompt (use {N} for the player name)'],['a','Option A'],['b','Option B'],['c','Option C'],['d','Option D']] },
   guess_the_split:    { name:'Guess the Split',  fields:[['a','Option A'],['b','Option B']] },
@@ -1090,6 +1090,7 @@ const GAMES_META = {
   cornhole:        { name:'Cornhole',         fields:[] },   // content-less: toggles only, no packs/custom/retire
   quick_pour:      { name:GNAME.quick_pour,       fields:[] },   // content-less, same as cornhole
   exquisite_corpse:{ name:'Exquisite Corpse', fields:[] },   // content-less: prompts live in the app
+  sketch_chain:    { name:GNAME.sketch_chain, fields:[] },   // content-less: the word list lives in the app
   horse_racing:    { name:'Horse Racing',     fields:[] },   // content-less AND venue-exclusive (38): tick it only where it is sold
   ring_toss:       { name:'Ring Toss',        fields:[] },   // content-less AND venue-exclusive (39): tick it only where it is sold
 };

@@ -570,6 +570,9 @@
   .promo__k{color:var(--on-accent);opacity:.85;font-size:14px;letter-spacing:.13em}
   .promo__t{color:var(--on-accent)}
   a.promo{padding-right:48px}
+  /* a message card opens nothing: no arrow, no press feedback, room for the text */
+  .landing-opt--static, .landing-opt--static:active{cursor:default;padding-right:18px;transform:none}
+  .landing-opt__d--msg{white-space:pre-line}
   /* a stand-out card that opens a link or a page: the same row, colors
      inverted onto the accent (icon tile and arrow flip with it) */
   .landing-opt.is-hot, html.dark .landing-opt.is-hot{background:var(--accent);border-color:transparent;color:var(--on-accent)}
@@ -581,6 +584,8 @@
     .landing-opt.is-hot{box-shadow:0 4px 10px color-mix(in srgb, var(--accent) 32%, rgba(22,17,10,.05)), 0 14px 34px color-mix(in srgb, var(--accent) 20%, transparent)}
     .landing-opt.is-hot .landing-opt__arrow, html.dark .landing-opt.is-hot .landing-opt__arrow{background:color-mix(in srgb, var(--on-accent) 18%, transparent)}
   }
+  /* flat, so a message card does not read as something to press */
+  .landing-opt.landing-opt--static, .landing-opt.landing-opt--static.is-hot, html.dark .landing-opt.landing-opt--static{box-shadow:none}
   .promo__arrow{color:var(--on-accent);opacity:.9}
 
   /* inputs and answer surfaces */
@@ -729,6 +734,19 @@
   .ec-sz span{display:block;border-radius:50%;background:var(--ink)}
   .ec-sz.on{border-color:var(--accent);background:var(--accent)}
   .ec-sz.on span{background:var(--on-accent)}
+  /* Sketchy Telephone: a full-frame board (no strip above it), the picture to guess, the chain */
+  .sc-cv{border-top:1.5px solid var(--line-2);border-radius:12px;aspect-ratio:320/300}
+  .sc-pic{display:block;width:320px;max-width:100%;height:auto;margin:12px auto 0;border:1.5px solid var(--line-2);border-radius:12px;background:#fff;box-shadow:var(--shadow-sm);-webkit-user-select:none;user-select:none}
+  .sc-input{display:block;width:100%;min-height:54px;margin-top:14px;border:1.5px solid var(--line-2);border-radius:14px;padding:12px 16px;font-family:var(--font-b);font-size:18px;color:var(--ink);background:var(--bg)}
+  .sc-input:focus{border-color:var(--accent);outline:none}
+  .sc-swap{background:none;border:0;padding:0;font:inherit;font-weight:600;color:var(--accent);text-decoration:underline;text-underline-offset:3px;cursor:pointer}
+  .sc-chain{display:flex;flex-direction:column;gap:12px;margin-top:14px}
+  .sc-item{background:var(--bg);border:1px solid var(--line);border-radius:var(--radius);padding:14px 16px;box-shadow:var(--shadow-sm);animation:rise .45s var(--ease) both}
+  .sc-item__k{font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-dim);margin-bottom:6px}
+  .sc-item__t{font-family:var(--font-d);font-weight:700;font-size:22px;line-height:1.25;overflow-wrap:anywhere}
+  .sc-item .sc-pic{margin-top:4px;box-shadow:none}
+  .sc-item--end{border-color:var(--accent);border-width:1.5px}
+  .sc-item--end .sc-item__t{font-size:18px}
   .ec-done{padding:10px 0 4px;border-top:1px solid var(--line);margin-top:8px}
   .ec-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:14px}
   .ec-top .btn.sm{padding:9px 16px;font-size:14px;min-height:40px;box-shadow:none}
@@ -771,7 +789,7 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=37"></script>
-<script src="js/app.js?v=37"></script>
+<script src="js/shared.js?v=38"></script>
+<script src="js/app.js?v=38"></script>
 </body>
 </html>

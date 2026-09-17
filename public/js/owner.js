@@ -8,7 +8,7 @@ if(!CFG || !CFG.supabaseUrl || !CFG.supabaseKey){
 }
 const SUPABASE_URL = CFG.supabaseUrl;
 const SUPABASE_KEY = CFG.supabaseKey;
-const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour' }, CFG.gameNames || {});
+const GNAME = Object.assign({ who_knows_who: 'Who Knows Who', guess_the_split: 'Guess the Split', quick_pour: 'Quick Pour', sketch_chain: 'Sketchy Telephone' }, CFG.gameNames || {});
 const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 const params = new URLSearchParams(location.search);
@@ -96,7 +96,7 @@ function render(s){
   const gp = s.game_plays || [];
   const ev = s.events_30d || {};
   const gmax = Math.max(1, ...gp.map(g => g.plays));
-  const gameName = g => ({guess_the_split:'Guess the Split', who_knows_who:'Who Knows Who', wordy:'Wordy', trivia:'Trivia', who_invited_you:'Who Invited You?', fortune_teller:'Fortune Teller', all_talk:'All Talk', cornhole:'Cornhole', quick_pour:GNAME.quick_pour, horse_racing:'Horse Racing', ring_toss:'Ring Toss'}[g] || g);
+  const gameName = g => ({guess_the_split:'Guess the Split', who_knows_who:'Who Knows Who', wordy:'Wordy', trivia:'Trivia', who_invited_you:'Who Invited You?', fortune_teller:'Fortune Teller', all_talk:'All Talk', cornhole:'Cornhole', quick_pour:GNAME.quick_pour, horse_racing:'Horse Racing', ring_toss:'Ring Toss', exquisite_corpse:'Exquisite Corpse', sketch_chain:GNAME.sketch_chain}[g] || g);
   $('games').innerHTML =
     (gp.length ? gp.map(g => `<div class="bar"><span class="lbl">${esc(gameName(g.game))}</span><span class="track"><span class="fill" style="width:${Math.round(g.plays/gmax*100)}%"></span></span><span class="n">${g.plays}</span></div>`).join('') : '<div class="empty">No game plays recorded yet.</div>')
     + `<div class="mini" style="margin-top:10px">Last 30 days: ${ev.opens ?? 0} app opens${
@@ -543,6 +543,7 @@ const GAME_LIB = [
   { id:'cornhole',        name:'Cornhole',         sub:'bag toss, teams or solo' },
   { id:'quick_pour',      name:GNAME.quick_pour,       sub:'timed bar game, solo' },
   { id:'exquisite_corpse', name:'Exquisite Corpse',  sub:'2 or 3, pass and draw' },
+  { id:'sketch_chain',    name:GNAME.sketch_chain, sub:'2 to 8, draw and guess' },
   // excl: venue-exclusive (38_horse_racing.sql). The row only renders for a
   // venue that already has the game, and the server refuses to ADD it from
   // this page, so unticking it here means only the platform can restore it.
