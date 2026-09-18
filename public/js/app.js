@@ -4518,15 +4518,7 @@ reg('sc_setup', (el)=>{
       <button class="btn sm" id="addBtn" style="padding-left:20px;padding-right:20px">Add</button>
     </div>
     <div class="namehint" id="nameHint"></div>
-    <div class="ec-optgroup">
-      <div class="ec-optlabel">The words</div>
-      <div class="ec-optrow">
-        <button type="button" class="ec-tool${sc.mode !== 'normal' ? ' on' : ''}" data-mode="easy">Easy</button>
-        <button type="button" class="ec-tool${sc.mode === 'normal' ? ' on' : ''}" data-mode="normal">Normal</button>
-      </div>
-      <div class="ec-note" id="scModeNote"></div>
-    </div>
-    <button class="btn" id="startSc" style="margin-top:14px">Start ›</button>
+    <button class="btn" id="startSc" style="margin-top:14px">Next ›</button>
     <div class="spacer"></div>`;
   const chips = el.querySelector('#chips'), input = el.querySelector('#nameInput'), hint = el.querySelector('#nameHint');
   if(!sc.icon) sc.icon = {};
@@ -4554,9 +4546,6 @@ reg('sc_setup', (el)=>{
     hint.textContent = ''; sc.players.push(v); input.value = ''; input.focus(); renderChips(); refresh();
     return true;
   }
-  const modeNote = ()=>{ el.querySelector('#scModeNote').textContent = sc.mode === 'normal' ? 'A little more to draw: a treehouse, a snowball fight, a dog on a skateboard.' : 'Simple things: a cat, a pizza, a lighthouse.'; };
-  el.querySelectorAll('[data-mode]').forEach(b => b.onclick = ()=>{ sc.mode = b.dataset.mode; el.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b)); modeNote(); });
-  modeNote();
   el.querySelector('#addBtn').onclick = ()=>{ add(); };
   input.addEventListener('keydown', e=>{ if(e.key === 'Enter') add(); else hint.textContent = ''; });
   input.addEventListener('input', refresh);
@@ -4564,10 +4553,34 @@ reg('sc_setup', (el)=>{
     if(input.value.trim() && !add()){ input.focus(); return; }
     if(sc.players.length < 2) return;
     sc.startIx = 0;
-    scBegin();
+    go('sc_options', { exit:true });
   };
   renderChips(); refresh();
 });
+
+// the words are one choice for the table, on their own screen so it never
+// reads as a per-player setting (same shape as Exquisite Corpse's options)
+reg('sc_options', (el)=>{
+  if(!sc.mode) sc.mode = 'easy';
+  el.innerHTML = `
+    <div class="eyebrow">${escHtml(GNAME.sketch_chain)} · setup</div>
+    <h1 class="big">How tricky?</h1>
+    <div class="ec-optgroup">
+      <div class="ec-optlabel">The words</div>
+      <div class="ec-optrow">
+        <button type="button" class="ec-tool${sc.mode !== 'normal' ? ' on' : ''}" data-mode="easy">Easy</button>
+        <button type="button" class="ec-tool${sc.mode === 'normal' ? ' on' : ''}" data-mode="normal">Normal</button>
+      </div>
+      <div class="ec-note" id="scModeNote"></div>
+    </div>
+    <button class="btn" id="startSc" style="margin-top:14px">Start ›</button>
+    <div class="spacer"></div>`;
+  const modeNote = ()=>{ el.querySelector('#scModeNote').textContent = sc.mode === 'normal' ? 'A little more to draw: a treehouse, a snowball fight, a dog on a skateboard.' : 'Simple things: a cat, a pizza, a lighthouse.'; };
+  el.querySelectorAll('[data-mode]').forEach(b => b.onclick = ()=>{ sc.mode = b.dataset.mode; el.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b)); modeNote(); });
+  modeNote();
+  el.querySelector('#startSc').onclick = ()=> scBegin();
+});
+reg('sc_options__back', ()=> go('sc_setup', { exit:true }));
 
 reg('sc_pass', (el)=>{
   const who = scWho(sc.turn), n = scN();
@@ -4673,7 +4686,7 @@ reg('sc_reveal', (el)=>{
       <button class="btn" id="scAgain">Play another round ›</button>
       <button class="btn btn--ghost" id="scHub">Back to games</button>`;
     // the next round starts with the next player, so everyone gets a turn starting the chain
-    actions.querySelector('#scAgain').onclick = ()=>{ sc.startIx = (sc.startIx + 1) % scN(); scBegin(); };
+    actions.querySelector('#scAgain').onclick = ()=>{ sc.startIx = (sc.startIx + 1) % scN(); go('sc_options', { exit:true }); };
     actions.querySelector('#scHub').onclick = ()=> go('hub');
   };
   el.querySelector('#scShow').onclick = ()=>{
