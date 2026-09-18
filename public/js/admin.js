@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 38;
+const BUILD = 39;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -2581,7 +2581,13 @@ function packs(){
         <td>${r.active}</td><td>${r.retired}</td><td>${r.custom}</td>
         <td style="color:var(--ink-dim)">${r.newest ? new Date(r.newest).toLocaleDateString([], {month:'short', day:'numeric', year:'2-digit'}) : 'none'}</td>
       </tr>`).join('')}
-    </table>`;
+      ${Object.keys(PROMPT_BANKS).map(g => `<tr style="border-top:1px solid var(--line)">
+        <td style="padding:6px 0">${esc((GAMES_META[g]||{name:g}).name)}</td>
+        <td colspan="3">${PROMPT_BANKS[g].map(([label, n]) => n + ' ' + esc(label)).join(', ')}</td>
+        <td style="color:var(--ink-dim)">in the app</td>
+      </tr>`).join('')}
+    </table>
+    <div class="hint" style="margin-top:8px">"In the app" banks ship with platform updates and have no packs, custom rows or retire.</div>`;
   };
   paintCounts();
 

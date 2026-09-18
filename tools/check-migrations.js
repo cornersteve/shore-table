@@ -99,5 +99,6 @@ if (folders.length) {
   ok(`${n} definitions from migrations-src/${f} checked against install.sql`);
 }
 
+if (require('./check-games.js')() > 0) bad++;
 console.log(bad ? `\n${bad} problem(s)` : '\nall good');
 process.exit(bad ? 1 : 0);
