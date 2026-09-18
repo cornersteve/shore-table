@@ -88,23 +88,34 @@ protects that button.
 
 ## Shipping a new game
 
-Same release, all together (missing one of these has bitten before):
+Same release, all together. `node tools/check-migrations.js` (which runs
+tools/check-games.js) refuses the release if a game id known to the database
+is missing from any of the lists below, so run it before you push.
 
 - `install/install.sql` stays the fresh-install truth: game id in
   `game_plays`' check, `log_game_play`'s whitelist, `set_venue_games` +
-  `admin_set_games` allowed lists, `venues.games` default (UNLESS the
-  game is venue-exclusive: then it goes in `v_excl`, never the default).
-- The equivalent changes for existing operators ship as that release's
-  migration JSON.
-- `public/app.html`: GAME_IDS, the hub card, the screens (and
-  DEFAULT_ORDER unless exclusive).
-- `public/owner.html`: GAME_LIB + the gameName map (exclusives get
-  `excl:true`).
-- `public/admin.html`: GAMES_META (content-less games use `fields:[]`),
+  `admin_set_games` allowed lists (UNLESS the game is venue-exclusive: then
+  it goes in `v_excl`, never the default). The equivalent changes for
+  existing operators ship as that release's migration JSON.
+- `public/js/app.js`: GAME_IDS, GAME_HOME (the screen prefix), the hub card
+  + its wire() line, the screens (and DEFAULT_ORDER unless exclusive).
+- `public/js/owner.js`: GAME_LIB (exclusives get `excl:true`) + the
+  gameName map.
+- `public/js/admin.js`: GAMES_META (content-less games use `fields:[]`),
   GAME_ORDER.
+- `public/js/report.js`: the game name map.
+- GNAME defaults (app, owner, admin, report) only if the diner-facing name
+  should be operator-configurable.
+- Prompts or words that live in code (no question packs) go in
+  `public/js/prompts.js` and are registered in PROMPT_BANKS there. That is
+  how the dashboard's Question packs page counts them.
 - `public/index.html`: the game-library card (never for exclusives).
 - Launch policy: new games ship OFF everywhere; operators tick them on
-  per venue.
+  per venue. Preview with `?try=<id>`.
+
+The same idea applies to any feature that touches a list: if it appears in
+the owner dashboard, look for its twin in the operator dashboard (the card
+editor, game toggles and feedback form live in both), and the reverse.
 
 ## Content updates
 

@@ -387,7 +387,6 @@ reg('landing', (el)=>{
       ${cardsHtml}
     </div>
     <div class="spacer"></div>
-    ${venue().demo ? `<div style="text-align:center;font-size:12px;color:var(--ink-faint,#a49d90);margin-bottom:6px">Preview. Built for ${escHtml(venue().name)} by ${escHtml(CFG.brandName)}. Not live yet.</div>` : ''}
     <div style="text-align:center"><button class="privacy-link" id="privacyLink">Privacy</button></div>`;
   el.querySelector('#toGames')?.addEventListener('click', ()=> go('hub'));
   el.querySelector('#toBox').onclick   = ()=> go('sb_intro');
@@ -4161,14 +4160,6 @@ function ecJoinCopy(parts, i){
   const bottom = next ? 'Draw the ' + part.t.toLowerCase() + ' all the way off the bottom edge: the next drawer sees only that edge, and the ' + next.t.toLowerCase() + ' will only connect if your lines reach it.' : '';
   return [top, bottom].filter(Boolean).join(' ');
 }
-const EC_PROMPTS = {
-  figure: ['a pirate','a chef','a robot','a sea captain','a lifeguard','a rock star','a mermaid','a superhero','a very sleepy tourist','a lighthouse keeper','a wizard','a hockey player',
-           'a fisherman','a ballerina','a cowboy','a knight','a scuba diver','an astronaut','a surfer','a clown','a detective','a mad scientist',
-           'a construction worker','a friendly ghost','a snowman','a farmer','a viking','a cheerleader','a magician','a bartender','a marathon runner','a beekeeper'],
-  scene:  ['a beach day','a shipwreck','the boardwalk at night','a fishing trip','a thunderstorm at sea','a backyard barbecue','a parade','a snow day at the shore','a carnival','a marina at sunrise',
-           'a lighthouse in the fog','a pirate ship','a treehouse','a farmers market','a hot dog eating contest','a lemonade stand','a rainy day on the pier','a lifeguard rescue','a campfire on the beach','a crowded subway car',
-           'a jazz club','a cabin in the mountains','a volcano island','a haunted house','a rooftop party','a dog park','a sailing race','the line at the ice cream truck','a drive-in movie','a garden party'],
-};
 const EC_COLORS = ['#1b1410', '#7a4b2a', '#c0392b', '#d6a32b', '#2e9e63', '#3a6ea5', '#ffffff'];   // ink, brown, red, gold, green, blue, white
 const EC_SIZES = [2.5, 5, 9, 40];   // the last one is for filling; the eraser follows the same choice
 const EC_ICON = {
@@ -4422,24 +4413,14 @@ reg('ec_reveal', (el)=>{
    The name diners see is GNAME.sketch_chain. */
 let sc = { players: [] };
 const SC_W = 320, SC_H = 300;
-// easy on purpose: a finger on a phone screen is a blunt pencil
-const SC_WORDS = [
-  'a cat','a dog','a fish','a bird','a snake','a turtle','a spider','a bee','a butterfly','a snail',
-  'an octopus','a shark','a whale','a crab','a duck','a pig','a cow','a giraffe','an elephant','a penguin',
-  'a house','a tree','a flower','the sun','the moon','a star','a rain cloud','a rainbow','a mountain','a volcano',
-  'a lighthouse','a sailboat','a car','a bus','a bike','a train','an airplane','a rocket','a hot air balloon','an anchor',
-  'a pizza','a burger','an ice cream cone','a hot dog','a taco','a donut','a birthday cake','a banana','an apple','a cup of coffee',
-  'a snowman','a ghost','a robot','a crown','a key','an umbrella','a pair of glasses','a hat','a guitar','a drum',
-  'a balloon','a kite','a clock','a light bulb','a candle','a campfire','a tent','a ladder','a bridge','a castle',
-  'a beach ball','a surfboard','a cactus','a palm tree','a mushroom','a heart','a smiley face','a football','a fishing rod','a bathtub',
-];
 const scN = ()=> sc.players.length;
 const scWho = i => sc.players[(sc.startIx + i) % scN()];
 const scIsDraw = i => i % 2 === 0;               // draw, guess, draw, guess...
 function scPickWord(){
   if(!sc.used) sc.used = [];
-  let pool = SC_WORDS.filter(w => !sc.used.includes(w));
-  if(!pool.length){ sc.used = []; pool = SC_WORDS.slice(); }
+  const list = SC_WORDS[sc.mode] || SC_WORDS.easy;
+  let pool = list.filter(w => !sc.used.includes(w));
+  if(!pool.length){ sc.used = []; pool = list.slice(); }
   const w = pool[Math.floor(Math.random() * pool.length)];
   sc.used.push(w);
   return w;
@@ -4523,7 +4504,7 @@ reg('sc_intro', (el)=>{
     <p class="lede">Two to eight players, one phone. No art skills needed. Bad drawings make it better.</p>
     <button class="btn" id="scToSetup" style="margin-top:14px">Add players ›</button>
     <div class="spacer"></div>`;
-  el.querySelector('#scToSetup').onclick = ()=>{ sc = { players: [], used: sc.used || [] }; go('sc_setup', { exit:true }); };
+  el.querySelector('#scToSetup').onclick = ()=>{ sc = { players: [], used: sc.used || [], mode: sc.mode || 'easy' }; go('sc_setup', { exit:true }); };
 });
 
 reg('sc_setup', (el)=>{
@@ -4537,7 +4518,7 @@ reg('sc_setup', (el)=>{
       <button class="btn sm" id="addBtn" style="padding-left:20px;padding-right:20px">Add</button>
     </div>
     <div class="namehint" id="nameHint"></div>
-    <button class="btn" id="startSc" style="margin-top:14px">Start ›</button>
+    <button class="btn" id="startSc" style="margin-top:14px">Next ›</button>
     <div class="spacer"></div>`;
   const chips = el.querySelector('#chips'), input = el.querySelector('#nameInput'), hint = el.querySelector('#nameHint');
   if(!sc.icon) sc.icon = {};
@@ -4572,10 +4553,34 @@ reg('sc_setup', (el)=>{
     if(input.value.trim() && !add()){ input.focus(); return; }
     if(sc.players.length < 2) return;
     sc.startIx = 0;
-    scBegin();
+    go('sc_options', { exit:true });
   };
   renderChips(); refresh();
 });
+
+// the words are one choice for the table, on their own screen so it never
+// reads as a per-player setting (same shape as Exquisite Corpse's options)
+reg('sc_options', (el)=>{
+  if(!sc.mode) sc.mode = 'easy';
+  el.innerHTML = `
+    <div class="eyebrow">${escHtml(GNAME.sketch_chain)} · setup</div>
+    <h1 class="big">How tricky?</h1>
+    <div class="ec-optgroup">
+      <div class="ec-optlabel">The words</div>
+      <div class="ec-optrow">
+        <button type="button" class="ec-tool${sc.mode !== 'normal' ? ' on' : ''}" data-mode="easy">Easy</button>
+        <button type="button" class="ec-tool${sc.mode === 'normal' ? ' on' : ''}" data-mode="normal">Normal</button>
+      </div>
+      <div class="ec-note" id="scModeNote"></div>
+    </div>
+    <button class="btn" id="startSc" style="margin-top:14px">Start ›</button>
+    <div class="spacer"></div>`;
+  const modeNote = ()=>{ el.querySelector('#scModeNote').textContent = sc.mode === 'normal' ? 'A little more to draw: a treehouse, a snowball fight, a dog on a skateboard.' : 'Simple things: a cat, a pizza, a lighthouse.'; };
+  el.querySelectorAll('[data-mode]').forEach(b => b.onclick = ()=>{ sc.mode = b.dataset.mode; el.querySelectorAll('[data-mode]').forEach(x => x.classList.toggle('on', x === b)); modeNote(); });
+  modeNote();
+  el.querySelector('#startSc').onclick = ()=> scBegin();
+});
+reg('sc_options__back', ()=> go('sc_setup', { exit:true }));
 
 reg('sc_pass', (el)=>{
   const who = scWho(sc.turn), n = scN();
@@ -4602,7 +4607,7 @@ reg('sc_draw', (el)=>{
   const who = scWho(sc.turn), n = scN(), last = sc.turn === n - 1, first = sc.turn === 0;
   el.innerHTML = `
     <div class="ec-top">
-      <div class="eyebrow" style="margin:0">${escHtml(GNAME.sketch_chain)} · ${escHtml(who)} · turn ${sc.turn + 1} of ${n}</div>
+      <div class="eyebrow" style="margin:0">${escHtml(who)} · turn ${sc.turn + 1} of ${n}</div>
       <button type="button" class="btn sm" id="scDoneTop">${last ? 'Reveal ›' : 'Done ›'}</button>
     </div>
     <h1 class="big" style="font-size:24px">Draw <span class="ec-of" id="scWord">${escHtml(scTarget())}</span></h1>
@@ -4681,7 +4686,7 @@ reg('sc_reveal', (el)=>{
       <button class="btn" id="scAgain">Play another round ›</button>
       <button class="btn btn--ghost" id="scHub">Back to games</button>`;
     // the next round starts with the next player, so everyone gets a turn starting the chain
-    actions.querySelector('#scAgain').onclick = ()=>{ sc.startIx = (sc.startIx + 1) % scN(); scBegin(); };
+    actions.querySelector('#scAgain').onclick = ()=>{ sc.startIx = (sc.startIx + 1) % scN(); go('sc_options', { exit:true }); };
     actions.querySelector('#scHub').onclick = ()=> go('hub');
   };
   el.querySelector('#scShow').onclick = ()=>{
