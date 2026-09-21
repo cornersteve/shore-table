@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 39;
+const BUILD = 40;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -2127,10 +2127,12 @@ ${SIG}`);
   // ---- home screen cards: the owner dashboard's editor, verbatim in behavior ----
   const cardDraftK = 'st_admin_cards_' + v.id;
   let CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : [];
-  let hadDraft = false;
-  try { const d = localStorage.getItem(cardDraftK); if(d){ CARDS = JSON.parse(d); hadDraft = JSON.stringify(CARDS) !== JSON.stringify(Array.isArray(v.cards) ? v.cards : []); } } catch(e){}
+  // an unsaved draft from an earlier visit is offered, not applied (build 40)
+  let draft = null;
+  try { const d = JSON.parse(localStorage.getItem(cardDraftK) || 'null'); const cards = Array.isArray(d) ? d : (d && Array.isArray(d.cards) ? d.cards : null);
+        if(cards && JSON.stringify(cards) !== JSON.stringify(Array.isArray(v.cards) ? v.cards : [])) draft = { cards, at: (!Array.isArray(d) && d && d.at) || null }; } catch(e){}   // an older plain-array draft has no time
   let CARD_OPEN = -1, CARD_CONFIRM = -1, CARD_ASK = 'top';
-  const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK, JSON.stringify(CARDS)); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); setSaveState('cards', 'cardsSaveInline', 'Save'); };
+  const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK, JSON.stringify({ cards: CARDS, at: Date.now() })); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); setSaveState('cards', 'cardsSaveInline', 'Save'); const dn = $('cardDraftNote'); if(dn) dn.remove(); };
   const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK); } catch(e){} };
   const defaultCard = t =>
       t === 'schedule' ? { t, title:'Daily specials', icon:'calendar', days:{} }
@@ -2205,7 +2207,7 @@ ${SIG}`);
     if(CARDS.length >= cap()) $('cardKind').style.display = 'none';
     setSaveState('cards', 'cardsSave', 'Save');
     $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
-      <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
+      <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}${c.t === 'notice' && c.hot ? ' hot' : ''}">
         <div class="cbox__head">
           <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
             <span class="cbox__ic${c.icon === 'none' ? ' cbox__ic--none' : ''}">${cardIcon(c)}</span>
@@ -2242,6 +2244,7 @@ ${SIG}`);
     L.querySelectorAll('input[data-f], textarea[data-f]').forEach(i => i.addEventListener('input', ()=>{
       const c = CARDS[+i.dataset.ix];
       if(i.type === 'checkbox') c[i.dataset.f] = i.checked; else c[i.dataset.f] = i.value;
+      if(i.dataset.f === 'hot'){ cardSaveDraft(); renderCards(); return; }   // the row previews the stand-out look
       if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
       if(i.dataset.f === 'desc' && c.mode === 'link') c.body = '';   // a build 35 link card: the message now lives in desc
       if(i.dataset.f === 'desc'){ const s = L.querySelectorAll('.cbox__type')[+i.dataset.ix]; if(s) s.textContent = (i.value.trim() || CARD_TYPES[c.t]) + (c.off ? ' · hidden' : ''); }
@@ -2289,11 +2292,14 @@ ${SIG}`);
     m.className = 'msg ok'; m.textContent = 'Saved. Live on their tables now.';
   };
   renderCards();
-  if(hadDraft){
-    DIRTY.cards = true; setSaveState('cards', 'cardsSave', 'Save');
-    const m = $('cardsMsg'); m.className = 'msg';
-    m.innerHTML = 'Unsaved changes from last time are back. Save them, or <button type="button" class="linkbtn" id="dropDraft">drop them</button>.';
-    $('dropDraft').onclick = ()=>{ cardClearDraft(); CARDS = Array.isArray(v.cards) ? JSON.parse(JSON.stringify(v.cards)) : []; CARD_OPEN = -1; CARD_CONFIRM = -1; DIRTY.cards = false; renderCards(); m.textContent = 'Dropped. Showing what is live.'; };
+  if(draft){
+    const n = document.createElement('div'); n.id = 'cardDraftNote'; n.className = 'draftnote';
+    const when = draft.at ? ' from ' + new Date(draft.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+    n.innerHTML = '<b>Unsaved card changes' + esc(when) + ' were found from your last visit.</b> Restore those pending changes, or discard them?'
+      + '<span class="draftnote__btns"><button type="button" class="btn sm" id="cardDraftKeep">Restore</button><button type="button" class="btn ghost sm" id="cardDraftDrop">Discard</button></span>';
+    $('cardList').insertAdjacentElement('afterend', n);
+    $('cardDraftKeep').onclick = ()=>{ CARDS = JSON.parse(JSON.stringify(draft.cards)); CARD_OPEN = -1; CARD_CONFIRM = -1; markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); setSaveState('cards', 'cardsSaveInline', 'Save'); renderCards(); n.remove(); };
+    $('cardDraftDrop').onclick = ()=>{ cardClearDraft(); n.remove(); };
   }
 
   // ---- add-ons and limits: one Save runs only what changed ----
