@@ -97,6 +97,13 @@
   .cbox__ctl{display:flex;gap:8px;flex:none}
   @media (max-width:480px){ .cbox__head{flex-wrap:wrap} .cbox__main{flex:1 1 100%} .cbox__ctl{width:100%;justify-content:flex-end;padding-top:2px} }
   .cbox.open .cbox__chev{transform:rotate(90deg)}
+  /* a stand-out card previews as it will look on the home screen: inverted onto the accent */
+  .cbox.hot{background:var(--accent);border-color:transparent}
+  .cbox.hot .cbox__main,.cbox.hot .cbox__t,.cbox.hot .cbox__type,.cbox.hot .cbox__chev{color:var(--on-accent,#fff)}
+  .cbox.hot .cbox__ic{background:var(--on-accent,#fff);color:var(--accent)}
+  .cbox.hot .cbox__ic--none{background:transparent;border-color:var(--on-accent,#fff)}
+  .cbox.hot .cbox__why{color:var(--on-accent,#fff);opacity:.9}
+  .cbox.hot .cbox__body{background:var(--bg);color:var(--ink);border-radius:0 0 13px 13px}
   .cbox__body{border-top:1px solid var(--line);padding:12px}
   .cfl{display:block;font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-dim);margin:12px 0 5px}
   .cfl:first-child{margin-top:0}
@@ -180,6 +187,9 @@
   body.vd .ownertag, body.vd .sub{color:rgba(255,255,255,.66)}
   body.vd header{border-bottom-color:rgba(255,255,255,.22)}
 
+  .draftnote{margin-top:10px;background:#fff3cd;border:1px solid #e6c65a;border-radius:12px;padding:12px 14px;font-size:14px;line-height:1.45}
+  .draftnote b{display:block;margin-bottom:2px}
+  .draftnote__btns{display:flex;gap:8px;margin-top:10px}
   .linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
 </style>
 </head>
@@ -325,7 +335,7 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=39"></script>
-<script src="js/owner.js?v=39"></script>
+<script src="js/shared.js?v=40"></script>
+<script src="js/owner.js?v=40"></script>
 </body>
 </html>

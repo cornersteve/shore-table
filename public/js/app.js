@@ -387,6 +387,7 @@ reg('landing', (el)=>{
       ${cardsHtml}
     </div>
     <div class="spacer"></div>
+    ${venue().demo && state.venue !== (CFG.demoVenue || 'demo') ? `<div style="text-align:center;font-size:12px;color:var(--ink-faint,#a49d90);margin-bottom:6px">Preview. Built for ${escHtml(venue().name)} by ${escHtml(CFG.brandName)}. Not live yet.</div>` : ''}
     <div style="text-align:center"><button class="privacy-link" id="privacyLink">Privacy</button></div>`;
   el.querySelector('#toGames')?.addEventListener('click', ()=> go('hub'));
   el.querySelector('#toBox').onclick   = ()=> go('sb_intro');

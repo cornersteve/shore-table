@@ -110,13 +110,14 @@ function render(s){
   renderGameToggles(s.games || null);
 
   // home screen cards (schema 2): a deep copy, so edits stay local until
-  // Save; an unsaved draft from an evicted tab wins over the server copy
+  // Save. An unsaved draft from an earlier visit is offered, not applied:
+  // the owner picks Restore or Discard (build 40; it used to come back on its own)
   const cardDraft = cardLoadDraft();
-  CARDS = cardDraft ? cardDraft.cards : (Array.isArray(s.cards) ? JSON.parse(JSON.stringify(s.cards)) : []);
+  CARDS = Array.isArray(s.cards) ? JSON.parse(JSON.stringify(s.cards)) : [];
   CARD_CAP = (typeof s.card_cap === 'number') ? s.card_cap : 4;
-  DIRTY.cards = !!cardDraft;
+  DIRTY.cards = false;
   renderCards();
-  if (cardDraft) cardDraftNote(cardDraft.at, s.cards);
+  if (cardDraft) cardDraftNote(cardDraft);
   // games-off venues (operator-set): the game toggles have nothing to toggle,
   // and a stale games draft must not hold the page hostage
   if (s.games_enabled === false){
@@ -302,7 +303,7 @@ let CARDS = [], CARD_CAP = 4, CARD_OPEN = -1, CARD_CONFIRM = -1, CARD_ASK = 'top
 // a localStorage draft survives tab eviction (phones especially); it clears
 // on a successful save and wins over the server copy until then
 const cardDraftK = ()=> 'st_owner_cards_' + (V || '');
-const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK(), JSON.stringify({ cards: CARDS, at: Date.now() })); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); };
+const cardSaveDraft = ()=>{ try { localStorage.setItem(cardDraftK(), JSON.stringify({ cards: CARDS, at: Date.now() })); } catch(e){} markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); const n = $('cardDraftNote'); if(n) n.remove(); };   // editing settles the question
 const cardClearDraft = ()=>{ try { localStorage.removeItem(cardDraftK()); } catch(e){} const n = $('cardDraftNote'); if(n) n.remove(); };
 // { cards, at } (build 23); an older plain-array draft still loads
 const cardLoadDraft = ()=>{ try {
@@ -311,19 +312,20 @@ const cardLoadDraft = ()=>{ try {
   if (d && Array.isArray(d.cards)) return d;
   return null;
 } catch(e){ return null; } };
-// the restored-draft line under the card list: when it was saved, and a way out of it
-function cardDraftNote(at, serverCards){
+// the unsaved-draft question under the card list: Restore brings the draft
+// back as unsaved edits, Discard forgets it
+function cardDraftNote(draft){
   const old = $('cardDraftNote'); if(old) old.remove();
-  const n = document.createElement('div'); n.id = 'cardDraftNote'; n.className = 'hint'; n.style.marginTop = '10px';
-  const when = at ? new Date(at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'an earlier visit';
-  n.innerHTML = 'Unsaved card changes from ' + esc(when) + ' were restored. <button type="button" class="linkbtn" id="cardDraftDrop">Discard them</button>';
+  const n = document.createElement('div'); n.id = 'cardDraftNote'; n.className = 'draftnote';
+  const when = draft.at ? ' from ' + new Date(draft.at).toLocaleString([], { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : '';
+  n.innerHTML = '<b>Unsaved card changes' + esc(when) + ' were found from your last visit.</b> Restore those pending changes, or discard them?'
+    + '<span class="draftnote__btns"><button type="button" class="btn sm" id="cardDraftKeep">Restore</button><button type="button" class="btn ghost sm" id="cardDraftDrop">Discard</button></span>';
   $('cardAddRow').insertAdjacentElement('afterend', n);
-  $('cardDraftDrop').onclick = ()=>{
-    cardClearDraft();
-    CARDS = Array.isArray(serverCards) ? JSON.parse(JSON.stringify(serverCards)) : [];
-    DIRTY.cards = false; CARD_OPEN = -1; CARD_CONFIRM = -1;
-    renderCards();
+  $('cardDraftKeep').onclick = ()=>{
+    CARDS = JSON.parse(JSON.stringify(draft.cards)); CARD_OPEN = -1; CARD_CONFIRM = -1;
+    markDirty('cards', 'cardsSave', 'Save', 'cardsMsg'); renderCards(); n.remove();
   };
+  $('cardDraftDrop').onclick = ()=>{ cardClearDraft(); n.remove(); };
 }
 
 function defaultCard(t){
@@ -402,7 +404,7 @@ function renderCards(){
   if(CARDS.length >= CARD_CAP) $('cardKind').style.display = 'none';
   setSaveState('cards', 'cardsSave', 'Save');
   $('cardList').innerHTML = CARDS.length ? CARDS.map((c, ix) => `
-    <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}">
+    <div class="cbox${c.off || cardExpired(c) ? ' isoff' : ''}${ix === CARD_OPEN ? ' open' : ''}${c.t === 'notice' && c.hot ? ' hot' : ''}">
       <div class="cbox__head">
         <button type="button" class="cbox__main" data-open="${ix}" aria-expanded="${ix === CARD_OPEN}">
           <span class="cbox__ic${c.icon === 'none' ? ' cbox__ic--none' : ''}">${cardIcon(c)}</span>
@@ -441,6 +443,7 @@ function wireCards(){
     const c = CARDS[+i.dataset.ix];
     if(i.type === 'checkbox') c[i.dataset.f] = i.checked;
     else c[i.dataset.f] = i.value;
+    if(i.dataset.f === 'hot'){ cardSaveDraft(); renderCards(); return; }   // the row previews the stand-out look
     if(i.dataset.f === 'title'){ const t = L.querySelectorAll('.cbox__t')[+i.dataset.ix]; if(t) t.textContent = i.value || 'Untitled card'; }
     // the short line mirrors into the card row as it is typed, like the name
     if(i.dataset.f === 'desc' && c.mode === 'link') c.body = '';   // a build 35 link card: the message now lives in desc
