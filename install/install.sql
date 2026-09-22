@@ -335,11 +335,11 @@ with (security_invoker = off) as
          custom_only,
          dark_mode,
          cards,
-         card,
          games_enabled,
          form_custom,
          report_county,
-         (status = 'lead') as demo
+         (status = 'lead') as demo,
+         card                      -- appended last: create or replace view cannot insert a column mid-list
   from public.venues
   where status in ('lead', 'active');
 
