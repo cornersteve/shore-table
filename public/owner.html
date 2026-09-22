@@ -191,6 +191,29 @@
   .draftnote b{display:block;margin-bottom:2px}
   .draftnote__btns{display:flex;gap:8px;margin-top:10px}
   .linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
+  /* the shared table card designer (js/card.js) */
+  .cd{display:grid;grid-template-columns:1fr;gap:20px}
+  @media(min-width:760px){ .cd{grid-template-columns:1fr 300px;align-items:start} }
+  .cd-preview{position:sticky;top:76px}
+  .cd-preview canvas{width:100%;max-width:300px;border-radius:10px;box-shadow:0 10px 30px rgba(22,17,10,.18);display:block;margin:0 auto}
+  .cd-h{font-family:var(--font-d);font-weight:700;font-size:15px;margin:22px 0 4px;padding-top:14px;border-top:1px solid var(--line)}
+  .cd-h:first-child{margin-top:0;padding-top:0;border-top:0}
+  .cd-l{display:block;font-family:var(--font-d);font-weight:700;font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--ink-dim);margin:14px 0 6px}
+  .cd-l span{font-weight:400;text-transform:none;letter-spacing:0;font-size:12px}
+  .cd input[type=text],.cd input[type=url],.cd textarea{width:100%;min-height:44px;border:1px solid var(--line-2);border-radius:10px;padding:10px 12px;font-family:var(--font-b);font-size:15px;color:var(--ink);background:var(--bg)}
+  .cd textarea{min-height:72px;resize:vertical}
+  .cd input:focus,.cd textarea:focus{border-color:var(--accent);outline:none}
+  .cd-row{display:flex;gap:10px;align-items:center}
+  .cd-row input[type=color]{width:52px;height:44px;flex:none;border:1px solid var(--line-2);border-radius:8px;padding:2px;background:var(--bg);cursor:pointer}
+  .cd-row input[type=text]{width:120px;flex:none}
+  .cd-sw{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .cd-swatch{width:26px;height:26px;border-radius:8px;border:1px solid var(--line-2);cursor:pointer;padding:0}
+  .cd-radios{display:flex;flex-direction:column;gap:2px;margin-bottom:8px}
+  .cd-ck{display:flex;align-items:center;gap:8px;min-height:36px;font-size:14.5px;cursor:pointer}
+  .cd-ck input{accent-color:var(--accent);width:18px;height:18px}
+  .cd-note{color:var(--ink-dim);font-size:13px;line-height:1.4;margin-top:6px}
+  .cd-warn{display:none;margin-top:12px;background:#fff3cd;border:1px solid #e6c65a;border-radius:10px;padding:10px 12px;font-size:13.5px;line-height:1.45}
+  .cd-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:16px}
 </style>
 </head>
 <body>
@@ -280,29 +303,9 @@
   </section>
 <section id="cardSec" style="display:none">
     <h2>Table card</h2>
-    <div class="hint">Your printable 4x6 card with both QR codes. Colors start from your app branding. Always test-scan a printed card before a real print run.</div>
+    <div class="hint">Your printable 4x6 card with both QR codes. Change the colors, the words, and where each code sends people. Save design keeps it for next time.</div>
     <details class="fold" id="cardFold"><summary>Design and download your table card</summary>
-    <div class="cardsplit" style="margin-top:12px">
-      <div>
-        <label class="cf" for="cTown" style="margin-top:0">Town line (top right, optional)</label>
-        <div class="cfrow"><input type="text" id="cTown" maxlength="30" placeholder="Ex. Springfield, USA" style="flex:1;min-width:170px"></div>
-        <label class="cf" for="cA1">Structure color (headlines, pills, bottom bar)</label>
-        <div class="cfrow"><input type="color" id="cA1"><input type="text" id="cA1Hex" aria-label="Structure color, hex code" style="width:120px" autocapitalize="off" spellcheck="false"></div>
-        <div class="swatches" id="cSw1"></div>
-        <label class="cf" for="cA2">Accent color (header rule, feedback pill)</label>
-        <div class="cfrow"><input type="color" id="cA2"><input type="text" id="cA2Hex" aria-label="Accent color, hex code" style="width:120px" autocapitalize="off" spellcheck="false"></div>
-        <div class="swatches" id="cSw2"></div>
-        <label class="cf">Header background</label>
-        <div class="cfrow"><label style="font-size:14px;display:flex;gap:7px;align-items:center"><input type="checkbox" id="cHbOn"> custom color</label><input type="color" id="cHb" style="display:none"></div>
-        <label class="cf">Dark card</label>
-        <div class="cfrow"><label style="font-size:14px;display:flex;gap:7px;align-items:center"><input type="checkbox" id="cDark"> dark card (QR panels stay white so they scan)</label></div>
-        <div class="cfrow" style="margin-top:16px"><button class="btn" id="dlPrint">Download my table card</button></div>
-        <div class="hint" style="margin-top:8px;margin-bottom:0">An exact 4x6 at 300dpi for home or lab printing.</div>
-        <details class="fold" style="margin-top:8px"><summary>Printing at a shop?</summary><div class="cfrow" style="margin-top:6px"><button class="btn ghost" id="dlBleed">Download with bleed</button></div><div class="hint" style="margin-top:8px;margin-bottom:0">The bleed version extends the background past each edge for commercial printers that trim to size.</div></details>
-        <div class="savemsg" id="cMsg"></div>
-      </div>
-      <canvas id="cardCanvas"></canvas>
-    </div>
+    <div id="cardHost" style="margin-top:12px"></div>
     </details>
   </section>
   <div class="promo-row" style="margin-top:4px"><a class="btn ghost" id="reportBtn2" target="_blank" rel="noopener">View the monthly report</a></div>
@@ -335,7 +338,8 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=42"></script>
-<script src="js/owner.js?v=42"></script>
+<script src="js/shared.js?v=43"></script>
+<script src="js/card.js?v=43"></script>
+<script src="js/owner.js?v=43"></script>
 </body>
 </html>
