@@ -62,6 +62,7 @@ create table venues (
   owner_pass         text,
   dark_mode          boolean     not null default false,
   cards              jsonb,
+  card               jsonb,                            -- the printable table card's design (clean_card shape)
   card_cap           smallint    not null default 4 check (card_cap between 0 and 20),
   games_enabled      boolean     not null default true,
   form_custom        boolean     not null default false,
@@ -82,6 +83,7 @@ comment on column venues.owner_email  is 'Owner contact email. PII: operator-fac
 comment on column venues.owner_pass   is 'Optional bcrypt hash gating the owner dashboard. NULL = link-only (default, and the off switch).';
 comment on column venues.report_county is 'Show the "vs county" comparison on this venue''s guest report. Default true.';
 comment on column venues.cards is 'Landing-screen cards, a jsonb array of preset card objects (schedule / list / notice). Written only through clean_cards; capped at card_cap.';
+comment on column venues.card is 'The table card design: town line, colors (a1, a2, hb, bb), and two QR slots s1/s2 {head, body, scan, to, url}. Written only through clean_card. Null = the default card.';
 comment on column venues.card_cap is 'How many landing cards this venue may have. Operator-set per venue; the default is 4.';
 comment on column venues.games_enabled is 'Operator-set. False hides the games side of the app entirely (feedback-and-cards venues); the landing always keeps feedback, so it can never be empty.';
 
@@ -247,7 +249,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8), (9), (10);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -333,6 +335,7 @@ with (security_invoker = off) as
          custom_only,
          dark_mode,
          cards,
+         card,
          games_enabled,
          form_custom,
          report_county,
@@ -1000,6 +1003,71 @@ $$;
 revoke all on function public.set_venue_cards(text, text, jsonb, text) from public;
 grant execute on function public.set_venue_cards(text, text, jsonb, text) to anon, authenticated;
 
+-- The table card design: every write funnels through this. Colors must be
+-- #rrggbb, text is trimmed and capped, a QR slot's target is one of four
+-- words, and a custom link must be https. Anything else is dropped.
+create or replace function public.clean_card(p jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_out  jsonb := '{}'::jsonb;
+  v_s    jsonb;
+  v_slot jsonb;
+  v_to   text;
+  v_k    text;
+begin
+  if p is null or jsonb_typeof(p) <> 'object' then return null; end if;
+  v_out := jsonb_strip_nulls(jsonb_build_object(
+    'town', nullif(left(btrim(coalesce(p->>'town', '')), 30), ''),
+    'a1', case when coalesce(p->>'a1', '') ~* '^#[0-9a-f]{6}$' then lower(p->>'a1') end,
+    'a2', case when coalesce(p->>'a2', '') ~* '^#[0-9a-f]{6}$' then lower(p->>'a2') end,
+    'hb', case when coalesce(p->>'hb', '') ~* '^#[0-9a-f]{6}$' then lower(p->>'hb') end,
+    'bb', case when coalesce(p->>'bb', '') ~* '^#[0-9a-f]{6}$' then lower(p->>'bb') end));
+  foreach v_k in array array['s1', 's2'] loop
+    v_s := p->v_k;
+    continue when v_s is null or jsonb_typeof(v_s) <> 'object';
+    v_to := v_s->>'to';
+    if v_to is null or v_to not in ('home', 'games', 'box', 'url') then v_to := null; end if;
+    v_slot := jsonb_strip_nulls(jsonb_build_object(
+      'head', nullif(left(btrim(coalesce(v_s->>'head', '')), 60), ''),
+      'body', nullif(left(btrim(coalesce(v_s->>'body', '')), 120), ''),
+      'scan', nullif(left(btrim(coalesce(v_s->>'scan', '')), 40), ''),
+      'to',   v_to,
+      'url',  case when v_to = 'url' and coalesce(v_s->>'url', '') ~* '^https://[^\s"''<>]{1,200}$' then v_s->>'url' end));
+    if v_slot <> '{}'::jsonb then v_out := v_out || jsonb_build_object(v_k, v_slot); end if;
+  end loop;
+  return nullif(v_out, '{}'::jsonb);
+end;
+$$;
+
+revoke all on function public.clean_card(jsonb) from public, anon, authenticated;
+
+create or replace function public.set_venue_card(p_venue_id text, p_key text, p_card jsonb, p_pass text default null)
+returns json
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_gate text;
+  v_card jsonb;
+begin
+  v_gate := public.owner_gate(p_venue_id, p_key, p_pass);
+  if v_gate <> 'ok' then
+    return json_build_object('ok', false, 'error', v_gate);
+  end if;
+  v_card := public.clean_card(p_card);
+  update public.venues set card = v_card where id = p_venue_id;
+  return json_build_object('ok', true, 'card', v_card);
+end;
+$$;
+
+revoke all on function public.set_venue_card(text, text, jsonb, text) from public;
+grant execute on function public.set_venue_card(text, text, jsonb, text) to anon, authenticated;
+
 create or replace function public.set_venue_form(p_venue_id text, p_key text, p_core jsonb, p_extras jsonb, p_pass text default null)
 returns boolean
 language plpgsql
@@ -1319,7 +1387,7 @@ begin
       'owner_email', owner_email, 'owner_key', owner_key,
       'custom_questions', custom_questions, 'games', games,
       'custom_only', custom_only, 'has_pass', owner_pass is not null,
-      'dark_mode', dark_mode, 'cards', cards,
+      'dark_mode', dark_mode, 'cards', cards, 'card', card,
       'card_cap', card_cap, 'games_enabled', games_enabled,
       'form_custom', form_custom, 'report_county', report_county,
       'pause_submissions', pause_submissions, 'created_at', created_at
@@ -2133,6 +2201,27 @@ $$;
 revoke all on function public.admin_set_cards(text, jsonb) from public;
 revoke execute on function public.admin_set_cards(text, jsonb) from anon;
 grant execute on function public.admin_set_cards(text, jsonb) to authenticated;
+
+create or replace function public.admin_set_card(p_id text, p_card jsonb)
+returns json
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  v_card jsonb;
+begin
+  if not public.is_operator() then return json_build_object('ok', false, 'error', 'not_operator'); end if;
+  v_card := public.clean_card(p_card);
+  update public.venues set card = v_card where id = p_id;
+  if not found then return json_build_object('ok', false, 'error', 'no_such_venue'); end if;
+  return json_build_object('ok', true, 'card', v_card);
+end;
+$$;
+
+revoke all on function public.admin_set_card(text, jsonb) from public;
+revoke execute on function public.admin_set_card(text, jsonb) from anon;
+grant execute on function public.admin_set_card(text, jsonb) to authenticated;
 
 -- Raising the cap is the sellable knob; lowering it re-trims the saved cards
 -- through the sanitizer so the app and the editors always agree.
