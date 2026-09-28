@@ -196,6 +196,9 @@
   .draftnote__btns{display:flex;gap:8px;margin-top:10px}
   .linkbtn{background:none;border:0;padding:0;color:var(--accent);font:inherit;font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:2px}
   /* the shared table card designer (js/card.js) */
+  .cd-kinds{display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--line-2);border-radius:12px;padding:4px;margin-bottom:16px;max-width:360px}
+  .cd-kind{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;font-family:var(--font-d);font-weight:700;font-size:14px;color:var(--ink);cursor:pointer}
+  .cd-kind.on{background:var(--accent);color:var(--on-accent,#fff)}
   .cd{display:grid;grid-template-columns:1fr;gap:20px}
   @media(min-width:760px){ .cd{grid-template-columns:1fr 300px;align-items:start} }
   .cd-preview{position:sticky;top:76px}
@@ -306,9 +309,9 @@
     </div>
   </section>
 <section id="cardSec" style="display:none">
-    <h2>Table card</h2>
-    <div class="hint">Your printable 4x6 card with both QR codes. Change the colors, the words, and where each code sends people. Save design keeps it for next time.</div>
-    <details class="fold" id="cardFold"><summary>Design and download your table card</summary>
+    <h2>Table and takeout cards</h2>
+    <div class="hint">Your printable 4x6 cards with both QR codes: one for the table, one to tuck into to-go orders. Change the colors, the words, and where each code sends people.</div>
+    <details class="fold" id="cardFold"><summary>Design and download your cards</summary>
     <div id="cardHost" style="margin-top:12px"></div>
     </details>
   </section>
@@ -342,8 +345,8 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=46"></script>
-<script src="js/card.js?v=46"></script>
-<script src="js/owner.js?v=46"></script>
+<script src="js/shared.js?v=47"></script>
+<script src="js/card.js?v=47"></script>
+<script src="js/owner.js?v=47"></script>
 </body>
 </html>

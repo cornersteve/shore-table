@@ -249,7 +249,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12), (13);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -1009,10 +1009,10 @@ $$;
 revoke all on function public.set_venue_cards(text, text, jsonb, text) from public;
 grant execute on function public.set_venue_cards(text, text, jsonb, text) to anon, authenticated;
 
--- The table card design: every write funnels through this. Colors must be
+-- One card design (the table card, or the takeout card). Colors must be
 -- #rrggbb, text is trimmed and capped, a QR slot's target is one of four
 -- words, and a custom link must be https. Anything else is dropped.
-create or replace function public.clean_card(p jsonb)
+create or replace function public.clean_card_design(p jsonb)
 returns jsonb
 language plpgsql
 immutable
@@ -1045,6 +1045,28 @@ begin
       'url',  case when v_to = 'url' and coalesce(v_s->>'url', '') ~* '^https://[^\s"''<>]{1,200}$' then v_s->>'url' end));
     if v_slot <> '{}'::jsonb then v_out := v_out || jsonb_build_object(v_k, v_slot); end if;
   end loop;
+  return nullif(v_out, '{}'::jsonb);
+end;
+$$;
+
+revoke all on function public.clean_card_design(jsonb) from public, anon, authenticated;
+
+-- The whole saved value: the table card design, plus the takeout card design
+-- under "takeout". Both go through clean_card_design.
+create or replace function public.clean_card(p jsonb)
+returns jsonb
+language plpgsql
+immutable
+set search_path = ''
+as $$
+declare
+  v_out jsonb;
+  v_to  jsonb;
+begin
+  if p is null or jsonb_typeof(p) <> 'object' then return null; end if;
+  v_out := coalesce(public.clean_card_design(p), '{}'::jsonb);
+  v_to  := public.clean_card_design(p->'takeout');
+  if v_to is not null then v_out := v_out || jsonb_build_object('takeout', v_to); end if;
   return nullif(v_out, '{}'::jsonb);
 end;
 $$;
