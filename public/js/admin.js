@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 45;
+const BUILD = 46;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -1951,18 +1951,23 @@ ${SIG}`);
       <label class="ck"><input type="checkbox" data-f="always" data-ix="${ix}" ${c.always ? 'checked' : ''}> Keep the card on the home screen even on blank days, so diners can still open the week</label>`;
     if (c.t === 'list') return common + `
       <label class="cfl">The list</label>
-      <div class="hint" style="margin-bottom:2px">Prices get a dollar sign in the app. Type just the number, or words like "Market price".</div>
+      <div class="hint" style="margin-bottom:2px">Prices get a dollar sign in the app. Type just the number, or words like "Market price". Add a category to group rows under a heading, like Appetizers or Drafts.</div>
       ${(c.items || []).map((i, j) => `
-        <div class="lirow">
+        ${i.h !== undefined ? `<div class="lirow lirow--cat">
+          <input class="li-h" type="text" spellcheck="true" maxlength="40" data-li="h" data-ix="${ix}" data-j="${j}" value="${esc(i.h || '')}" placeholder="Ex. Appetizers" aria-label="Category name">
+          <button type="button" class="iconbtn" data-upitem="${ix}" data-j="${j}" title="Move this category up" aria-label="Move this category up" ${j === 0 ? 'disabled' : ''}>${ARR_UP}</button>
+          <button type="button" class="iconbtn" data-downitem="${ix}" data-j="${j}" title="Move this category down" aria-label="Move this category down" ${j === (c.items || []).length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
+          <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this category" aria-label="Remove this category">${TRASH}</button>
+        </div>` : `<div class="lirow">
           <input class="li-n" type="text" spellcheck="true" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness">
           <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" inputmode="decimal">
           <span class="li-br" aria-hidden="true"></span>
-          <input class="li-d" type="text" spellcheck="true" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
+          <input class="li-d" type="text" spellcheck="true" maxlength="200" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
           <button type="button" class="iconbtn" data-upitem="${ix}" data-j="${j}" title="Move this row up" aria-label="Move this row up" ${j === 0 ? 'disabled' : ''}>${ARR_UP}</button>
           <button type="button" class="iconbtn" data-downitem="${ix}" data-j="${j}" title="Move this row down" aria-label="Move this row down" ${j === (c.items || []).length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
           <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
-        </div>`).join('')}
-      <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" data-additem="${ix}">+ Add a row</button></div>`;
+        </div>`}`).join('')}
+      <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" data-additem="${ix}">+ Add a row</button><button type="button" class="btn ghost sm" data-addcat="${ix}">+ Add a category</button></div>`;
     const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
     // announcements: what it does first, then the name, the message, the icon, the date
     return `
@@ -2045,7 +2050,8 @@ ${SIG}`);
     L.querySelectorAll('input[data-day]').forEach(i => i.addEventListener('input', ()=>{ const c = CARDS[+i.dataset.ix]; c.days = c.days || {}; c.days[i.dataset.day] = i.value; cardSaveDraft(); }));
     L.querySelectorAll('input[type="radio"][name^="cmode_"]').forEach(r => r.addEventListener('change', ()=>{ cardSwitchMode(CARDS[+r.dataset.ix], r.value); cardSaveDraft(); renderCards(); }));
     L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{ CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft(); }));
-    L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 60) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
+    L.querySelectorAll('[data-addcat]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.addcat]; c.items = c.items || []; if(c.items.length < 60) c.items.push({h:''}); cardSaveDraft(); renderCards(); const last = L.querySelectorAll('.cbox.open .li-h'); if(last.length) last[last.length - 1].focus(); });
     L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
     // rows reorder the way cards and games do: the list on the table follows this order
     const moveItem = (b, by) => { const it = CARDS[+b.dataset[by < 0 ? 'upitem' : 'downitem']].items, j = +b.dataset.j, k = j + by; if(k < 0 || k >= it.length) return; [it[j], it[k]] = [it[k], it[j]]; cardSaveDraft(); renderCards(); };
@@ -2072,7 +2078,7 @@ ${SIG}`);
       const d = { ...c };
       d.title = d.title.trim();
       if(d.url && !/^(https?:\/\/|mailto:|tel:)/i.test(d.url.trim())) d.url = 'https://' + d.url.trim();
-      if(d.t === 'list') d.items = (d.items || []).filter(i => i.n && i.n.trim());
+      if(d.t === 'list') d.items = (d.items || []).filter(i => (i.n && i.n.trim()) || (i.h && i.h.trim()));
       if(d.t === 'schedule'){ const days = {}; SP_DAYS.forEach(([k]) => { const t = ((d.days || {})[k] || '').trim(); if(t) days[k] = t; }); d.days = days; }
       return d;
     });

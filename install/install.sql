@@ -249,7 +249,7 @@ create table schema_migrations (
   applied_at timestamptz not null default now()
 );
 comment on table schema_migrations is 'Applied platform migration versions. Written only by admin_run_migration; a fresh install seeds every version it already includes.';
-insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11);
+insert into schema_migrations (version) values (1), (2), (3), (4), (5), (6), (7), (8), (9), (10), (11), (12);
 
 -- ---------------------------------------------------------------------------
 --  ROW LEVEL SECURITY  (locked by default; policies below open exact doors)
@@ -942,17 +942,23 @@ begin
         'days',   coalesce(v_days, '{}'::jsonb),
         'always', v_el->'always' = 'true'::jsonb);
     elsif v_t = 'list' then
-      select coalesce(jsonb_agg(jsonb_strip_nulls(jsonb_build_object(
-               'n', left(btrim(i.el->>'n'), 60),
-               'd', nullif(left(btrim(coalesce(i.el->>'d', '')), 120), ''),
-               'p', nullif(left(btrim(coalesce(i.el->>'p', '')), 20), ''))) order by i.ord), '[]'::jsonb)
+      -- a row is an item {n, d, p} or a category heading {h}
+      select coalesce(jsonb_agg(
+               case when nullif(btrim(coalesce(i.el->>'h', '')), '') is not null
+                    then jsonb_build_object('h', left(btrim(i.el->>'h'), 40))
+                    else jsonb_strip_nulls(jsonb_build_object(
+                           'n', left(btrim(i.el->>'n'), 60),
+                           'd', nullif(left(btrim(coalesce(i.el->>'d', '')), 200), ''),
+                           'p', nullif(left(btrim(coalesce(i.el->>'p', '')), 20), '')))
+               end order by i.ord), '[]'::jsonb)
         into v_items
         from (select t.el, t.ord from jsonb_array_elements(
                 case when jsonb_typeof(v_el->'items') = 'array' then v_el->'items' else '[]'::jsonb end)
                 with ordinality t(el, ord)
-               limit 40) i
+               limit 60) i
        where jsonb_typeof(i.el) = 'object'
-         and nullif(btrim(coalesce(i.el->>'n', '')), '') is not null;
+         and (nullif(btrim(coalesce(i.el->>'n', '')), '') is not null
+              or nullif(btrim(coalesce(i.el->>'h', '')), '') is not null);
       v_c := v_c || jsonb_build_object('items', coalesce(v_items, '[]'::jsonb));
     else  -- notice
       v_mode := v_el->>'mode';

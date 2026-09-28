@@ -429,7 +429,7 @@ reg('card', (el)=>{
     return;
   }
   if (c.t === 'list'){
-    const rows = (c.items || []).map(i => `
+    const rows = (c.items || []).map(i => i.h ? `<div class="lr-cat">${escHtml(i.h)}</div>` : `
       <div class="lr">
         <div class="lr__l">
           <div class="lr__n">${escHtml(i.n)}</div>
