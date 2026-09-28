@@ -168,6 +168,9 @@
   @media (max-width:480px){ .cbox__head{flex-wrap:wrap} .cbox__main{flex:1 1 100%} .cbox__ctl{width:100%;justify-content:flex-end;padding-top:2px} }
   .cbox.open .cbox__chev{transform:rotate(90deg)}
   /* the shared table card designer (js/card.js) */
+  .cd-kinds{display:flex;gap:4px;background:var(--bg);border:1.5px solid var(--line-2);border-radius:12px;padding:4px;margin-bottom:16px;max-width:360px}
+  .cd-kind{flex:1;min-height:40px;border:0;border-radius:9px;background:transparent;font-family:var(--font-d);font-weight:700;font-size:14px;color:var(--ink);cursor:pointer}
+  .cd-kind.on{background:var(--accent);color:var(--on-accent,#fff)}
   .cd{display:grid;grid-template-columns:1fr;gap:20px}
   @media(min-width:760px){ .cd{grid-template-columns:1fr 300px;align-items:start} }
   .cd-preview{position:sticky;top:76px}
@@ -213,6 +216,8 @@
   .lirow input{min-height:44px;border:1px solid var(--line-2);border-radius:10px;padding:9px 10px;font-family:var(--font-b);font-size:14px;color:var(--ink);background:var(--bg)}
   .lirow .li-n{flex:1;min-width:130px}
   .lirow .li-p{width:76px;flex:none}
+  .lirow--cat{border-bottom:0;padding-bottom:2px;margin-top:16px}
+  .lirow .li-h{flex:1 1 110px;min-width:110px;font-family:var(--font-d);font-weight:700;text-transform:uppercase;letter-spacing:.08em;border-color:var(--accent)}
   .lirow .li-br{flex-basis:100%;height:0}   /* name and price above; description and the row's controls below */
   .lirow .li-d{flex:1 1 110px;min-width:110px}
   .lirow .iconbtn:disabled{opacity:.35;cursor:default}
@@ -284,9 +289,9 @@
 <script src="config.js"></script>
 <script src="brand.js"></script>
 <script src="vendor/supabase.js"></script>
-<script src="js/shared.js?v=45"></script>
-<script src="js/prompts.js?v=45"></script>
-<script src="js/card.js?v=45"></script>
-<script src="js/admin.js?v=45"></script>
+<script src="js/shared.js?v=47"></script>
+<script src="js/prompts.js?v=47"></script>
+<script src="js/card.js?v=47"></script>
+<script src="js/admin.js?v=47"></script>
 </body>
 </html>

@@ -272,12 +272,20 @@ const CARD_DEFAULT_SLOTS = {
   s1: { head: 'Play games while you wait.', body: 'A few quick games for the table. No app or sign-up required.', scan: 'SCAN TO PLAY TABLE GAMES', to: 'games', url: '' },
   s2: { head: 'How was everything?', body: 'Tell us anything, completely anonymous. No name, no email.', scan: 'SCAN TO LEAVE FEEDBACK', to: 'box', url: '' },
 };
+// the takeout card: tucked into to-go orders, so the words are about eating at home
+const CARD_TAKEOUT_SLOTS = {
+  s1: { head: 'Dinner and a game.', body: 'Quick games for the couch or the kitchen table. No app or sign-up required.', scan: 'SCAN TO PLAY', to: 'home', url: '' },
+  s2: { head: 'How did we do?', body: 'Hot, right, and worth it? Tell us in 30 seconds, completely anonymous.', scan: 'SCAN TO LEAVE FEEDBACK', to: 'box', url: '' },
+};
+const CARD_PILL_TAKEOUT = { home: 'GAME TIME', games: 'GAME TIME', box: 'YOUR FEEDBACK', url: 'SCAN ME' };
 const HEX = /^#[0-9a-f]{6}$/i;
 // the saved design (or nothing) merged over the defaults for this venue
-function cardDesign(v, saved){
+function cardDesign(v, saved, kind){
   const s = saved && typeof saved === 'object' ? saved : {};
-  const slot = k => Object.assign({}, CARD_DEFAULT_SLOTS[k], (s[k] && typeof s[k] === 'object') ? s[k] : {});
+  const base = kind === 'takeout' ? CARD_TAKEOUT_SLOTS : CARD_DEFAULT_SLOTS;
+  const slot = k => Object.assign({}, base[k], (s[k] && typeof s[k] === 'object') ? s[k] : {});
   return {
+    kind: kind === 'takeout' ? 'takeout' : 'table',
     town: typeof s.town === 'string' ? s.town : '',
     a1: HEX.test(s.a1 || '') ? s.a1 : '#1e3a5f',
     a2: HEX.test(s.a2 || '') ? s.a2 : (HEX.test(v.accent || '') ? v.accent : '#3a6ea5'),
@@ -333,7 +341,7 @@ async function renderCard(cnv, v, opts){
   // bands extend through the bleed ring so a commercial printer can trim back
   // to a clean 4x6. 38px at 300dpi is a hair over the standard 1/8" bleed.
   const W = 1200, H = 1800, B = opts.bleed || 0;
-  const d = cardDesign(v, opts);
+  const d = cardDesign(v, opts, opts.kind);
   cnv.width = W + 2*B; cnv.height = H + 2*B;
   const ctx = cnv.getContext('2d');
   const a1 = d.a1, a2 = d.a2, HEADER = d.hb, BODY = d.bb;
@@ -383,7 +391,8 @@ async function renderCard(cnv, v, opts){
   // line. With the default text every y lands where the original card put it.
   const COL = 560;   // text column: from x=110 to the QR panel
   const section = (y0, slot, pillBg, dot) => {
-    drawPill(ctx, 110, y0, CARD_PILL[slot.to] || CARD_PILL.games, pillBg, dot);
+    const pills = d.kind === 'takeout' ? CARD_PILL_TAKEOUT : CARD_PILL;
+    drawPill(ctx, 110, y0, pills[slot.to] || pills.games, pillBg, dot);
     ctx.fillStyle = a1;
     const head = fitText(ctx, slot.head, COL, 2, [74, 66, 58, 52], 800, FAM);
     let y = y0 + 162;
@@ -441,115 +450,137 @@ function mountCardDesigner(host, v, opts){
   let legacy = null;
   if (!v.card) { try { legacy = JSON.parse(localStorage.getItem('st_card_' + v.id) || 'null'); } catch(e){} }
   const start = v.card || (legacy ? { town: legacy.town, a1: legacy.a1, a2: legacy.a2, hb: legacy.hb || (legacy.dark ? '#0b0a09' : null), bb: legacy.dark ? '#171512' : null } : null);
-  const d = cardDesign(v, start);
   const msgClass = opts.msgClass || 'msg';
-  const color = (key, label, sub) => `
-    <label class="cd-l">${label} <span>${sub}</span></label>
-    <div class="cd-row"><input type="color" data-cd="${key}" value="${esc(d[key])}"><input type="text" data-cdhex="${key}" value="${esc(d[key])}" aria-label="${label}, hex code" autocapitalize="off" spellcheck="false" maxlength="7"></div>
-    <div class="cd-sw" data-sw="${key}"></div>`;
-  const slotForm = (k, title) => { const s = d[k]; return `
-    <div class="cd-h">${title}</div>
-    <label class="cd-l">Headline</label>
-    <input type="text" data-cd="${k}.head" value="${esc(s.head)}" maxlength="60" spellcheck="true" placeholder="Ex. Play games while you wait.">
-    <label class="cd-l">Message</label>
-    <textarea data-cd="${k}.body" maxlength="120" spellcheck="true" placeholder="Ex. A few quick games for the table.">${esc(s.body)}</textarea>
-    <label class="cd-l">Small caps line</label>
-    <input type="text" data-cd="${k}.scan" value="${esc(s.scan)}" maxlength="40" spellcheck="true" placeholder="Ex. SCAN TO PLAY">
-    <label class="cd-l">Where the code sends them</label>
-    <div class="cd-radios">${Object.keys(CARD_TARGETS).map(t => `<label class="cd-ck"><input type="radio" name="cd_${k}_to" value="${t}" ${s.to === t ? 'checked' : ''}> ${CARD_TARGETS[t]}</label>`).join('')}</div>
-    <input type="url" data-cd="${k}.url" value="${esc(s.url || '')}" maxlength="200" placeholder="https://yourrestaurant.com/menu" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" style="${s.to === 'url' ? '' : 'display:none'}">
-    <div class="cd-note" data-urlnote="${k}" style="${s.to === 'url' ? '' : 'display:none'}">A link of your own skips the app, so scans of this code do not show in your report.</div>`; };
-  host.innerHTML = `
-    <div class="cd">
-      <div class="cd-form">
-        <div class="cd-h">Colors</div>
-        <label class="cd-l">Town line <span>(top right, optional)</span></label>
-        <input type="text" data-cd="town" value="${esc(d.town)}" maxlength="30" spellcheck="true" placeholder="Ex. Highlands, NJ">
-        ${color('a1', 'Structure color', '(headlines, pills, bottom bar)')}
-        ${color('a2', 'Accent color', '(header rule, second pill)')}
-        ${color('hb', 'Header background', '')}
-        ${color('bb', 'Card background', '(QR panels stay white so they scan)')}
-        <div class="cd-warn" data-warn></div>
-        ${slotForm('s1', 'Top QR code')}
-        ${slotForm('s2', 'Bottom QR code')}
-        <div class="cd-actions">
-          <button type="button" class="btn" data-save>Save design</button>
-          <span class="${msgClass}" data-msg></span>
-        </div>
-        <div class="cd-actions">
-          <button type="button" class="btn ghost" data-dl>Download my table card</button>
-          <button type="button" class="btn ghost" data-dlbleed>Download with bleed</button>
-        </div>
-        <div class="hint" style="margin-top:8px">An exact 4x6 at 300dpi for home or lab printing. The bleed version extends the background past each edge for commercial printers that trim to size. Always test-scan a printed card before a real print run.</div>
-      </div>
-      <div class="cd-preview"><canvas data-canvas></canvas><div class="hint" data-note style="text-align:center;margin-top:8px"></div></div>
-    </div>`;
+  // both versions live in memory while the designer is open, so switching
+  // between them never loses what was typed. A takeout card that has never
+  // been saved starts from the table card's town line and colors.
+  const table = cardDesign(v, start, 'table');
+  const designs = { table, takeout: cardDesign(v, Object.assign({ town: table.town, a1: table.a1, a2: table.a2, hb: table.hb, bb: table.bb }, (start && start.takeout) || {}), 'takeout') };
+  let kind = 'table', logoImg = null, timer = null, dirty = false, canvas, msg;
   const q = sel => host.querySelector(sel);
-  const canvas = q('[data-canvas]'), msg = q('[data-msg]');
-  let logoImg = null, timer = null, dirty = false;
-  const setDirty = b => { dirty = b; q('[data-save]').disabled = !b; q('[data-save]').textContent = b ? 'Save design' : 'Saved'; if (opts.onDirty) opts.onDirty(b); };
-  // the design as typed right now
+  const NAME = { table: 'Table card', takeout: 'Takeout card' };
+  const URL_OK = /^https:\/\/[^\s"'<>]{1,200}$/i;
+  const setDirty = b => { dirty = b; const s = q('[data-save]'); if (s) { s.disabled = !b; s.textContent = b ? 'Save design' : 'Saved'; } if (opts.onDirty) opts.onDirty(b); };
+  // the design as typed right now, for the version on screen
   const read = ()=>{
+    const d = designs[kind];
     const g = k => { const e = host.querySelector(`[data-cd="${k}"]`); return e ? e.value.trim() : ''; };
-    const slot = k => ({ head: g(k + '.head'), body: g(k + '.body'), scan: g(k + '.scan'), to: (host.querySelector(`input[name="cd_${k}_to"]:checked`) || {}).value || CARD_DEFAULT_SLOTS[k].to, url: g(k + '.url') });
+    const slot = k => ({ head: g(k + '.head'), body: g(k + '.body'), scan: g(k + '.scan'), to: (host.querySelector(`input[name="cd_${k}_to"]:checked`) || {}).value || d[k].to, url: g(k + '.url') });
     const hex = k => { const e = q(`[data-cdhex="${k}"]`); return HEX.test(e.value) ? e.value.toLowerCase() : d[k]; };
-    return { town: g('town'), a1: hex('a1'), a2: hex('a2'), hb: hex('hb'), bb: hex('bb'), s1: slot('s1'), s2: slot('s2') };
+    return { kind, town: g('town'), a1: hex('a1'), a2: hex('a2'), hb: hex('hb'), bb: hex('bb'), s1: slot('s1'), s2: slot('s2') };
   };
+  const keep = ()=>{ designs[kind] = read(); };
   const warn = c => {
     const w = [];
     if (contrastRatio(c.a1, c.bb) < 3) w.push('The structure color is hard to read on this card background.');
     if (contrastRatio(c.a2, c.bb) < 2) w.push('The accent color is hard to see on this card background.');
-    ['s1', 's2'].forEach(k => { if (c[k].to === 'url' && c[k].url && !/^https:\/\/[^\s"'<>]{1,200}$/i.test(c[k].url)) w.push('The ' + (k === 's1' ? 'top' : 'bottom') + ' link must start with https://.'); });
+    ['s1', 's2'].forEach(k => { if (c[k].to === 'url' && c[k].url && !URL_OK.test(c[k].url)) w.push('The ' + (k === 's1' ? 'top' : 'bottom') + ' link must start with https://.'); });
     q('[data-warn]').innerHTML = w.map(esc).join('<br>');
     q('[data-warn]').style.display = w.length ? '' : 'none';
   };
   const paint = ()=>{ const c = read(); warn(c); return renderCard(canvas, v, Object.assign({}, c, { logoImg, base: opts.base })); };
   const queue = ()=>{ clearTimeout(timer); timer = setTimeout(paint, 150); };
   const touched = ()=>{ setDirty(true); msg.textContent = ''; msg.className = msgClass; queue(); };
-  host.querySelectorAll('[data-cd]').forEach(e => e.addEventListener('input', touched));
-  host.querySelectorAll('input[type=color][data-cd]').forEach(w => w.addEventListener('input', ()=>{ q(`[data-cdhex="${w.dataset.cd}"]`).value = w.value; }));
-  host.querySelectorAll('[data-cdhex]').forEach(h => h.addEventListener('input', ()=>{ if (HEX.test(h.value)) q(`input[type=color][data-cd="${h.dataset.cdhex}"]`).value = h.value; touched(); }));
-  host.querySelectorAll('input[type=radio]').forEach(r => r.addEventListener('change', ()=>{
-    const k = r.name.replace('cd_', '').replace('_to', ''), isUrl = r.value === 'url';
-    host.querySelector(`[data-cd="${k}.url"]`).style.display = isUrl ? '' : 'none';
-    q(`[data-urlnote="${k}"]`).style.display = isUrl ? '' : 'none';
-    if (isUrl) host.querySelector(`[data-cd="${k}.url"]`).focus();
-    touched();
-  }));
-  q('[data-dl]').onclick = async ()=>{ await paint(); downloadCanvas(canvas, `${v.id}-table-card.png`); };
-  q('[data-dlbleed]').onclick = async ()=>{ const b = document.createElement('canvas'); await renderCard(b, v, Object.assign({}, read(), { logoImg, base: opts.base, bleed: 38 })); downloadCanvas(b, `${v.id}-table-card-bleed.png`); };
-  q('[data-save]').onclick = async ()=>{
-    const c = read();
-    for (const k of ['s1', 's2']) if (c[k].to === 'url' && !/^https:\/\/[^\s"'<>]{1,200}$/i.test(c[k].url)) { msg.className = msgClass + ' err'; msg.textContent = 'A link of your own must start with https://. Nothing was saved.'; return; }
-    msg.className = msgClass; msg.textContent = 'Saving…'; q('[data-save]').disabled = true;
-    try {
-      const saved = await opts.save(c);
-      v.card = saved || null;
-      try { localStorage.removeItem('st_card_' + v.id); } catch(e){}
-      setDirty(false);
-      msg.className = msgClass + ' ok'; msg.textContent = 'Saved. Download the card whenever you like.';
-    } catch(e){
-      q('[data-save]').disabled = false;
-      msg.className = msgClass + ' err';
-      msg.textContent = e.message === 'locked' ? 'Too many passphrase tries. Wait fifteen minutes, then reload this page.'
-        : (e.message === 'need_pass' || e.message === 'bad_key') ? 'Your link or passphrase no longer matches. Reload this page and sign in again.'
-        : 'Could not save. Check your connection and try again.';
-    }
+  const swatches = ()=>{
+    if (!logoImg || !opts.swatches) return;
+    const sw = opts.swatches(logoImg);
+    ['a1', 'a2', 'hb', 'bb'].forEach(k => {
+      const box = q(`[data-sw="${k}"]`);
+      box.innerHTML = sw.map(c => `<button type="button" class="cd-swatch" style="background:${c}" data-c="${c}" title="${c}" aria-label="Use ${c}"></button>`).join('');
+      box.querySelectorAll('.cd-swatch').forEach(b => b.onclick = ()=>{ q(`input[type=color][data-cd="${k}"]`).value = b.dataset.c; q(`[data-cdhex="${k}"]`).value = b.dataset.c; touched(); });
+    });
   };
-  setDirty(false);
+  function draw(){
+    const d = designs[kind], takeout = kind === 'takeout';
+    const color = (key, label, sub) => `
+      <label class="cd-l">${label} <span>${sub}</span></label>
+      <div class="cd-row"><input type="color" data-cd="${key}" value="${esc(d[key])}"><input type="text" data-cdhex="${key}" value="${esc(d[key])}" aria-label="${label}, hex code" autocapitalize="off" spellcheck="false" maxlength="7"></div>
+      <div class="cd-sw" data-sw="${key}"></div>`;
+    const slotForm = (k, title) => { const s = d[k], ex = (takeout ? CARD_TAKEOUT_SLOTS : CARD_DEFAULT_SLOTS)[k]; return `
+      <div class="cd-h">${title}</div>
+      <label class="cd-l">Headline</label>
+      <input type="text" data-cd="${k}.head" value="${esc(s.head)}" maxlength="60" spellcheck="true" placeholder="Ex. ${esc(ex.head)}">
+      <label class="cd-l">Message</label>
+      <textarea data-cd="${k}.body" maxlength="120" spellcheck="true" placeholder="Ex. ${esc(ex.body)}">${esc(s.body)}</textarea>
+      <label class="cd-l">Small caps line</label>
+      <input type="text" data-cd="${k}.scan" value="${esc(s.scan)}" maxlength="40" spellcheck="true" placeholder="Ex. ${esc(ex.scan)}">
+      <label class="cd-l">Where the code sends them</label>
+      <div class="cd-radios">${Object.keys(CARD_TARGETS).map(t => `<label class="cd-ck"><input type="radio" name="cd_${k}_to" value="${t}" ${s.to === t ? 'checked' : ''}> ${CARD_TARGETS[t]}</label>`).join('')}</div>
+      <input type="url" data-cd="${k}.url" value="${esc(s.url || '')}" maxlength="200" placeholder="https://yourrestaurant.com/menu" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" style="${s.to === 'url' ? '' : 'display:none'}">
+      <div class="cd-note" data-urlnote="${k}" style="${s.to === 'url' ? '' : 'display:none'}">A link of your own skips the app, so scans of this code do not show in your report.</div>`; };
+    host.innerHTML = `
+      <div class="cd-kinds" role="tablist" aria-label="Which card">
+        ${['table', 'takeout'].map(k => `<button type="button" class="cd-kind${k === kind ? ' on' : ''}" role="tab" aria-selected="${k === kind}" data-kind="${k}">${NAME[k]}</button>`).join('')}
+      </div>
+      <div class="hint" style="margin:-6px 0 14px">${takeout ? 'A card to tuck into to-go orders. Same size as the table card, with words written for eating at home.' : 'The card that lives on the table.'} Save design keeps both versions.</div>
+      <div class="cd">
+        <div class="cd-form">
+          <div class="cd-h">Colors</div>
+          <label class="cd-l">Town line <span>(top right, optional)</span></label>
+          <input type="text" data-cd="town" value="${esc(d.town)}" maxlength="30" spellcheck="true" placeholder="Ex. Highlands, NJ">
+          ${color('a1', 'Structure color', '(headlines, pills, bottom bar)')}
+          ${color('a2', 'Accent color', '(header rule, second pill)')}
+          ${color('hb', 'Header background', '')}
+          ${color('bb', 'Card background', '(QR panels stay white so they scan)')}
+          <div class="cd-warn" data-warn></div>
+          ${slotForm('s1', 'Top QR code')}
+          ${slotForm('s2', 'Bottom QR code')}
+          <div class="cd-actions">
+            <button type="button" class="btn" data-save>Save design</button>
+            <span class="${msgClass}" data-msg></span>
+          </div>
+          <div class="cd-actions">
+            <button type="button" class="btn ghost" data-dl>Download my ${NAME[kind].toLowerCase()}</button>
+            <button type="button" class="btn ghost" data-dlbleed>Download with bleed</button>
+          </div>
+          <div class="hint" style="margin-top:8px">An exact 4x6 at 300dpi for home or lab printing. The bleed version extends the background past each edge for commercial printers that trim to size. Always test-scan a printed card before a real print run.</div>
+        </div>
+        <div class="cd-preview"><canvas data-canvas></canvas><div class="hint" data-note style="text-align:center;margin-top:8px"></div></div>
+      </div>`;
+    canvas = q('[data-canvas]'); msg = q('[data-msg]');
+    host.querySelectorAll('[data-kind]').forEach(b => b.onclick = ()=>{ if (b.dataset.kind === kind) return; keep(); kind = b.dataset.kind; draw(); });
+    host.querySelectorAll('[data-cd]').forEach(e => e.addEventListener('input', touched));
+    host.querySelectorAll('input[type=color][data-cd]').forEach(w => w.addEventListener('input', ()=>{ q(`[data-cdhex="${w.dataset.cd}"]`).value = w.value; }));
+    host.querySelectorAll('[data-cdhex]').forEach(h => h.addEventListener('input', ()=>{ if (HEX.test(h.value)) q(`input[type=color][data-cd="${h.dataset.cdhex}"]`).value = h.value; touched(); }));
+    host.querySelectorAll('input[type=radio]').forEach(r => r.addEventListener('change', ()=>{
+      const k = r.name.replace('cd_', '').replace('_to', ''), isUrl = r.value === 'url';
+      host.querySelector(`[data-cd="${k}.url"]`).style.display = isUrl ? '' : 'none';
+      q(`[data-urlnote="${k}"]`).style.display = isUrl ? '' : 'none';
+      if (isUrl) host.querySelector(`[data-cd="${k}.url"]`).focus();
+      touched();
+    }));
+    const file = ()=> `${v.id}-${kind === 'takeout' ? 'takeout' : 'table'}-card`;
+    q('[data-dl]').onclick = async ()=>{ await paint(); downloadCanvas(canvas, file() + '.png'); };
+    q('[data-dlbleed]').onclick = async ()=>{ const b = document.createElement('canvas'); await renderCard(b, v, Object.assign({}, read(), { logoImg, base: opts.base, bleed: 38 })); downloadCanvas(b, file() + '-bleed.png'); };
+    q('[data-save]').onclick = async ()=>{
+      keep();
+      for (const kd of ['table', 'takeout']) for (const k of ['s1', 's2']) if (designs[kd][k].to === 'url' && !URL_OK.test(designs[kd][k].url)) { msg.className = msgClass + ' err'; msg.textContent = 'A link of your own must start with https:// (' + NAME[kd].toLowerCase() + '). Nothing was saved.'; return; }
+      msg.className = msgClass; msg.textContent = 'Saving…'; q('[data-save]').disabled = true;
+      try {
+        const saved = await opts.save(Object.assign({}, designs.table, { takeout: designs.takeout }));
+        v.card = saved || null;
+        try { localStorage.removeItem('st_card_' + v.id); } catch(e){}
+        setDirty(false);
+        msg.className = msgClass + ' ok'; msg.textContent = 'Saved, both versions. Download either card whenever you like.';
+      } catch(e){
+        q('[data-save]').disabled = false;
+        msg.className = msgClass + ' err';
+        msg.textContent = e.message === 'locked' ? 'Too many passphrase tries. Wait fifteen minutes, then reload this page.'
+          : (e.message === 'need_pass' || e.message === 'bad_key') ? 'Your link or passphrase no longer matches. Reload this page and sign in again.'
+          : 'Could not save. Check your connection and try again.';
+      }
+    };
+    setDirty(dirty);
+    q('[data-note]').textContent = logoImg === null && !draw.loaded ? 'Rendering…' : (logoImg ? '' : 'No logo image, so the header prints your name as a wordmark.');
+    if (draw.loaded) { swatches(); paint(); }
+  }
+  draw();
   (async ()=>{
-    q('[data-note]').textContent = 'Rendering…';
     logoImg = await loadCardLogo(v);
+    draw.loaded = true;
     await paint();
     q('[data-note]').textContent = logoImg ? '' : 'No logo image, so the header prints your name as a wordmark.';
-    if (logoImg && opts.swatches){
-      const sw = opts.swatches(logoImg);
-      ['a1', 'a2', 'hb', 'bb'].forEach(k => {
-        const box = q(`[data-sw="${k}"]`);
-        box.innerHTML = sw.map(c => `<button type="button" class="cd-swatch" style="background:${c}" data-c="${c}" title="${c}" aria-label="Use ${c}"></button>`).join('');
-        box.querySelectorAll('.cd-swatch').forEach(b => b.onclick = ()=>{ q(`input[type=color][data-cd="${k}"]`).value = b.dataset.c; q(`[data-cdhex="${k}"]`).value = b.dataset.c; touched(); });
-      });
-    }
+    swatches();
   })();
-  return { paint, isDirty: ()=> dirty };
+  return { paint, isDirty: ()=> dirty, kind: ()=> kind };
 }
