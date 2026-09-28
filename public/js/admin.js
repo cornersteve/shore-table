@@ -10,7 +10,7 @@
    each exactly once, transactional per migration).
    Token scope: classic token with "repo" (must read the private upstream).
    ===================================================================== */
-const BUILD = 44;
+const BUILD = 45;
 const NOTES_URL = '';   // release-notes page (community post); empty = no link shown   // stamped by each release; compare with /version.json
 
 // a stored expiry date turns into a reminder a month out (GitHub emails too, but not everyone reads those)
@@ -1956,8 +1956,11 @@ ${SIG}`);
         <div class="lirow">
           <input class="li-n" type="text" spellcheck="true" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness">
           <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" inputmode="decimal">
-          <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
+          <span class="li-br" aria-hidden="true"></span>
           <input class="li-d" type="text" spellcheck="true" maxlength="120" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
+          <button type="button" class="iconbtn" data-upitem="${ix}" data-j="${j}" title="Move this row up" aria-label="Move this row up" ${j === 0 ? 'disabled' : ''}>${ARR_UP}</button>
+          <button type="button" class="iconbtn" data-downitem="${ix}" data-j="${j}" title="Move this row down" aria-label="Move this row down" ${j === (c.items || []).length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
+          <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
         </div>`).join('')}
       <div class="frow" style="margin-top:10px"><button type="button" class="btn ghost sm" data-additem="${ix}">+ Add a row</button></div>`;
     const urlField = `<input type="url" data-f="url" data-ix="${ix}" maxlength="500" value="${esc(c.url || '')}" placeholder="Ex. theirrestaurant.com/events" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false">`;
@@ -2044,6 +2047,10 @@ ${SIG}`);
     L.querySelectorAll('input[data-li]').forEach(i => i.addEventListener('input', ()=>{ CARDS[+i.dataset.ix].items[+i.dataset.j][i.dataset.li] = i.value; cardSaveDraft(); }));
     L.querySelectorAll('[data-additem]').forEach(b => b.onclick = ()=>{ const c = CARDS[+b.dataset.additem]; c.items = c.items || []; if(c.items.length < 40) c.items.push({n:'',d:'',p:''}); cardSaveDraft(); renderCards(); });
     L.querySelectorAll('[data-delitem]').forEach(b => b.onclick = ()=>{ CARDS[+b.dataset.delitem].items.splice(+b.dataset.j, 1); cardSaveDraft(); renderCards(); });
+    // rows reorder the way cards and games do: the list on the table follows this order
+    const moveItem = (b, by) => { const it = CARDS[+b.dataset[by < 0 ? 'upitem' : 'downitem']].items, j = +b.dataset.j, k = j + by; if(k < 0 || k >= it.length) return; [it[j], it[k]] = [it[k], it[j]]; cardSaveDraft(); renderCards(); };
+    L.querySelectorAll('[data-upitem]').forEach(b => b.onclick = ()=> moveItem(b, -1));
+    L.querySelectorAll('[data-downitem]').forEach(b => b.onclick = ()=> moveItem(b, 1));
   }
 
   $('addCardBtn').onclick = ()=>{ $('cardKind').style.display = ''; $('cardKind').querySelector('.kindopt').focus(); };
