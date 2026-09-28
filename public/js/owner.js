@@ -362,15 +362,15 @@ function cardBody(c, ix){
     <div class="hint" style="margin-bottom:2px">Prices get a dollar sign in the app. Type just the number, or words like "Market price". Add a category to group rows under a heading, like Appetizers or Drafts.</div>
     ${(c.items || []).map((i, j) => `
       ${i.h !== undefined ? `<div class="lirow lirow--cat">
-        <input class="li-h" type="text" spellcheck="true" maxlength="40" data-li="h" data-ix="${ix}" data-j="${j}" value="${esc(i.h || '')}" placeholder="Ex. Appetizers" aria-label="Category name">
+        <input class="li-h" type="text" spellcheck="true" maxlength="40" data-li="h" data-ix="${ix}" data-j="${j}" value="${esc(i.h || '')}" placeholder="Category name" aria-label="Category name">
         <button type="button" class="iconbtn" data-upitem="${ix}" data-j="${j}" title="Move this category up" aria-label="Move this category up" ${j === 0 ? 'disabled' : ''}>${ARR_UP}</button>
         <button type="button" class="iconbtn" data-downitem="${ix}" data-j="${j}" title="Move this category down" aria-label="Move this category down" ${j === (c.items || []).length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
         <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this category" aria-label="Remove this category">${TRASH}</button>
       </div>` : `<div class="lirow">
-        <input class="li-n" type="text" spellcheck="true" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Ex. Guinness">
-        <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Ex. 7" inputmode="decimal">
+        <input class="li-n" type="text" spellcheck="true" maxlength="60" data-li="n" data-ix="${ix}" data-j="${j}" value="${esc(i.n || '')}" placeholder="Menu item title">
+        <input class="li-p" type="text" maxlength="20" data-li="p" data-ix="${ix}" data-j="${j}" value="${esc(i.p || '')}" placeholder="Price" inputmode="decimal">
         <span class="li-br" aria-hidden="true"></span>
-        <input class="li-d" type="text" spellcheck="true" maxlength="200" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Ex. Nitro stout, 4.2% (optional)">
+        <input class="li-d" type="text" spellcheck="true" maxlength="200" data-li="d" data-ix="${ix}" data-j="${j}" value="${esc(i.d || '')}" placeholder="Menu item description (optional)">
         <button type="button" class="iconbtn" data-upitem="${ix}" data-j="${j}" title="Move this row up" aria-label="Move this row up" ${j === 0 ? 'disabled' : ''}>${ARR_UP}</button>
         <button type="button" class="iconbtn" data-downitem="${ix}" data-j="${j}" title="Move this row down" aria-label="Move this row down" ${j === (c.items || []).length - 1 ? 'disabled' : ''}>${ARR_DOWN}</button>
         <button type="button" class="iconbtn" data-delitem="${ix}" data-j="${j}" title="Remove this row" aria-label="Remove this row">${TRASH}</button>
