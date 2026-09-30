@@ -35,6 +35,10 @@ function cardSwitchMode(c, next){
   if(prev === 'link' && next === 'inline'){ c.body = c.desc || ''; c.desc = ''; }
   if(prev === 'page' && next === 'link'){ c._page = c.body || ''; c.body = ''; }
   if(prev === 'link' && next === 'page'){ c.body = c._page || ''; delete c._page; }
+  // a home-screen message becomes the line under the name, and the details page
+  // comes back if there was one; the reverse puts the line back on the home screen
+  if(prev === 'inline' && next === 'page'){ if(!c.desc) c.desc = (c.body || '').slice(0, 240); c.body = c._page || ''; delete c._page; }
+  if(prev === 'page' && next === 'inline'){ c._page = c.body || ''; c.body = c.desc || ''; c.desc = ''; }
   c.mode = next;
 }
 // a card's icon markup; 'none' is the owner choosing no icon at all, and an
