@@ -293,7 +293,12 @@ function startEntry(){
   if (state.entry === 'games' && venue().gamesEnabled === false) state.entry = 'landing';
   logEvent('app_open', state.entry === 'games' ? 'games' : state.entry === 'suggest' ? 'box' : 'chooser');
   if (state.entry === 'landing') go('landing');
-  else if (state.entry === 'games') go('hub');
+  else if (state.entry === 'games'){
+    go('hub');
+    // ?play=<game id> (a link in a post, say) opens that game straight away,
+    // with the hub underneath so Back lands on the picker
+    if (playParam && GAME_OPEN[playParam]) GAME_OPEN[playParam]();
+  }
   else go('sb_intro');
 }
 
@@ -481,6 +486,23 @@ reg('hub__back', ()=> go('landing'));
 // DEFAULT_ORDER, so the fail-open full library never shows them at other
 // venues.
 const GAME_IDS = ['who_knows_who','guess_the_split','wordy','trivia','who_invited_you','fortune_teller','all_talk','cornhole','quick_pour','horse_racing','ring_toss','exquisite_corpse','sketch_chain'];
+// how each game opens from its hub card, and from a ?play=<id> link
+const GAME_OPEN = {
+  cornhole:         ()=> go('ch_intro', { exit:true }),
+  quick_pour:       ()=> go('pp_intro', { exit:true }),
+  horse_racing:     ()=> go('hr_intro', { exit:true }),
+  ring_toss:        ()=> go('rt_intro', { exit:true }),
+  guess_the_split:  ()=> go('tot_intro', { exit:true }),
+  who_knows_who:    ()=>{ hs = { players: [] }; go('hs_setup', { exit:true }); },
+  who_invited_you:  ()=> go('wiy_intro', { exit:true }),
+  wordy:            ()=>{ logPlay('wordy'); startWordle(); go('wordle', { exit:true }); },
+  trivia:           ()=> go('trivia_intro', { exit:true }),
+  fortune_teller:   ()=> go('fortune_intro', { exit:true }),
+  all_talk:         ()=> go('at_intro', { exit:true }),
+  exquisite_corpse: ()=> go('ec_intro', { exit:true }),
+  sketch_chain:     ()=> go('sc_intro', { exit:true }),
+};
+const GAME_CARD_BTN = { cornhole:'#gcCh', quick_pour:'#gcPp', horse_racing:'#gcHr', ring_toss:'#gcRt', guess_the_split:'#gcTot', who_knows_who:'#gcHs', who_invited_you:'#gcWiy', wordy:'#gcWordle', trivia:'#gcTriv', fortune_teller:'#gcFor', all_talk:'#gcAt', exquisite_corpse:'#gcEc', sketch_chain:'#gcSc' };
 reg('hub', (el)=>{
   backBtn.style.display='block';   // chooser is home, reachable from any entry mode
   // One template per game; `ok` is the content check (a game with no rows
@@ -523,19 +545,7 @@ reg('hub', (el)=>{
     ${order.map(id => CARDS[id].ok ? CARDS[id].html : '').join('')}
     <div class="spacer"></div>`;
   const wire = (id, fn)=>{ const b=el.querySelector(id); if(b) b.onclick=fn; };
-  wire('#gcCh',    ()=> go('ch_intro',{exit:true}));
-  wire('#gcPp',    ()=> go('pp_intro',{exit:true}));
-  wire('#gcHr',    ()=> go('hr_intro',{exit:true}));
-  wire('#gcRt',    ()=> go('rt_intro',{exit:true}));
-  wire('#gcTot',   ()=> go('tot_intro',{exit:true}));
-  wire('#gcHs',    ()=> { hs={players:[]}; go('hs_setup',{exit:true}); });
-  wire('#gcWiy',   ()=> go('wiy_intro',{exit:true}));
-  wire('#gcWordle',()=> { logPlay('wordy'); startWordle(); go('wordle',{exit:true}); });
-  wire('#gcTriv',  ()=> go('trivia_intro',{exit:true}));
-  wire('#gcFor',   ()=> go('fortune_intro',{exit:true}));
-  wire('#gcAt',    ()=> go('at_intro',{exit:true}));
-  wire('#gcEc',    ()=> go('ec_intro',{exit:true}));
-  wire('#gcSc',    ()=> go('sc_intro',{exit:true}));
+  Object.keys(GAME_CARD_BTN).forEach(id => wire(GAME_CARD_BTN[id], GAME_OPEN[id]));
 });
 
 /* ---------- GUESS THE SPLIT (internal id: guess_the_split) ----------
@@ -4702,7 +4712,8 @@ reg('sc_reveal', (el)=>{
 const params = new URLSearchParams(location.search);
 const vParam = params.get('v');
 const goParam = params.get('go');                        // games | box | (none)
-state.entry = goParam === 'games' ? 'games'
+const playParam = params.get('play');                    // a game id: open it right away (implies go=games)
+state.entry = (goParam === 'games' || playParam) ? 'games'
             : goParam === 'box'   ? 'suggest'
             :                       'landing';            // no &go -> single-QR chooser
 if(vParam) state.venue = vParam;

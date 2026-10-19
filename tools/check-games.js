@@ -16,6 +16,8 @@ module.exports = function checkGames() {
   const ids = [...m[1].matchAll(/'([a-z_]+)'/g)].map(x => x[1]);
   const app = read('public/js/app.js'), owner = read('public/js/owner.js'), admin = read('public/js/admin.js'), report = read('public/js/report.js'), prompts = read('public/js/prompts.js');
   const gameIds = (app.match(/const GAME_IDS = \[([^\]]*)\]/) || ['', ''])[1];
+  const gameOpen = app.slice(app.indexOf('const GAME_OPEN = {'), app.indexOf('\n};', app.indexOf('const GAME_OPEN = {')));
+  const cardBtn = (app.match(/const GAME_CARD_BTN = \{([^}]*)\}/) || ['', ''])[1];
   const gameLib = owner.slice(owner.indexOf('const GAME_LIB = ['), owner.indexOf('];', owner.indexOf('const GAME_LIB = [')));
   const ownerNames = (owner.match(/const gameName = g => \(\{([^}]*)\}/) || ['', ''])[1];
   const gameOrder = (admin.match(/const GAME_ORDER = \[([^\]]*)\]/) || ['', ''])[1];
@@ -24,6 +26,8 @@ module.exports = function checkGames() {
   const where = [
     ['app.js GAME_IDS', id => gameIds.includes(`'${id}'`)],
     ['app.js hub card', id => new RegExp(`\\n\\s*${id}:\\s*\\{ ok:`).test(app)],
+    ['app.js GAME_OPEN (how it opens, also ?play=)', id => new RegExp(`\\n\\s*${id}:\\s*\\(\\)=>`).test(gameOpen)],
+    ['app.js GAME_CARD_BTN', id => cardBtn.includes(`${id}:`)],
     ['owner.js GAME_LIB', id => gameLib.includes(`id:'${id}'`)],
     ['owner.js gameName map', id => ownerNames.includes(`${id}:`)],
     ['admin.js GAME_ORDER', id => gameOrder.includes(`'${id}'`)],
